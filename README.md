@@ -18,6 +18,20 @@ npm run build
 npm run preview
 ```
 
+## Component development
+
+Run Storybook to view and exercise reusable components in isolation:
+
+```bash
+npm run storybook
+```
+
+Create a production Storybook build with:
+
+```bash
+npm run build-storybook
+```
+
 The production build generates the web app manifest and service worker in
 `dist/`. Camera and microphone APIs require HTTPS in production (localhost is
 accepted during development).

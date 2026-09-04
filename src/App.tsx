@@ -35,10 +35,11 @@ function App() {
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-x-6 gap-y-9">
-          {books.map((book) => (
+          {books.map((book, index) => (
             <Book
               key={book.id}
               book={book}
+              bookIndex={index}
               isSelected={book.id === selectedBookId}
               onSelect={setSelectedBookId}
             />

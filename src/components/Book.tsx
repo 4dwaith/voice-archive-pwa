@@ -3,6 +3,7 @@ import type { BookModel } from '../models/book'
 
 type BookProps = {
   book: BookModel
+  bookIndex?: number
   isSelected: boolean
   onSelect: (bookId: number) => void
 }
@@ -16,11 +17,13 @@ const fallbackCoverColors = [
   'bg-[#31577a] text-white',
 ] as const
 
-export function Book({ book, isSelected, onSelect }: BookProps) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const showCoverImage = Boolean(book.coverImage) && !imageFailed
+export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
+  const [failedCoverImage, setFailedCoverImage] = useState<string>()
+  const showCoverImage =
+    Boolean(book.coverImage) && book.coverImage !== failedCoverImage
   const colorIndex =
-    ((book.id - 1) % fallbackCoverColors.length + fallbackCoverColors.length) %
+    ((bookIndex ?? 0) % fallbackCoverColors.length +
+      fallbackCoverColors.length) %
     fallbackCoverColors.length
   const fallbackColor = fallbackCoverColors[colorIndex]
 
@@ -43,7 +46,7 @@ export function Book({ book, isSelected, onSelect }: BookProps) {
               className="absolute inset-0 size-full object-cover"
               loading="lazy"
               decoding="async"
-              onError={() => setImageFailed(true)}
+              onError={() => setFailedCoverImage(book.coverImage)}
             />
           ) : (
             <>
@@ -56,7 +59,7 @@ export function Book({ book, isSelected, onSelect }: BookProps) {
               >
                 {book.mark}
               </span>
-              <span className="text-2xl font-bold leading-tight">
+              <span className="text-2xl font-bold leading-tight wrap-anywhere">
                 {book.title}
               </span>
             </>
@@ -64,7 +67,9 @@ export function Book({ book, isSelected, onSelect }: BookProps) {
         </span>
       </button>
 
-      <h2 className="mt-5 text-xl font-bold leading-snug">{book.title}</h2>
+      <h2 className="mt-5 text-xl font-bold leading-snug wrap-anywhere">
+        {book.title}
+      </h2>
     </article>
   )
 }
