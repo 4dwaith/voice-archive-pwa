@@ -19,12 +19,8 @@ const fallbackCoverColors = [
 
 export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
   const [failedCoverImage, setFailedCoverImage] = useState<string>()
-  const showCoverImage =
-    Boolean(book.coverImage) && book.coverImage !== failedCoverImage
-  const colorIndex =
-    ((bookIndex ?? 0) % fallbackCoverColors.length +
-      fallbackCoverColors.length) %
-    fallbackCoverColors.length
+  const showCoverImage = !!book.coverImage && book.coverImage !== failedCoverImage
+  const colorIndex = (bookIndex ?? 0) % fallbackCoverColors.length
   const fallbackColor = fallbackCoverColors[colorIndex]
 
   return (
@@ -50,9 +46,6 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
             />
           ) : (
             <>
-              <span className="text-lg font-semibold opacity-90">
-                Voice Archive
-              </span>
               <span
                 aria-hidden="true"
                 className="text-5xl font-black opacity-20"
