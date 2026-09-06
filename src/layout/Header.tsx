@@ -1,3 +1,4 @@
+import { NavLink, useLocation } from 'react-router'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   decreaseTextSize,
@@ -11,14 +12,22 @@ export function Header() {
   const dispatch = useAppDispatch()
   const textSizeStep = useAppSelector(selectTextSizeStep)
   const textSizePercent = useAppSelector(selectTextSizePercent)
+  const location = useLocation()
+  const pageTitle =
+    location.pathname === '/recordings' ? 'Your voice' : 'Your library'
 
   return (
     <header className="border-b-2 border-ink/10 bg-white">
       <div className="mx-auto flex flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-lg font-semibold text-accent">Voice Archive</p>
+          <NavLink
+            to="/"
+            end
+          >
+            <p className="text-lg font-semibold text-accent">Voice Archive</p>
+          </NavLink>
           <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-            Your library
+            {pageTitle}
           </h1>
         </div>
 

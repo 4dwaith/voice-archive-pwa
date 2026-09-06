@@ -32,6 +32,13 @@ Create a production Storybook build with:
 npm run build-storybook
 ```
 
+## Voice recordings
+
+The fixed footer records audio with the browser MediaRecorder API. The latest
+15 clips are stored locally in IndexedDB through Dexie and can be played from
+the Recordings route. Microphone access requires HTTPS in production; localhost
+is accepted during development.
+
 The production build generates the web app manifest and service worker in
 `dist/`. Camera and microphone APIs require HTTPS in production (localhost is
 accepted during development).
