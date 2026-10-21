@@ -1,20 +1,23 @@
 import { useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import type { BookModel } from '../models/book'
+import type { BookCardModel } from '../models/bookCard'
 import { Book } from './Book'
 
-const baseBook: BookModel = {
+const baseBook: BookCardModel = {
   id: 1,
   title: 'Pride and Prejudice',
   coverImage: '/covers/pride-and-prejudice.jpg',
   mark: 'PP',
 }
 
-const fallbackBooks: BookModel[] = Array.from({ length: 8 }, (_, index) => ({
-  id: index + 1,
-  title: `Book without a cover ${index + 1}`,
-  mark: `${index + 1}`,
-}))
+const fallbackBooks: BookCardModel[] = Array.from(
+  { length: 8 },
+  (_, index) => ({
+    id: index + 1,
+    title: `Book without a cover ${index + 1}`,
+    mark: `${index + 1}`,
+  }),
+)
 
 function InteractiveBook(props: ComponentProps<typeof Book>) {
   const [isSelected, setIsSelected] = useState(props.isSelected)

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-page: #f4f1e8;
@@ -6,8 +6,8 @@
   --color-muted: #536176;
   --color-accent: #086858;
   --color-accent-soft: #dcefe9;
-  --font-sans: Atkinson Hyperlegible, Verdana, Arial, ui-sans-serif, system-ui,
-    sans-serif;
+  --font-sans:
+    Atkinson Hyperlegible, Verdana, Arial, ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {

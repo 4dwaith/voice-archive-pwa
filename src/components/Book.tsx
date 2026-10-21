@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import type { BookModel } from '../models/book'
+import type { BookCardModel } from '../models/bookCard'
 
 type BookProps = {
-  book: BookModel
+  book: BookCardModel
   bookIndex?: number
   isSelected: boolean
   onSelect: (bookId: number) => void
@@ -19,7 +19,8 @@ const fallbackCoverColors = [
 
 export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
   const [failedCoverImage, setFailedCoverImage] = useState<string>()
-  const showCoverImage = !!book.coverImage && book.coverImage !== failedCoverImage
+  const showCoverImage =
+    !!book.coverImage && book.coverImage !== failedCoverImage
   const colorIndex = (bookIndex ?? 0) % fallbackCoverColors.length
   const fallbackColor = fallbackCoverColors[colorIndex]
 

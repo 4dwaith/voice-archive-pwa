@@ -136,10 +136,7 @@ export function useAudioRecorder() {
             blob,
           }
           try {
-            await saveStoredRecording(
-              storedRecording,
-              maximumRecordingHistory,
-            )
+            await saveStoredRecording(storedRecording, maximumRecordingHistory)
           } catch {
             setErrorMessage(
               'The recording could not be saved. Please try again.',

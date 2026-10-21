@@ -20,10 +20,7 @@ export function Header() {
     <header className="border-b-2 border-ink/10 bg-white">
       <div className="mx-auto flex flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <NavLink
-            to="/"
-            end
-          >
+          <NavLink to="/" end>
             <p className="text-lg font-semibold text-accent">Voice Archive</p>
           </NavLink>
           <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">

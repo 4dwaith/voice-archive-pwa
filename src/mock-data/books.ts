@@ -1,6 +1,6 @@
-import type { BookModel } from '../models/book'
+import type { BookCardModel } from '../models/bookCard'
 
-export const books: BookModel[] = [
+export const books: BookCardModel[] = [
   {
     id: 1,
     title: 'Pride and Prejudice',
