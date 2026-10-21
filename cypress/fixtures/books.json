@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "title": "ರುದ್ರ ಚಮಕ",
+    "language": "kn",
+    "author": null,
+    "description": "ಕನ್ನಡ ಪಠ್ಯ",
+    "cover_file_id": null,
+    "source_pdf_file_id": null,
+    "cover_url": null,
+    "source_pdf_url": null,
+    "created_at": "2026-10-21T00:00:00Z",
+    "updated_at": "2026-10-21T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "title": "A Library Book",
+    "language": "en",
+    "author": null,
+    "description": null,
+    "cover_file_id": null,
+    "source_pdf_file_id": null,
+    "cover_url": null,
+    "source_pdf_url": null,
+    "created_at": "2026-10-21T00:00:00Z",
+    "updated_at": "2026-10-21T00:00:00Z"
+  }
+]
