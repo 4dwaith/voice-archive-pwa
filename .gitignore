@@ -26,3 +26,6 @@ dist-ssr
 *storybook.log
 storybook-static
 /tmp/
+coverage/
+.nyc_output/
+cypress/artifacts/

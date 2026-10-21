@@ -6,3 +6,6 @@ public/
 package-lock.json
 *.log
 .idea/
+coverage/
+.nyc_output/
+cypress/artifacts/

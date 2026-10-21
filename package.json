@@ -11,7 +11,15 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "quality": "npm run format:check && npm run lint && npm test && npm run build && npm run build-storybook",
+    "test:coverage": "vitest run --coverage",
+    "cy:open:mock": "node scripts/cypress.ts mock --open",
+    "cy:run:mock": "node scripts/cypress.ts mock",
+    "cy:run:live": "node scripts/cypress.ts live",
+    "cy:run:coverage": "node scripts/cypress.ts mock --coverage",
+    "cy:typecheck": "tsc -p cypress/tsconfig.json",
+    "coverage": "node scripts/coverage.ts",
+    "coverage:merge": "node scripts/coverage.ts --merge-only",
+    "quality": "npm run format:check && npm run lint && npm test && npm run cy:typecheck && npm run build && npm run build-storybook",
     "api:check": "node scripts/api-generate.ts --check",
     "api:regenerate": "node scripts/api-generate.ts --write",
     "preview": "vite preview",
@@ -29,19 +37,29 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@badeball/cypress-cucumber-preprocessor": "28.0.1",
+    "@bahmutov/cypress-esbuild-preprocessor": "2.2.8",
+    "@cypress/code-coverage": "4.0.3",
     "@rtk-query/codegen-openapi": "2.2.0",
     "@storybook/addon-a11y": "^10.6.0",
     "@storybook/addon-docs": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/cypress": "10.1.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
+    "@types/istanbul-lib-coverage": "2.0.6",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-istanbul": "5.0.5",
+    "cypress": "16.2.0",
+    "esbuild": "0.28.2",
+    "istanbul-lib-coverage": "3.2.2",
     "jsdom": "^29.1.1",
+    "nyc": "18.0.0",
     "openapi-types": "12.1.3",
     "orval": "8.43.0",
     "oxlint": "^1.79.0",
@@ -50,8 +68,31 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
+    "vite-plugin-istanbul": "9.0.1",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "5.0.5"
+  },
+  "cypress-cucumber-preprocessor": {
+    "stepDefinitions": [
+      "cypress/step_definitions/**/*.ts"
+    ],
+    "filterSpecs": true,
+    "omitFiltered": true
+  },
+  "nyc": {
+    "include": [
+      "src/**/*.{ts,tsx}"
+    ],
+    "exclude": [
+      "src/api-client/generated/**",
+      "**/*.stories.*",
+      "src/mock-data/**",
+      "**/*.d.ts"
+    ],
+    "reporter": [
+      "json"
+    ],
+    "report-dir": "coverage/cypress"
   },
   "overrides": {
     "sharp": "0.35.4"

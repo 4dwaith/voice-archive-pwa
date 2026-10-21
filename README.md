@@ -21,8 +21,10 @@ npm run build
 npm run preview
 ```
 
-`npm run quality` runs formatting checks, lint, Vitest, strict TypeScript/application
-build, and Storybook build. It does not need a running backend.
+`npm run quality` runs formatting checks, lint, Vitest, Cypress type checking,
+strict TypeScript/application build, and Storybook build. It does not need a
+running backend. Browser execution and combined coverage use the separate
+commands documented below.
 
 `npm run format` formats the project, including generated TypeScript;
 `npm run format:check` only reports formatting differences. Public source assets,
@@ -131,9 +133,8 @@ tests/
 
 `tests/api-client/` tests the frontend connection layer: request serialization,
 response validation, generated contract types, and error handling. Backend
-correctness belongs to the backend's test suite. Browser-level integration will
-be exercised by the planned Cypress feature tests; there is no separate live
-backend smoke-test suite in this frontend.
+correctness belongs to the backend's test suite. Browser integration is
+exercised by the Cypress feature tests, including their isolated live mode.
 
 `client.test.ts` covers shared transport, schema selection (including endpoint
 overrides), and validation at the RTK boundary. `booksApi.test.ts` covers book
@@ -154,10 +155,16 @@ It does not repeat transport validation, request offsets, or shelf layout tests.
 The app-wide text-size regression during asynchronous loading lives in
 `App.test.tsx` and uses the real API integration with mocked fetch.
 
-Phase 07 will add the separate top-level `cypress/` directory specified in the
-roadmap, with `e2e/*.feature`, `step_definitions/`, `fixtures/`, and `support/`.
-Cypress BDD tests will use their own configuration and runner. Share fixture
-code across runners only when an actual common use arises.
+Browser tests live under `cypress/`, with readable Gherkin features and their own
+configuration/runner. Run `npm run cy:run:mock` without a backend, or
+`npm run cy:run:live` to provision an isolated API from the sibling backend
+checkout. `npm run cy:open:mock` opens the interactive runner.
+
+`npm run coverage` runs Vitest and Cypress with Istanbul and produces a combined
+frontend report at `coverage/combined/index.html`. There are no percentage
+thresholds yet; backend coverage stays separate. See
+[browser tests and coverage](docs/browser-tests.md) for prerequisites, commands,
+database isolation, artifacts, coverage exclusions, and dependency upgrades.
 
 Shared WebStorm configurations live together in `.run/`:
 
