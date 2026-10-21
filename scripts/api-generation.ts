@@ -43,7 +43,7 @@ function isBackendOpenApiDocument(
 }
 
 export const projectRoot = fileURLToPath(new URL('../', import.meta.url))
-export const generatedDirectory = join(projectRoot, 'src/api/generated')
+export const generatedDirectory = join(projectRoot, 'src/api-client/generated')
 const header = '// GENERATED FILE. Run npm run api:regenerate; do not edit.\n'
 const methods = [
   'get',
@@ -458,7 +458,7 @@ export async function refreshContract({
   const document = await fetchOpenApiDocument(url)
   const temporaryRoot = await createGenerationWorkspace()
   try {
-    const stagingDirectory = join(temporaryRoot, 'api/generated')
+    const stagingDirectory = join(temporaryRoot, 'api-client/generated')
     await generateContract(document, stagingDirectory)
     const differences = await compareGenerated(stagingDirectory, target)
 

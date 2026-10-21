@@ -1,21 +1,14 @@
 import { useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import type { BookCardModel } from '../models/bookCard'
+import { books, makeBookFixture } from '../../mock-data/books'
 import { Book } from './Book'
 
-const baseBook: BookCardModel = {
-  id: 1,
-  title: 'Pride and Prejudice',
-  coverImage: '/covers/pride-and-prejudice.jpg',
-  mark: 'PP',
-}
+const baseBook = books[0]
 
-const fallbackBooks: BookCardModel[] = Array.from(
-  { length: 8 },
-  (_, index) => ({
+const fallbackBooks = Array.from({ length: 8 }, (_, index) =>
+  makeBookFixture({
     id: index + 1,
     title: `Book without a cover ${index + 1}`,
-    mark: `${index + 1}`,
   }),
 )
 
@@ -61,43 +54,39 @@ export const WithCover: Story = {}
 
 export const WithoutCover: Story = {
   args: {
-    book: {
+    book: makeBookFixture({
       id: 2,
       title: 'A Book Waiting for Its Cover',
-      mark: 'BW',
-    },
+    }),
   },
 }
 
 export const BrokenCoverImage: Story = {
   args: {
-    book: {
+    book: makeBookFixture({
       id: 3,
       title: 'A Cover That Could Not Be Loaded',
-      coverImage: '/covers/this-cover-does-not-exist.jpg',
-      mark: 'BC',
-    },
+      cover_url: '/covers/this-cover-does-not-exist.jpg',
+    }),
   },
 }
 
 export const OverflowingTitle: Story = {
   args: {
-    book: {
+    book: makeBookFixture({
       id: 4,
       title:
         'The Astonishingly Comprehensive Chronicle of Pneumonoultramicroscopicsilicovolcanoconiosis and Other Unnecessarily Long Words',
-      mark: 'LONG',
-    },
+    }),
   },
 }
 
-export const EmptyInitials: Story = {
+export const KannadaTitle: Story = {
   args: {
-    book: {
+    book: makeBookFixture({
       id: 5,
-      title: 'A Book with No Initials',
-      mark: '',
-    },
+      title: 'ಗೀತಾಭಾವಧಾರೆ',
+    }),
   },
 }
 

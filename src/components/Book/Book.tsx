@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import type { BookCardModel } from '../models/bookCard'
+import type { BookResponseOutput } from '../../api-client/generated/schemas'
+import { titleInitials } from './titleInitials'
 
 type BookProps = {
-  book: BookCardModel
+  book: BookResponseOutput
   bookIndex?: number
   isSelected: boolean
   onSelect: (bookId: number) => void
@@ -18,9 +19,10 @@ const fallbackCoverColors = [
 ] as const
 
 export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
-  const [failedCoverImage, setFailedCoverImage] = useState<string>()
-  const showCoverImage =
-    !!book.coverImage && book.coverImage !== failedCoverImage
+  const [failedCoverImage, setFailedCoverImage] = useState<string | null>()
+
+  const showCoverImage = !!book.cover_url && book.cover_url !== failedCoverImage
+
   const colorIndex = (bookIndex ?? 0) % fallbackCoverColors.length
   const fallbackColor = fallbackCoverColors[colorIndex]
 
@@ -38,12 +40,12 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
         >
           {showCoverImage ? (
             <img
-              src={book.coverImage}
+              src={book.cover_url ?? undefined}
               alt=""
               className="absolute inset-0 size-full object-cover"
               loading="lazy"
               decoding="async"
-              onError={() => setFailedCoverImage(book.coverImage)}
+              onError={() => setFailedCoverImage(book.cover_url)}
             />
           ) : (
             <>
@@ -51,9 +53,10 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
                 aria-hidden="true"
                 className="text-5xl font-black opacity-20"
               >
-                {book.mark}
+                {titleInitials(book.title)}
               </span>
-              <span className="text-2xl font-bold leading-tight wrap-anywhere">
+
+              <span className="line-clamp-4 text-2xl font-bold leading-tight wrap-anywhere">
                 {book.title}
               </span>
             </>
@@ -61,9 +64,9 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
         </span>
       </button>
 
-      <h2 className="mt-5 text-xl font-bold leading-snug wrap-anywhere">
+      <h3 className="mt-5 text-xl font-bold leading-snug wrap-anywhere">
         {book.title}
-      </h2>
+      </h3>
     </article>
   )
 }

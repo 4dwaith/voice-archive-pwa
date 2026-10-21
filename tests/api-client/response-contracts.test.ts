@@ -10,12 +10,12 @@ import {
   ValidationErrorResponse,
   type BookResponseOutput,
   type BookListOutput,
-} from '../../src/api/generated/schemas'
+} from '../../src/api-client/generated/schemas'
 import type {
   GetApiV1BookApiResponse,
   ListApiV1BooksApiResponse,
   CreateApiV1CoverFileApiArg,
-} from '../../src/api/generated/endpoints'
+} from '../../src/api-client/generated/endpoints'
 import { book } from './fixtures/book'
 
 describe('generated contracts', () => {

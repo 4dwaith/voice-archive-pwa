@@ -1,4 +1,4 @@
-import type { BookResponseOutput } from '../../../src/api/generated/schemas'
+import type { BookResponseOutput } from '../../../src/api-client/generated/schemas'
 
 // Representative backend wire data. Dates stay strings, including microseconds.
 export const book = {

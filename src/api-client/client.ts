@@ -7,7 +7,12 @@ import {
 } from '@reduxjs/toolkit/query'
 import { errorSchemas, multipartEndpoints } from './generated/validation'
 
+type ArchiveQueryExtraOptions = {
+  errorSchemaEndpoint?: string
+}
+
 export function contractError(): FetchBaseQueryError {
+  console.error('Voice Archive: API response contract validation failed.')
   return {
     status: 'CUSTOM_ERROR',
     error: 'The API response did not match its contract.',
@@ -21,7 +26,7 @@ export function createArchiveBaseQuery(baseUrl: string) {
     string | FetchArgs,
     unknown,
     FetchBaseQueryError,
-    object,
+    ArchiveQueryExtraOptions,
     FetchBaseQueryMeta
   > = async (args, api, extraOptions) => {
     let request = typeof args === 'string' ? { url: args } : args
@@ -44,7 +49,8 @@ export function createArchiveBaseQuery(baseUrl: string) {
     }
     const result = await fetchQuery(request, api, extraOptions)
     if (result.error && typeof result.error.status === 'number') {
-      const schema = errorSchemas[api.endpoint]?.[result.error.status]
+      const endpoint = extraOptions?.errorSchemaEndpoint ?? api.endpoint
+      const schema = errorSchemas[endpoint]?.[result.error.status]
       if (schema) {
         const parsed = schema.safeParse(result.error.data)
         if (!parsed.success)

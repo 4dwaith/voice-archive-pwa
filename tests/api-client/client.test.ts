@@ -1,18 +1,20 @@
 import { configureStore } from '@reduxjs/toolkit'
+import type { BaseQueryApi } from '@reduxjs/toolkit/query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../../src/api/api'
+import { archiveApi } from '../../src/api-client/archiveApi'
+import { createArchiveBaseQuery } from '../../src/api-client/client'
 import { book } from './fixtures/book'
 
 function testStore() {
   return configureStore({
-    reducer: { [api.reducerPath]: api.reducer },
-    middleware: (defaults) => defaults().concat(api.middleware),
+    reducer: { [archiveApi.reducerPath]: archiveApi.reducer },
+    middleware: (defaults) => defaults().concat(archiveApi.middleware),
   })
 }
 
 let store = testStore()
 afterEach(() => {
-  store.dispatch(api.util.resetApiState())
+  store.dispatch(archiveApi.util.resetApiState())
   store = testStore()
 })
 
@@ -23,11 +25,12 @@ describe('generated RTK endpoint validation', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
     const result = await store.dispatch(
-      api.endpoints.getApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.getApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.data).toEqual(book)
     expect(
-      api.endpoints.getApiV1Book.select({ bookId: 1 })(store.getState()).data,
+      archiveApi.endpoints.getApiV1Book.select({ bookId: 1 })(store.getState())
+        .data,
     ).toEqual(book)
     const request = fetchMock.mock.calls[0][0]
     expect(request.url).toBe('http://127.0.0.1:8000/api/v1/books/1')
@@ -39,14 +42,15 @@ describe('generated RTK endpoint validation', () => {
       vi.fn(async () => Response.json({ ...book, title: 42 })),
     )
     const result = await store.dispatch(
-      api.endpoints.getApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.getApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.error).toMatchObject({
       status: 'CUSTOM_ERROR',
       data: { code: 'response_contract_error' },
     })
     expect(
-      api.endpoints.getApiV1Book.select({ bookId: 1 })(store.getState()).data,
+      archiveApi.endpoints.getApiV1Book.select({ bookId: 1 })(store.getState())
+        .data,
     ).toBeUndefined()
   })
 
@@ -61,7 +65,7 @@ describe('generated RTK endpoint validation', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
     const result = await store.dispatch(
-      api.endpoints.listApiV1Books.initiate({ limit: 5, offset: 10 }),
+      archiveApi.endpoints.listApiV1Books.initiate({ limit: 5, offset: 10 }),
     )
     expect(result.data?.items).toEqual([book])
     const request = fetchMock.mock.calls[0][0]
@@ -84,7 +88,7 @@ describe('generated RTK endpoint validation', () => {
       ),
     )
     const result = await store.dispatch(
-      api.endpoints.getApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.getApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.error).toEqual({
       status: 404,
@@ -98,7 +102,7 @@ describe('generated RTK endpoint validation', () => {
       vi.fn(async () => Response.json({ detail: 'Missing' }, { status: 404 })),
     )
     const result = await store.dispatch(
-      api.endpoints.getApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.getApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.error).toMatchObject({ status: 'CUSTOM_ERROR' })
   })
@@ -111,7 +115,7 @@ describe('generated RTK endpoint validation', () => {
       }),
     )
     const result = await store.dispatch(
-      api.endpoints.getApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.getApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.error).toMatchObject({ status: 'FETCH_ERROR' })
   })
@@ -149,12 +153,12 @@ describe('generated RTK endpoint validation', () => {
       const result =
         kind === 'cover'
           ? await store.dispatch(
-              api.endpoints.createApiV1CoverFile.initiate({
+              archiveApi.endpoints.createApiV1CoverFile.initiate({
                 bodyCreateApiV1CoverFile: { file },
               }),
             )
           : await store.dispatch(
-              api.endpoints.createApiV1SourcePdfFile.initiate({
+              archiveApi.endpoints.createApiV1SourcePdfFile.initiate({
                 bodyCreateApiV1SourcePdfFile: { file },
               }),
             )
@@ -169,15 +173,79 @@ describe('generated RTK endpoint validation', () => {
       vi.fn(async () => new Response(null, { status: 204 })),
     )
     const result = await store.dispatch(
-      api.endpoints.deleteApiV1Book.initiate({ bookId: 1 }),
+      archiveApi.endpoints.deleteApiV1Book.initiate({ bookId: 1 }),
     )
     expect(result.error).toBeUndefined()
     expect(result.data).toBeNull()
   })
 
   it('keeps binary downloads and HEAD operations outside JSON endpoints', () => {
-    expect(api.endpoints).not.toHaveProperty('getApiV1SourcePdfFile')
-    expect(api.endpoints).not.toHaveProperty('getApiV1CoverFile')
-    expect(api.endpoints).not.toHaveProperty('headApiV1SourcePdfFile')
+    expect(archiveApi.endpoints).not.toHaveProperty('getApiV1SourcePdfFile')
+    expect(archiveApi.endpoints).not.toHaveProperty('getApiV1CoverFile')
+    expect(archiveApi.endpoints).not.toHaveProperty('headApiV1SourcePdfFile')
   })
+})
+
+describe('error schema selection', () => {
+  it.each([
+    ['arbitraryAlias', { errorSchemaEndpoint: 'getApiV1Book' }],
+    ['getApiV1Book', undefined],
+  ] as const)(
+    'validates errors for %s using its override or endpoint name',
+    async (endpoint, extraOptions) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          Response.json(
+            {
+              error: {
+                code: 'book_not_found',
+                message: 'Missing',
+                extra: true,
+              },
+              extra: true,
+            },
+            { status: 404 },
+          ),
+        ),
+      )
+
+      const context: BaseQueryApi = {
+        endpoint,
+        type: 'query',
+        signal: new AbortController().signal,
+        abort: vi.fn(),
+        dispatch: vi.fn(),
+        getState: () => ({}),
+        extra: undefined,
+      }
+
+      const query = createArchiveBaseQuery('http://127.0.0.1:8000')
+      const result = await query('/api/v1/books/1', context, extraOptions ?? {})
+
+      expect(result.error).toEqual({
+        status: 404,
+        data: { error: { code: 'book_not_found', message: 'Missing' } },
+      })
+
+      vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          Response.json({ detail: 'Malformed error' }, { status: 404 }),
+        ),
+      )
+
+      const invalidResult = await query(
+        '/api/v1/books/1',
+        context,
+        extraOptions ?? {},
+      )
+
+      expect(invalidResult.error).toMatchObject({
+        status: 'CUSTOM_ERROR',
+        data: { code: 'response_contract_error' },
+      })
+    },
+  )
 })

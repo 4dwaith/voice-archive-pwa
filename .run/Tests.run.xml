@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Frontend tests" type="JavaScriptTestRunnerVitest" factoryName="Vitest">
+    <node-interpreter value="project" />
+    <vitest-package value="$PROJECT_DIR$/node_modules/vitest" />
+    <config value="$PROJECT_DIR$/vitest.config.ts" />
+    <working-dir value="$PROJECT_DIR$" />
+    <scope-kind value="ALL" />
+    <method v="2" />
+  </configuration>
+</component>

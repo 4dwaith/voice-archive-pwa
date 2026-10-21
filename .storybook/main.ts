@@ -16,6 +16,46 @@ const config: StorybookConfig = {
   framework: '@storybook/react-vite',
   staticDirs: ['../public'],
   viteFinal: async (viteConfig) => {
+    // Keep the renderer and story hooks on the same React instance, and
+    // prebundle their entry points together before the first story is opened.
+    viteConfig.resolve = {
+      ...viteConfig.resolve,
+      dedupe: [
+        ...new Set([
+          ...(viteConfig.resolve?.dedupe ?? []),
+          'react',
+          'react-dom',
+        ]),
+      ],
+    }
+
+    viteConfig.optimizeDeps = {
+      ...viteConfig.optimizeDeps,
+      include: [
+        ...new Set([
+          ...(viteConfig.optimizeDeps?.include ?? []),
+          'react',
+          'react-dom',
+          'react-dom/client',
+          'react/jsx-runtime',
+          'react/jsx-dev-runtime',
+        ]),
+      ],
+    }
+
+    // The IDE opens Chrome with --no-open, so Vite's usual browser-open
+    // prewarming never happens. Prepare story modules on server startup too.
+    viteConfig.server = {
+      ...viteConfig.server,
+      warmup: {
+        ...viteConfig.server?.warmup,
+        clientFiles: [
+          ...(viteConfig.server?.warmup?.clientFiles ?? []),
+          './src/components/**/*.stories.tsx',
+        ],
+      },
+    }
+
     viteConfig.plugins = viteConfig.plugins
       ?.flat()
       .filter((plugin) => !isPwaPlugin(plugin))

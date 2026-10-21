@@ -6,9 +6,9 @@ The live backend `/openapi.json` is authoritative. `api:regenerate` fetches it
 once and supplies the same temporary, normalized input to both generators:
 
 - `@rtk-query/codegen-openapi` **2.2.0** generates JSON/bodyless endpoints, hooks,
-  and wire types in `src/api/generated/endpoints.ts`.
+  and wire types in `src/api-client/generated/endpoints.ts`.
 - Orval **8.43.0** generates reusable Zod **4.6.7** schemas, input/output types,
-  and operation/status schemas in `src/api/generated/schemas.ts`.
+  and operation/status schemas in `src/api-client/generated/schemas.ts`.
 - The generation script derives response-schema associations, error-schema
   associations, and multipart endpoint metadata into `validation.ts`.
 - Prettier **3.9.10** formats all output with the project configuration.
@@ -49,25 +49,56 @@ BDD suite belongs in a separate top-level `cypress/` tree.
 ## Models and API imports
 
 Do not declare server entities by hand under `src/models/` or elsewhere in the
-application. Import server schemas and types from `src/api/generated/schemas`;
+application. Import server schemas and types from `src/api-client/generated/schemas`;
 prefer generated `*Output` types for parsed values. Generated RTK request/response
 types live in `generated/endpoints.ts`; compile-time tests check result-type
 agreement with Zod output.
 
-UI-only models are allowed. `BookCardModel` derives `id` and `title` from the
-generated book type and adds existing presentation fields. Its current mock data
-and component usage remain until phase 06; it is not a server-book declaration.
+Book and BookShelf use generated `BookResponseOutput` values directly; there is
+no intermediate BookCardModel or renamed coverImage field. Initials are derived
+in the component. Mock books are only imported by Storybook and use generated-schema
+validation; production library data comes from RTK Query.
 Local recordings remain a separate client-owned model.
 
-Import the enhanced `api` from `src/api/api.ts` when initiating requests or using
-hooks (`api.useListApiV1BooksQuery`, etc.). Do not consume the raw generated API
-directly in application features: its validators are attached by the enhancement
-module. Generated hooks can otherwise be called before that module is loaded.
+`src/api-client/archiveApi.ts` exports the shared `archiveApi`, attaches generated
+contracts, and supplies the reducer/middleware installed once in the store.
+Feature modules independently import and extend this instance; they do not
+consume the previous feature module's result or require a central composition
+chain. This follows RTK Query's endpoint-injection/code-splitting pattern.
 
-The API slice is not installed in the production Redux store in phase 05. Tests
-use isolated stores to prove compatibility. Store/UI integration belongs to
-phase 06. Custom cache tags, invalidation, and retention are deferred; they can
-be added through the existing enhancement object without regenerating models.
+Import `booksApi` from `src/api-client/resources/booksApi` for book hooks and selectors
+(`booksApi.useLibraryBooksInfiniteQuery`, etc.). Import `archiveApi` for shared
+operations such as health. Do not consume the raw generated API directly in
+application features: its validators are attached by the shared module.
+
+Resource modules live under `src/api-client/resources/`. Each enhances its
+generated endpoints with resource-specific cache tags; injecting additional
+endpoints is optional. `booksApi.ts` owns book cache enhancements and
+infinite-query injection.
+Its exported `booksApi` is the same runtime API/cache, with additional endpoint
+types. API-owned selectors carry those injected types without requiring the
+store's RootState to enumerate every independently loaded module.
+The infinite endpoint sets
+`extraOptions: { errorSchemaEndpoint: 'listApiV1Books' }` to reuse the generated
+list operation's error validators. The shared client reads this optional mapping
+and otherwise uses the RTK endpoint's own name; it has no book-specific logic.
+
+The enhanced API reducer and middleware are installed in the production Redux
+store. `libraryBooks` is an infinite-query endpoint using the generated list
+request builder and generated `BookList` schema, fetching 24 books per page.
+Its `rawResponseSchema` validates and strips the wire payload before
+`transformResponse` resolves cover/PDF paths against the API origin. The cache
+retains the generated book shape, including nullable file URLs and metadata.
+Pages stay in one RTK cache entry; LibraryPage derives a deduplicated view by ID.
+Empty pages terminate loading defensively. Offset pagination reflects current
+server ordering, not a database snapshot; inserts/deletes between requests can
+change the visible set until refresh.
+
+Book list/entity tags allow successful generated book mutations to invalidate
+the library without clearing unrelated endpoints. RTK's default cache retention
+applies (60 seconds after the final subscriber leaves); this is not offline
+metadata persistence. Refetches refresh loaded pages sequentially. The infinite
+endpoint uses the generated list operation's status-specific error validators.
 
 ## Runtime behavior
 
