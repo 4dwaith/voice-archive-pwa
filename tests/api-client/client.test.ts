@@ -122,21 +122,21 @@ describe('generated RTK endpoint validation', () => {
 
   it.each([
     ['cover', 'image/png'],
-    ['pdf', 'application/pdf'],
-  ])(
+    ['source_pdf', 'application/pdf'],
+  ] as const)(
     'sends a real multipart %s upload and validates its JSON result',
     async (kind, type) => {
       const file = new File(['bytes'], kind, { type })
-      const response =
-        kind === 'cover'
-          ? {
-              id: 1,
-              byte_size: 5,
-              width: 10,
-              height: 20,
-              created_at: book.created_at,
-            }
-          : { id: 1, byte_size: 5, page_count: 1, created_at: book.created_at }
+      const response = {
+        id: 1,
+        kind,
+        byte_size: 5,
+        metadata: {
+          cover: { width: 10, height: 20 },
+          source_pdf: { page_count: 1 },
+        }[kind],
+        created_at: book.created_at,
+      }
       const fetchMock = vi.fn(async (request: Request) => {
         expect(request.headers.get('content-type')).toMatch(
           /^multipart\/form-data; boundary=/,
@@ -150,18 +150,12 @@ describe('generated RTK endpoint validation', () => {
         return Response.json(response, { status: 201 })
       })
       vi.stubGlobal('fetch', fetchMock)
-      const result =
-        kind === 'cover'
-          ? await store.dispatch(
-              archiveApi.endpoints.createApiV1CoverFile.initiate({
-                bodyCreateApiV1CoverFile: { file },
-              }),
-            )
-          : await store.dispatch(
-              archiveApi.endpoints.createApiV1SourcePdfFile.initiate({
-                bodyCreateApiV1SourcePdfFile: { file },
-              }),
-            )
+      const result = await store.dispatch(
+        archiveApi.endpoints.createApiV1File.initiate({
+          kind,
+          bodyCreateApiV1File: { file },
+        }),
+      )
       expect(result.data).toEqual(response)
       expect(fetchMock).toHaveBeenCalledOnce()
     },
@@ -180,9 +174,8 @@ describe('generated RTK endpoint validation', () => {
   })
 
   it('keeps binary downloads and HEAD operations outside JSON endpoints', () => {
-    expect(archiveApi.endpoints).not.toHaveProperty('getApiV1SourcePdfFile')
-    expect(archiveApi.endpoints).not.toHaveProperty('getApiV1CoverFile')
-    expect(archiveApi.endpoints).not.toHaveProperty('headApiV1SourcePdfFile')
+    expect(archiveApi.endpoints).not.toHaveProperty('getApiV1File')
+    expect(archiveApi.endpoints).not.toHaveProperty('headApiV1File')
   })
 })
 

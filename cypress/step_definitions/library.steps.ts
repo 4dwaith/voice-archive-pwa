@@ -105,10 +105,10 @@ Given('a library with a broken cover', () => {
     BookResponse.parse({
       ...books[0],
       cover_file_id: 1,
-      cover_url: '/api/v1/cover-files/1',
+      cover_url: '/api/v1/files/1',
     }),
   ])
-  cy.intercept('GET', `${Cypress.expose('apiUrl')}/api/v1/cover-files/1`, {
+  cy.intercept('GET', `${Cypress.expose('apiUrl')}/api/v1/files/1`, {
     statusCode: 404,
   }).as('cover')
 })

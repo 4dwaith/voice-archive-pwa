@@ -46,41 +46,55 @@ const injectedRtkApi = api.injectEndpoints({
         method: 'DELETE',
       }),
     }),
-    createApiV1CoverFile: build.mutation<
-      CreateApiV1CoverFileApiResponse,
-      CreateApiV1CoverFileApiArg
+    importApiV1BookContent: build.mutation<
+      ImportApiV1BookContentApiResponse,
+      ImportApiV1BookContentApiArg
     >({
       query: (queryArg) => ({
-        url: `/api/v1/cover-files`,
+        url: `/api/v1/books/${queryArg.bookId}/content-imports`,
         method: 'POST',
-        body: queryArg.bodyCreateApiV1CoverFile,
+        body: queryArg.contentInput,
+        params: {
+          dry_run: queryArg.dryRun,
+        },
       }),
     }),
-    deleteApiV1CoverFile: build.mutation<
-      DeleteApiV1CoverFileApiResponse,
-      DeleteApiV1CoverFileApiArg
+    getApiV1BookContent: build.query<
+      GetApiV1BookContentApiResponse,
+      GetApiV1BookContentApiArg
     >({
       query: (queryArg) => ({
-        url: `/api/v1/cover-files/${queryArg.fileId}`,
+        url: `/api/v1/books/${queryArg.bookId}/content`,
+      }),
+    }),
+    purgeApiV1BookContent: build.mutation<
+      PurgeApiV1BookContentApiResponse,
+      PurgeApiV1BookContentApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/books/${queryArg.bookId}/content`,
         method: 'DELETE',
+        headers: {
+          'if-match': queryArg['if-match'],
+        },
       }),
     }),
-    createApiV1SourcePdfFile: build.mutation<
-      CreateApiV1SourcePdfFileApiResponse,
-      CreateApiV1SourcePdfFileApiArg
+    createApiV1File: build.mutation<
+      CreateApiV1FileApiResponse,
+      CreateApiV1FileApiArg
     >({
       query: (queryArg) => ({
-        url: `/api/v1/source-pdf-files`,
+        url: `/api/v1/files/${queryArg.kind}`,
         method: 'POST',
-        body: queryArg.bodyCreateApiV1SourcePdfFile,
+        body: queryArg.bodyCreateApiV1File,
       }),
     }),
-    deleteApiV1SourcePdfFile: build.mutation<
-      DeleteApiV1SourcePdfFileApiResponse,
-      DeleteApiV1SourcePdfFileApiArg
+    deleteApiV1File: build.mutation<
+      DeleteApiV1FileApiResponse,
+      DeleteApiV1FileApiArg
     >({
       query: (queryArg) => ({
-        url: `/api/v1/source-pdf-files/${queryArg.fileId}`,
+        url: `/api/v1/files/${queryArg.fileId}`,
         method: 'DELETE',
       }),
     }),
@@ -123,22 +137,31 @@ export type DeleteApiV1BookApiResponse = unknown
 export type DeleteApiV1BookApiArg = {
   bookId: number
 }
-export type CreateApiV1CoverFileApiResponse =
-  /** status 201 Successful Response */ CoverFileResponse
-export type CreateApiV1CoverFileApiArg = {
-  bodyCreateApiV1CoverFile: BodyCreateApiV1CoverFile
+export type ImportApiV1BookContentApiResponse =
+  /** status 200 Successful Response */ ImportResult
+export type ImportApiV1BookContentApiArg = {
+  bookId: number
+  dryRun?: boolean
+  contentInput: ContentInput
 }
-export type DeleteApiV1CoverFileApiResponse = unknown
-export type DeleteApiV1CoverFileApiArg = {
-  fileId: number
+export type GetApiV1BookContentApiResponse =
+  /** status 200 Successful Response */ ContentManifest
+export type GetApiV1BookContentApiArg = {
+  bookId: number
 }
-export type CreateApiV1SourcePdfFileApiResponse =
-  /** status 201 Successful Response */ SourcePdfFileResponse
-export type CreateApiV1SourcePdfFileApiArg = {
-  bodyCreateApiV1SourcePdfFile: BodyCreateApiV1SourcePdfFile
+export type PurgeApiV1BookContentApiResponse = unknown
+export type PurgeApiV1BookContentApiArg = {
+  bookId: number
+  'if-match'?: string
 }
-export type DeleteApiV1SourcePdfFileApiResponse = unknown
-export type DeleteApiV1SourcePdfFileApiArg = {
+export type CreateApiV1FileApiResponse =
+  /** status 201 Successful Response */ FileResponse
+export type CreateApiV1FileApiArg = {
+  kind: FileKind
+  bodyCreateApiV1File: BodyCreateApiV1File
+}
+export type DeleteApiV1FileApiResponse = unknown
+export type DeleteApiV1FileApiArg = {
   fileId: number
 }
 export type GetApiV1HealthApiResponse =
@@ -163,29 +186,21 @@ export type BookResponse = {
   /** API delivery URL for the linked source PDF, relative to this origin */
   source_pdf_url: string | null
 }
-export type CoverFileErrorCode =
-  | 'cover_file_not_found'
-  | 'cover_file_already_linked'
+export type FileErrorCode =
+  | 'file_not_found'
+  | 'file_already_linked'
+  | 'file_kind_mismatch'
   | 'invalid_image'
   | 'unsupported_media_type'
-export type ErrorDetailCoverFileErrorCode = {
-  code: CoverFileErrorCode
-  message: string
-}
-export type CoverFileErrorResponse = {
-  error: ErrorDetailCoverFileErrorCode
-}
-export type SourcePdfFileErrorCode =
-  | 'source_pdf_file_not_found'
-  | 'source_pdf_file_already_linked'
   | 'invalid_pdf'
   | 'encrypted_pdf_not_supported'
-export type ErrorDetailSourcePdfFileErrorCode = {
-  code: SourcePdfFileErrorCode
+  | 'invalid_audio'
+export type ErrorDetailFileErrorCode = {
+  code: FileErrorCode
   message: string
 }
-export type SourcePdfFileErrorResponse = {
-  error: ErrorDetailSourcePdfFileErrorCode
+export type FileErrorResponse = {
+  error: ErrorDetailFileErrorCode
 }
 export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError = {
   code: 'route_not_found' | 'method_not_allowed' | 'http_error'
@@ -197,8 +212,8 @@ export type HttpErrorResponse = {
 export type BookErrorCode =
   | 'book_not_found'
   | 'duplicate_book'
-  | 'cover_file_already_linked'
-  | 'source_pdf_file_already_linked'
+  | 'file_already_linked'
+  | 'content_purge_required'
 export type ErrorDetailBookErrorCode = {
   code: BookErrorCode
   message: string
@@ -250,13 +265,141 @@ export type BookPatch = {
   cover_file_id?: number | null
   source_pdf_file_id?: number | null
 }
+export type ImportResult = {
+  dry_run: boolean
+  section_count: number
+  segment_count: number
+  content_version: string | null
+}
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+  {
+    code:
+      | 'content_exists'
+      | 'content_precondition_required'
+      | 'content_precondition_failed'
+      | 'content_payload_too_large'
+    message: string
+  }
+export type ContentErrorResponse = {
+  error: ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+}
+export type ErrorDetailLiteralContentValidationError = {
+  code: 'content_validation_error'
+  message: string
+}
+export type ContentIssueResponse = {
+  code: string
+  path: string
+  source_key: string | null
+  detail: string
+}
+export type ContentValidationResponse = {
+  error: ErrorDetailLiteralContentValidationError
+  issues: ContentIssueResponse[]
+}
+export type SectionKind = 'part' | 'chapter' | 'section'
+export type SectionInput = {
+  source_key: string
+  parent_source_key?: string | null
+  kind: SectionKind
+  title: string
+  sibling_sequence: number
+  audio_file_id?: number | null
+}
+export type SegmentKind = 'heading' | 'prose' | 'verse'
+export type Region = {
+  page_index: number
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+}
+export type JsonValue = unknown
+export type SegmentInput = {
+  source_key: string
+  section_source_key?: string | null
+  sequence: number
+  kind: SegmentKind
+  html_content: string
+  language?: string | null
+  regions?: Region[]
+  narration_start_ms?: number | null
+  narration_end_ms?: number | null
+  narration_seek_ms?: number | null
+  alignment_status?: string | null
+  alignment_metadata?: {
+    [key: string]: JsonValue
+  } | null
+}
+export type ContentInput = {
+  schema_version: 1
+  source_pdf_file_id?: number | null
+  sections: SectionInput[]
+  segments: SegmentInput[]
+}
+export type ContentManifest = {
+  state: 'empty' | 'pdf_only' | 'published'
+  content_version: string | null
+  schema_version: number | null
+  imported_at: string | null
+  source_pdf_file_id: number | null
+}
+export type ValidationError = {
+  loc: (string | number)[]
+  msg: string
+  type: string
+  input?: unknown
+  ctx?: object
+}
+export type HttpValidationError = {
+  detail?: ValidationError[]
+}
+export type AudioMetadata = {
+  duration_ms: number
+  sample_rate: number
+  channels: number
+  [key: string]: unknown
+}
+export type AudioFileResponse = {
+  id: number
+  byte_size: number
+  created_at: string
+  kind: 'audio_chapter'
+  metadata: AudioMetadata
+}
+export type CoverMetadata = {
+  width: number
+  height: number
+  [key: string]: unknown
+}
 export type CoverFileResponse = {
   id: number
   byte_size: number
-  width: number
-  height: number
   created_at: string
+  kind: 'cover'
+  metadata: CoverMetadata
 }
+export type SourcePdfMetadata = {
+  page_count: number
+  [key: string]: unknown
+}
+export type SourcePdfFileResponse = {
+  id: number
+  byte_size: number
+  created_at: string
+  kind: 'source_pdf'
+  metadata: SourcePdfMetadata
+}
+export type FileResponse =
+  | ({
+      kind: 'audio_chapter'
+    } & AudioFileResponse)
+  | ({
+      kind: 'cover'
+    } & CoverFileResponse)
+  | ({
+      kind: 'source_pdf'
+    } & SourcePdfFileResponse)
 export type ErrorDetailLiteralFileTooLargeInvalidMultipart = {
   code: 'file_too_large' | 'invalid_multipart'
   message: string
@@ -264,18 +407,9 @@ export type ErrorDetailLiteralFileTooLargeInvalidMultipart = {
 export type FileUploadErrorResponse = {
   error: ErrorDetailLiteralFileTooLargeInvalidMultipart
 }
-export type BodyCreateApiV1CoverFile = {
-  /** JPEG, PNG, or WebP; normalized to a static WebP cover */
-  file: Blob
-}
-export type SourcePdfFileResponse = {
-  id: number
-  byte_size: number
-  page_count: number
-  created_at: string
-}
-export type BodyCreateApiV1SourcePdfFile = {
-  /** Unencrypted PDF with at least one page; original bytes are preserved */
+export type FileKind = 'cover' | 'source_pdf' | 'audio_chapter'
+export type BodyCreateApiV1File = {
+  /** File bytes, validated and prepared according to kind */
   file: Blob
 }
 export type HealthResponse = {
@@ -292,10 +426,11 @@ export const {
   useGetApiV1BookQuery,
   usePatchApiV1BookMutation,
   useDeleteApiV1BookMutation,
-  useCreateApiV1CoverFileMutation,
-  useDeleteApiV1CoverFileMutation,
-  useCreateApiV1SourcePdfFileMutation,
-  useDeleteApiV1SourcePdfFileMutation,
+  useImportApiV1BookContentMutation,
+  useGetApiV1BookContentQuery,
+  usePurgeApiV1BookContentMutation,
+  useCreateApiV1FileMutation,
+  useDeleteApiV1FileMutation,
   useGetApiV1HealthQuery,
   useGetApiV1ReadyQuery,
 } = injectedRtkApi

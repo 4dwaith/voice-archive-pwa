@@ -8,12 +8,13 @@ export const endpointEnhancements = {
   createApiV1Book: { responseSchema: schemas.CreateApiV1Book201Response },
   getApiV1Book: { responseSchema: schemas.GetApiV1Book200Response },
   patchApiV1Book: { responseSchema: schemas.PatchApiV1Book200Response },
-  createApiV1CoverFile: {
-    responseSchema: schemas.CreateApiV1CoverFile201Response,
+  importApiV1BookContent: {
+    responseSchema: schemas.ImportApiV1BookContent200Response,
   },
-  createApiV1SourcePdfFile: {
-    responseSchema: schemas.CreateApiV1SourcePdfFile201Response,
+  getApiV1BookContent: {
+    responseSchema: schemas.GetApiV1BookContent200Response,
   },
+  createApiV1File: { responseSchema: schemas.CreateApiV1File201Response },
   getApiV1Health: { responseSchema: schemas.GetApiV1Health200Response },
   getApiV1Ready: { responseSchema: schemas.GetApiV1Ready200Response },
 }
@@ -49,34 +50,42 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
     '422': schemas.DeleteApiV1Book422Response,
     '500': schemas.DeleteApiV1Book500Response,
   },
-  createApiV1CoverFile: {
-    '400': schemas.CreateApiV1CoverFile400Response,
-    '405': schemas.CreateApiV1CoverFile405Response,
-    '413': schemas.CreateApiV1CoverFile413Response,
-    '415': schemas.CreateApiV1CoverFile415Response,
-    '422': schemas.CreateApiV1CoverFile422Response,
-    '500': schemas.CreateApiV1CoverFile500Response,
+  importApiV1BookContent: {
+    '404': schemas.ImportApiV1BookContent404Response,
+    '405': schemas.ImportApiV1BookContent405Response,
+    '409': schemas.ImportApiV1BookContent409Response,
+    '413': schemas.ImportApiV1BookContent413Response,
+    '422': schemas.ImportApiV1BookContent422Response,
+    '500': schemas.ImportApiV1BookContent500Response,
   },
-  deleteApiV1CoverFile: {
-    '404': schemas.DeleteApiV1CoverFile404Response,
-    '405': schemas.DeleteApiV1CoverFile405Response,
-    '409': schemas.DeleteApiV1CoverFile409Response,
-    '422': schemas.DeleteApiV1CoverFile422Response,
-    '500': schemas.DeleteApiV1CoverFile500Response,
+  getApiV1BookContent: {
+    '404': schemas.GetApiV1BookContent404Response,
+    '405': schemas.GetApiV1BookContent405Response,
+    '422': schemas.GetApiV1BookContent422Response,
+    '500': schemas.GetApiV1BookContent500Response,
   },
-  createApiV1SourcePdfFile: {
-    '400': schemas.CreateApiV1SourcePdfFile400Response,
-    '405': schemas.CreateApiV1SourcePdfFile405Response,
-    '413': schemas.CreateApiV1SourcePdfFile413Response,
-    '422': schemas.CreateApiV1SourcePdfFile422Response,
-    '500': schemas.CreateApiV1SourcePdfFile500Response,
+  purgeApiV1BookContent: {
+    '404': schemas.PurgeApiV1BookContent404Response,
+    '405': schemas.PurgeApiV1BookContent405Response,
+    '412': schemas.PurgeApiV1BookContent412Response,
+    '422': schemas.PurgeApiV1BookContent422Response,
+    '428': schemas.PurgeApiV1BookContent428Response,
+    '500': schemas.PurgeApiV1BookContent500Response,
   },
-  deleteApiV1SourcePdfFile: {
-    '404': schemas.DeleteApiV1SourcePdfFile404Response,
-    '405': schemas.DeleteApiV1SourcePdfFile405Response,
-    '409': schemas.DeleteApiV1SourcePdfFile409Response,
-    '422': schemas.DeleteApiV1SourcePdfFile422Response,
-    '500': schemas.DeleteApiV1SourcePdfFile500Response,
+  createApiV1File: {
+    '400': schemas.CreateApiV1File400Response,
+    '405': schemas.CreateApiV1File405Response,
+    '413': schemas.CreateApiV1File413Response,
+    '415': schemas.CreateApiV1File415Response,
+    '422': schemas.CreateApiV1File422Response,
+    '500': schemas.CreateApiV1File500Response,
+  },
+  deleteApiV1File: {
+    '404': schemas.DeleteApiV1File404Response,
+    '405': schemas.DeleteApiV1File405Response,
+    '409': schemas.DeleteApiV1File409Response,
+    '422': schemas.DeleteApiV1File422Response,
+    '500': schemas.DeleteApiV1File500Response,
   },
   getApiV1Health: {
     '405': schemas.GetApiV1Health405Response,
@@ -88,7 +97,4 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
     '503': schemas.GetApiV1Ready503Response,
   },
 }
-export const multipartEndpoints = new Set<string>([
-  'createApiV1CoverFile',
-  'createApiV1SourcePdfFile',
-])
+export const multipartEndpoints = new Set<string>(['createApiV1File'])

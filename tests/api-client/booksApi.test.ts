@@ -17,8 +17,8 @@ afterEach(() => {
 it('resolves file URLs before caching, preserving the generated book fields', async () => {
   const wireBook = {
     ...book,
-    cover_url: '/api/v1/cover-files/17',
-    source_pdf_url: '/api/v1/source-pdf-files/9',
+    cover_url: '/api/v1/files/17',
+    source_pdf_url: '/api/v1/files/9',
   }
 
   vi.stubGlobal(
@@ -40,8 +40,8 @@ it('resolves file URLs before caching, preserving the generated book fields', as
       .items[0],
   ).toEqual({
     ...wireBook,
-    cover_url: 'http://127.0.0.1:8000/api/v1/cover-files/17',
-    source_pdf_url: 'http://127.0.0.1:8000/api/v1/source-pdf-files/9',
+    cover_url: 'http://127.0.0.1:8000/api/v1/files/17',
+    source_pdf_url: 'http://127.0.0.1:8000/api/v1/files/9',
   })
 })
 

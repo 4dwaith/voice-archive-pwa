@@ -6,30 +6,46 @@
  * OpenAPI spec version: 0.1.0
  */
 import * as zod from 'zod'
-export const BodyCreateApiV1CoverFile = zod.object({
+export const audioMetadataDurationMsExclusiveMin = 0
+export const audioMetadataDurationMsMax = 9223372036854776000
+export const audioMetadataSampleRateExclusiveMin = 0
+export const audioMetadataSampleRateMax = 2147483647
+export const audioMetadataChannelsExclusiveMin = 0
+export const audioMetadataChannelsMax = 2147483647
+export const AudioMetadata = zod.looseObject({
+  duration_ms: zod
+    .int()
+    .gt(audioMetadataDurationMsExclusiveMin)
+    .max(audioMetadataDurationMsMax),
+  sample_rate: zod
+    .int()
+    .gt(audioMetadataSampleRateExclusiveMin)
+    .max(audioMetadataSampleRateMax),
+  channels: zod
+    .int()
+    .gt(audioMetadataChannelsExclusiveMin)
+    .max(audioMetadataChannelsMax),
+})
+export type AudioMetadata = zod.input<typeof AudioMetadata>
+export type AudioMetadataOutput = zod.output<typeof AudioMetadata>
+export const audioFileResponseIdExclusiveMin = 0
+export const audioFileResponseByteSizeExclusiveMin = 0
+export const AudioFileResponse = zod.object({
+  id: zod.int().gt(audioFileResponseIdExclusiveMin),
+  byte_size: zod.int().gt(audioFileResponseByteSizeExclusiveMin),
+  created_at: zod.iso.datetime({ offset: true }),
+  kind: zod.enum(['audio_chapter']),
+  metadata: AudioMetadata,
+})
+export type AudioFileResponse = zod.input<typeof AudioFileResponse>
+export type AudioFileResponseOutput = zod.output<typeof AudioFileResponse>
+export const BodyCreateApiV1File = zod.object({
   file: zod
     .instanceof(Blob)
-    .describe('JPEG, PNG, or WebP; normalized to a static WebP cover'),
+    .describe('File bytes, validated and prepared according to kind'),
 })
-export type BodyCreateApiV1CoverFile = zod.input<
-  typeof BodyCreateApiV1CoverFile
->
-export type BodyCreateApiV1CoverFileOutput = zod.output<
-  typeof BodyCreateApiV1CoverFile
->
-export const BodyCreateApiV1SourcePdfFile = zod.object({
-  file: zod
-    .instanceof(Blob)
-    .describe(
-      'Unencrypted PDF with at least one page; original bytes are preserved',
-    ),
-})
-export type BodyCreateApiV1SourcePdfFile = zod.input<
-  typeof BodyCreateApiV1SourcePdfFile
->
-export type BodyCreateApiV1SourcePdfFileOutput = zod.output<
-  typeof BodyCreateApiV1SourcePdfFile
->
+export type BodyCreateApiV1File = zod.input<typeof BodyCreateApiV1File>
+export type BodyCreateApiV1FileOutput = zod.output<typeof BodyCreateApiV1File>
 export const bookCreateTitleMax = 750
 export const bookCreateAuthorOneMax = 450
 export const bookCreateDescriptionOneMax = 15000
@@ -99,8 +115,8 @@ export type BookCreateOutput = zod.output<typeof BookCreate>
 export const BookErrorCode = zod.enum([
   'book_not_found',
   'duplicate_book',
-  'cover_file_already_linked',
-  'source_pdf_file_already_linked',
+  'file_already_linked',
+  'content_purge_required',
 ])
 export type BookErrorCode = zod.input<typeof BookErrorCode>
 export type BookErrorCodeOutput = zod.output<typeof BookErrorCode>
@@ -272,48 +288,331 @@ export const BookPatch = zod
   )
 export type BookPatch = zod.input<typeof BookPatch>
 export type BookPatchOutput = zod.output<typeof BookPatch>
-export const CoverFileErrorCode = zod.enum([
-  'cover_file_not_found',
-  'cover_file_already_linked',
-  'invalid_image',
-  'unsupported_media_type',
-])
-export type CoverFileErrorCode = zod.input<typeof CoverFileErrorCode>
-export type CoverFileErrorCodeOutput = zod.output<typeof CoverFileErrorCode>
-export const ErrorDetailCoverFileErrorCode = zod.object({
-  code: CoverFileErrorCode,
+export const ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+  zod.object({
+    code: zod.enum([
+      'content_exists',
+      'content_precondition_required',
+      'content_precondition_failed',
+      'content_payload_too_large',
+    ]),
+    message: zod.string(),
+  })
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+  zod.input<
+    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+  >
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeOutput =
+  zod.output<
+    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+  >
+export const ContentErrorResponse = zod.object({
+  error:
+    ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge,
+})
+export type ContentErrorResponse = zod.input<typeof ContentErrorResponse>
+export type ContentErrorResponseOutput = zod.output<typeof ContentErrorResponse>
+export const SectionKind = zod.enum(['part', 'chapter', 'section'])
+export type SectionKind = zod.input<typeof SectionKind>
+export type SectionKindOutput = zod.output<typeof SectionKind>
+export const sectionInputSourceKeyMax = 256
+export const sectionInputParentSourceKeyOneMax = 256
+export const sectionInputTitleMax = 2000
+export const sectionInputSiblingSequenceMin = 0
+export const sectionInputSiblingSequenceMax = 2147483647
+export const sectionInputAudioFileIdOneExclusiveMin = 0
+export const sectionInputAudioFileIdOneMax = 9223372036854776000
+export const SectionInput = zod.object({
+  source_key: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= sectionInputSourceKeyMax, {
+      error: 'String has too many Unicode code points',
+    }),
+  parent_source_key: zod
+    .union([
+      zod
+        .string()
+        .refine((value) => Array.from(value).length >= 1, {
+          error: 'String has too few Unicode code points',
+        })
+        .refine(
+          (value) =>
+            Array.from(value).length <= sectionInputParentSourceKeyOneMax,
+          { error: 'String has too many Unicode code points' },
+        ),
+      zod.null(),
+    ])
+    .optional(),
+  kind: SectionKind,
+  title: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= sectionInputTitleMax, {
+      error: 'String has too many Unicode code points',
+    }),
+  sibling_sequence: zod
+    .int()
+    .min(sectionInputSiblingSequenceMin)
+    .max(sectionInputSiblingSequenceMax),
+  audio_file_id: zod
+    .union([
+      zod
+        .int()
+        .gt(sectionInputAudioFileIdOneExclusiveMin)
+        .max(sectionInputAudioFileIdOneMax),
+      zod.null(),
+    ])
+    .optional(),
+})
+export type SectionInput = zod.input<typeof SectionInput>
+export type SectionInputOutput = zod.output<typeof SectionInput>
+export const SegmentKind = zod.enum(['heading', 'prose', 'verse'])
+export type SegmentKind = zod.input<typeof SegmentKind>
+export type SegmentKindOutput = zod.output<typeof SegmentKind>
+export const regionPageIndexMin = 0
+export const regionPageIndexMax = 2147483647
+export const regionX0Min = 0
+export const regionX0Max = 1
+export const regionY0Min = 0
+export const regionY0Max = 1
+export const regionX1Min = 0
+export const regionX1Max = 1
+export const regionY1Min = 0
+export const regionY1Max = 1
+export const Region = zod.object({
+  page_index: zod.int().min(regionPageIndexMin).max(regionPageIndexMax),
+  x0: zod.number().min(regionX0Min).max(regionX0Max),
+  y0: zod.number().min(regionY0Min).max(regionY0Max),
+  x1: zod.number().min(regionX1Min).max(regionX1Max),
+  y1: zod.number().min(regionY1Min).max(regionY1Max),
+})
+export type Region = zod.input<typeof Region>
+export type RegionOutput = zod.output<typeof Region>
+export const JsonValue = zod.unknown()
+export type JsonValue = zod.input<typeof JsonValue>
+export type JsonValueOutput = zod.output<typeof JsonValue>
+export const segmentInputSourceKeyMax = 256
+export const segmentInputSectionSourceKeyOneMax = 256
+export const segmentInputSequenceMin = 0
+export const segmentInputSequenceMax = 2147483647
+export const segmentInputHtmlContentMax = 256000
+export const segmentInputLanguageOneMax = 100
+export const segmentInputRegionsMax = 256
+export const segmentInputNarrationStartMsOneMin = 0
+export const segmentInputNarrationStartMsOneMax = 9223372036854776000
+export const segmentInputNarrationEndMsOneMin = 0
+export const segmentInputNarrationEndMsOneMax = 9223372036854776000
+export const segmentInputNarrationSeekMsOneMin = 0
+export const segmentInputNarrationSeekMsOneMax = 9223372036854776000
+export const segmentInputAlignmentStatusOneMax = 128
+export const SegmentInput = zod.object({
+  source_key: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= segmentInputSourceKeyMax, {
+      error: 'String has too many Unicode code points',
+    }),
+  section_source_key: zod
+    .union([
+      zod
+        .string()
+        .refine((value) => Array.from(value).length >= 1, {
+          error: 'String has too few Unicode code points',
+        })
+        .refine(
+          (value) =>
+            Array.from(value).length <= segmentInputSectionSourceKeyOneMax,
+          { error: 'String has too many Unicode code points' },
+        ),
+      zod.null(),
+    ])
+    .optional(),
+  sequence: zod.int().min(segmentInputSequenceMin).max(segmentInputSequenceMax),
+  kind: SegmentKind,
+  html_content: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= segmentInputHtmlContentMax, {
+      error: 'String has too many Unicode code points',
+    }),
+  language: zod
+    .union([
+      zod
+        .string()
+        .refine((value) => Array.from(value).length >= 1, {
+          error: 'String has too few Unicode code points',
+        })
+        .refine(
+          (value) => Array.from(value).length <= segmentInputLanguageOneMax,
+          { error: 'String has too many Unicode code points' },
+        ),
+      zod.null(),
+    ])
+    .optional(),
+  regions: zod.array(Region).max(segmentInputRegionsMax).optional(),
+  narration_start_ms: zod
+    .union([
+      zod
+        .int()
+        .min(segmentInputNarrationStartMsOneMin)
+        .max(segmentInputNarrationStartMsOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  narration_end_ms: zod
+    .union([
+      zod
+        .int()
+        .min(segmentInputNarrationEndMsOneMin)
+        .max(segmentInputNarrationEndMsOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  narration_seek_ms: zod
+    .union([
+      zod
+        .int()
+        .min(segmentInputNarrationSeekMsOneMin)
+        .max(segmentInputNarrationSeekMsOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  alignment_status: zod
+    .union([
+      zod
+        .string()
+        .refine((value) => Array.from(value).length >= 1, {
+          error: 'String has too few Unicode code points',
+        })
+        .refine(
+          (value) =>
+            Array.from(value).length <= segmentInputAlignmentStatusOneMax,
+          { error: 'String has too many Unicode code points' },
+        ),
+      zod.null(),
+    ])
+    .optional(),
+  alignment_metadata: zod
+    .union([zod.record(zod.string(), JsonValue), zod.null()])
+    .optional(),
+})
+export type SegmentInput = zod.input<typeof SegmentInput>
+export type SegmentInputOutput = zod.output<typeof SegmentInput>
+export const contentInputSourcePdfFileIdOneExclusiveMin = 0
+export const contentInputSourcePdfFileIdOneMax = 9223372036854776000
+export const contentInputSectionsMax = 50000
+export const contentInputSegmentsMax = 100000
+export const ContentInput = zod.object({
+  schema_version: zod.literal(1).meta({ title: 'Schema Version' }),
+  source_pdf_file_id: zod
+    .union([
+      zod
+        .int()
+        .gt(contentInputSourcePdfFileIdOneExclusiveMin)
+        .max(contentInputSourcePdfFileIdOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  sections: zod.array(SectionInput).max(contentInputSectionsMax),
+  segments: zod.array(SegmentInput).min(1).max(contentInputSegmentsMax),
+})
+export type ContentInput = zod.input<typeof ContentInput>
+export type ContentInputOutput = zod.output<typeof ContentInput>
+export const ContentIssueResponse = zod.object({
+  code: zod.string(),
+  path: zod.string(),
+  source_key: zod.union([zod.string(), zod.null()]),
+  detail: zod.string(),
+})
+export type ContentIssueResponse = zod.input<typeof ContentIssueResponse>
+export type ContentIssueResponseOutput = zod.output<typeof ContentIssueResponse>
+export const ContentManifest = zod.object({
+  state: zod.enum(['empty', 'pdf_only', 'published']),
+  content_version: zod.union([zod.uuid(), zod.null()]),
+  schema_version: zod.union([zod.int(), zod.null()]),
+  imported_at: zod.union([zod.iso.datetime({ offset: true }), zod.null()]),
+  source_pdf_file_id: zod.union([zod.int(), zod.null()]),
+})
+export type ContentManifest = zod.input<typeof ContentManifest>
+export type ContentManifestOutput = zod.output<typeof ContentManifest>
+export const ErrorDetailLiteralContentValidationError = zod.object({
+  code: zod.literal('content_validation_error').meta({ title: 'Code' }),
   message: zod.string(),
 })
-export type ErrorDetailCoverFileErrorCode = zod.input<
-  typeof ErrorDetailCoverFileErrorCode
+export type ErrorDetailLiteralContentValidationError = zod.input<
+  typeof ErrorDetailLiteralContentValidationError
 >
-export type ErrorDetailCoverFileErrorCodeOutput = zod.output<
-  typeof ErrorDetailCoverFileErrorCode
+export type ErrorDetailLiteralContentValidationErrorOutput = zod.output<
+  typeof ErrorDetailLiteralContentValidationError
 >
-export const CoverFileErrorResponse = zod
-  .object({
-    error: ErrorDetailCoverFileErrorCode,
-  })
-  .describe(
-    'Errors owned by cover-file operations, also used when linking a cover.',
-  )
-export type CoverFileErrorResponse = zod.input<typeof CoverFileErrorResponse>
-export type CoverFileErrorResponseOutput = zod.output<
-  typeof CoverFileErrorResponse
+export const ContentValidationResponse = zod.object({
+  error: ErrorDetailLiteralContentValidationError,
+  issues: zod.array(ContentIssueResponse),
+})
+export type ContentValidationResponse = zod.input<
+  typeof ContentValidationResponse
 >
+export type ContentValidationResponseOutput = zod.output<
+  typeof ContentValidationResponse
+>
+export const coverMetadataWidthExclusiveMin = 0
+export const coverMetadataWidthMax = 2147483647
+export const coverMetadataHeightExclusiveMin = 0
+export const coverMetadataHeightMax = 2147483647
+export const CoverMetadata = zod.looseObject({
+  width: zod
+    .int()
+    .gt(coverMetadataWidthExclusiveMin)
+    .max(coverMetadataWidthMax),
+  height: zod
+    .int()
+    .gt(coverMetadataHeightExclusiveMin)
+    .max(coverMetadataHeightMax),
+})
+export type CoverMetadata = zod.input<typeof CoverMetadata>
+export type CoverMetadataOutput = zod.output<typeof CoverMetadata>
 export const coverFileResponseIdExclusiveMin = 0
 export const coverFileResponseByteSizeExclusiveMin = 0
-export const coverFileResponseWidthExclusiveMin = 0
-export const coverFileResponseHeightExclusiveMin = 0
 export const CoverFileResponse = zod.object({
   id: zod.int().gt(coverFileResponseIdExclusiveMin),
   byte_size: zod.int().gt(coverFileResponseByteSizeExclusiveMin),
-  width: zod.int().gt(coverFileResponseWidthExclusiveMin),
-  height: zod.int().gt(coverFileResponseHeightExclusiveMin),
   created_at: zod.iso.datetime({ offset: true }),
+  kind: zod.enum(['cover']),
+  metadata: CoverMetadata,
 })
 export type CoverFileResponse = zod.input<typeof CoverFileResponse>
 export type CoverFileResponseOutput = zod.output<typeof CoverFileResponse>
+export const FileErrorCode = zod.enum([
+  'file_not_found',
+  'file_already_linked',
+  'file_kind_mismatch',
+  'invalid_image',
+  'unsupported_media_type',
+  'invalid_pdf',
+  'encrypted_pdf_not_supported',
+  'invalid_audio',
+])
+export type FileErrorCode = zod.input<typeof FileErrorCode>
+export type FileErrorCodeOutput = zod.output<typeof FileErrorCode>
+export const ErrorDetailFileErrorCode = zod.object({
+  code: FileErrorCode,
+  message: zod.string(),
+})
+export type ErrorDetailFileErrorCode = zod.input<
+  typeof ErrorDetailFileErrorCode
+>
+export type ErrorDetailFileErrorCodeOutput = zod.output<
+  typeof ErrorDetailFileErrorCode
+>
 export const ErrorDetailLiteralFileTooLargeInvalidMultipart = zod.object({
   code: zod.enum(['file_too_large', 'invalid_multipart']),
   message: zod.string(),
@@ -353,35 +652,69 @@ export type ErrorDetailLiteralValidationError = zod.input<
 export type ErrorDetailLiteralValidationErrorOutput = zod.output<
   typeof ErrorDetailLiteralValidationError
 >
-export const SourcePdfFileErrorCode = zod.enum([
-  'source_pdf_file_not_found',
-  'source_pdf_file_already_linked',
-  'invalid_pdf',
-  'encrypted_pdf_not_supported',
-])
-export type SourcePdfFileErrorCode = zod.input<typeof SourcePdfFileErrorCode>
-export type SourcePdfFileErrorCodeOutput = zod.output<
-  typeof SourcePdfFileErrorCode
->
-export const ErrorDetailSourcePdfFileErrorCode = zod.object({
-  code: SourcePdfFileErrorCode,
-  message: zod.string(),
+export const FileErrorResponse = zod
+  .object({
+    error: ErrorDetailFileErrorCode,
+  })
+  .describe('File operation and preparation errors.')
+export type FileErrorResponse = zod.input<typeof FileErrorResponse>
+export type FileErrorResponseOutput = zod.output<typeof FileErrorResponse>
+export const FileKind = zod.enum(['cover', 'source_pdf', 'audio_chapter'])
+export type FileKind = zod.input<typeof FileKind>
+export type FileKindOutput = zod.output<typeof FileKind>
+export const sourcePdfMetadataPageCountExclusiveMin = 0
+export const sourcePdfMetadataPageCountMax = 2147483647
+export const SourcePdfMetadata = zod.looseObject({
+  page_count: zod
+    .int()
+    .gt(sourcePdfMetadataPageCountExclusiveMin)
+    .max(sourcePdfMetadataPageCountMax),
 })
-export type ErrorDetailSourcePdfFileErrorCode = zod.input<
-  typeof ErrorDetailSourcePdfFileErrorCode
+export type SourcePdfMetadata = zod.input<typeof SourcePdfMetadata>
+export type SourcePdfMetadataOutput = zod.output<typeof SourcePdfMetadata>
+export const sourcePdfFileResponseIdExclusiveMin = 0
+export const sourcePdfFileResponseByteSizeExclusiveMin = 0
+export const SourcePdfFileResponse = zod.object({
+  id: zod.int().gt(sourcePdfFileResponseIdExclusiveMin),
+  byte_size: zod.int().gt(sourcePdfFileResponseByteSizeExclusiveMin),
+  created_at: zod.iso.datetime({ offset: true }),
+  kind: zod.enum(['source_pdf']),
+  metadata: SourcePdfMetadata,
+})
+export type SourcePdfFileResponse = zod.input<typeof SourcePdfFileResponse>
+export type SourcePdfFileResponseOutput = zod.output<
+  typeof SourcePdfFileResponse
 >
-export type ErrorDetailSourcePdfFileErrorCodeOutput = zod.output<
-  typeof ErrorDetailSourcePdfFileErrorCode
->
+export const FileResponse = zod.union([
+  CoverFileResponse,
+  SourcePdfFileResponse,
+  AudioFileResponse,
+])
+export type FileResponse = zod.input<typeof FileResponse>
+export type FileResponseOutput = zod.output<typeof FileResponse>
 export const FileUploadErrorResponse = zod
   .object({
     error: ErrorDetailLiteralFileTooLargeInvalidMultipart,
   })
-  .describe('Errors shared by cover and PDF upload requests.')
+  .describe('Errors shared by cover, PDF, and MP3 upload requests.')
 export type FileUploadErrorResponse = zod.input<typeof FileUploadErrorResponse>
 export type FileUploadErrorResponseOutput = zod.output<
   typeof FileUploadErrorResponse
 >
+export const ValidationError = zod.object({
+  loc: zod.array(zod.union([zod.string(), zod.int()])),
+  msg: zod.string(),
+  type: zod.string(),
+  input: zod.unknown().optional(),
+  ctx: zod.looseObject({}).optional(),
+})
+export type ValidationError = zod.input<typeof ValidationError>
+export type ValidationErrorOutput = zod.output<typeof ValidationError>
+export const HTTPValidationError = zod.object({
+  detail: zod.array(ValidationError).optional(),
+})
+export type HTTPValidationError = zod.input<typeof HTTPValidationError>
+export type HTTPValidationErrorOutput = zod.output<typeof HTTPValidationError>
 export const HealthResponse = zod.object({
   status: zod.literal('ok').meta({ title: 'Status' }),
   api_version: zod.literal('v1').meta({ title: 'Api Version' }),
@@ -395,6 +728,14 @@ export const HttpErrorResponse = zod
   .describe('Framework errors outside the domain-specific exception handlers.')
 export type HttpErrorResponse = zod.input<typeof HttpErrorResponse>
 export type HttpErrorResponseOutput = zod.output<typeof HttpErrorResponse>
+export const ImportResult = zod.object({
+  dry_run: zod.boolean(),
+  section_count: zod.int(),
+  segment_count: zod.int(),
+  content_version: zod.union([zod.uuid(), zod.null()]),
+})
+export type ImportResult = zod.input<typeof ImportResult>
+export type ImportResultOutput = zod.output<typeof ImportResult>
 export const InternalErrorResponse = zod
   .object({
     error: ErrorDetailLiteralInternalError,
@@ -410,32 +751,6 @@ export const NotReadyResponse = zod.object({
 })
 export type NotReadyResponse = zod.input<typeof NotReadyResponse>
 export type NotReadyResponseOutput = zod.output<typeof NotReadyResponse>
-export const SourcePdfFileErrorResponse = zod
-  .object({
-    error: ErrorDetailSourcePdfFileErrorCode,
-  })
-  .describe(
-    'Errors owned by source-PDF operations, also used when linking a PDF.',
-  )
-export type SourcePdfFileErrorResponse = zod.input<
-  typeof SourcePdfFileErrorResponse
->
-export type SourcePdfFileErrorResponseOutput = zod.output<
-  typeof SourcePdfFileErrorResponse
->
-export const sourcePdfFileResponseIdExclusiveMin = 0
-export const sourcePdfFileResponseByteSizeExclusiveMin = 0
-export const sourcePdfFileResponsePageCountExclusiveMin = 0
-export const SourcePdfFileResponse = zod.object({
-  id: zod.int().gt(sourcePdfFileResponseIdExclusiveMin),
-  byte_size: zod.int().gt(sourcePdfFileResponseByteSizeExclusiveMin),
-  page_count: zod.int().gt(sourcePdfFileResponsePageCountExclusiveMin),
-  created_at: zod.iso.datetime({ offset: true }),
-})
-export type SourcePdfFileResponse = zod.input<typeof SourcePdfFileResponse>
-export type SourcePdfFileResponseOutput = zod.output<
-  typeof SourcePdfFileResponse
->
 export const ValidationIssue = zod.object({
   location: zod.array(zod.union([zod.string(), zod.int()])),
   code: zod.string(),
@@ -465,10 +780,7 @@ export type CreateApiV1Book201Response = zod.input<
 export type CreateApiV1Book201ResponseOutput = zod.output<
   typeof CreateApiV1Book201Response
 >
-export const CreateApiV1Book404Response = zod.union([
-  CoverFileErrorResponse,
-  SourcePdfFileErrorResponse,
-])
+export const CreateApiV1Book404Response = FileErrorResponse
 export type CreateApiV1Book404Response = zod.input<
   typeof CreateApiV1Book404Response
 >
@@ -489,7 +801,10 @@ export type CreateApiV1Book409Response = zod.input<
 export type CreateApiV1Book409ResponseOutput = zod.output<
   typeof CreateApiV1Book409Response
 >
-export const CreateApiV1Book422Response = ValidationErrorResponse
+export const CreateApiV1Book422Response = zod.union([
+  ValidationErrorResponse,
+  FileErrorResponse,
+])
 export type CreateApiV1Book422Response = zod.input<
   typeof CreateApiV1Book422Response
 >
@@ -599,7 +914,8 @@ export type GetApiV1Book500ResponseOutput = zod.output<
 /**
  * Update supplied fields. Omission preserves values; only nullable fields accept null.
  *
- * Optional cover/PDF IDs link prepared files; null clears the corresponding link.
+ * Optional cover/PDF IDs attach prepared files. PDF links may be changed until
+ * content is imported; afterward, changing the PDF requires content purge.
  * @summary Patch Book
  */
 export const patchApiV1BookPathBookIdExclusiveMin = 0
@@ -624,8 +940,7 @@ export type PatchApiV1Book200ResponseOutput = zod.output<
 >
 export const PatchApiV1Book404Response = zod.union([
   BookErrorResponse,
-  CoverFileErrorResponse,
-  SourcePdfFileErrorResponse,
+  FileErrorResponse,
 ])
 export type PatchApiV1Book404Response = zod.input<
   typeof PatchApiV1Book404Response
@@ -647,7 +962,10 @@ export type PatchApiV1Book409Response = zod.input<
 export type PatchApiV1Book409ResponseOutput = zod.output<
   typeof PatchApiV1Book409Response
 >
-export const PatchApiV1Book422Response = ValidationErrorResponse
+export const PatchApiV1Book422Response = zod.union([
+  ValidationErrorResponse,
+  FileErrorResponse,
+])
 export type PatchApiV1Book422Response = zod.input<
   typeof PatchApiV1Book422Response
 >
@@ -712,383 +1030,302 @@ export type DeleteApiV1Book500ResponseOutput = zod.output<
   typeof DeleteApiV1Book500Response
 >
 /**
- * Upload and prepare a cover. Link its returned ID through an explicit book create/save.
- * @summary Create Cover File
+ * Validate and publish once (200); dry-run checks the same preconditions without writes.
+ * @summary Import Content
  */
-export const CreateApiV1CoverFileBody = BodyCreateApiV1CoverFile
-export type CreateApiV1CoverFileBody = zod.input<
-  typeof CreateApiV1CoverFileBody
+export const importApiV1BookContentPathBookIdExclusiveMin = 0
+export const importApiV1BookContentPathBookIdMax = 9223372036854776000
+export const ImportApiV1BookContentParams = zod.object({
+  book_id: zod
+    .int()
+    .gt(importApiV1BookContentPathBookIdExclusiveMin)
+    .max(importApiV1BookContentPathBookIdMax),
+})
+export type ImportApiV1BookContentParams = zod.input<
+  typeof ImportApiV1BookContentParams
 >
-export type CreateApiV1CoverFileBodyOutput = zod.output<
-  typeof CreateApiV1CoverFileBody
+export type ImportApiV1BookContentParamsOutput = zod.output<
+  typeof ImportApiV1BookContentParams
 >
-export const CreateApiV1CoverFile201Response = CoverFileResponse
-export type CreateApiV1CoverFile201Response = zod.input<
-  typeof CreateApiV1CoverFile201Response
+export const importApiV1BookContentQueryDryRunDefault = false
+export const ImportApiV1BookContentQueryParams = zod.object({
+  dry_run: zod.boolean().default(importApiV1BookContentQueryDryRunDefault),
+})
+export type ImportApiV1BookContentQueryParams = zod.input<
+  typeof ImportApiV1BookContentQueryParams
 >
-export type CreateApiV1CoverFile201ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile201Response
+export type ImportApiV1BookContentQueryParamsOutput = zod.output<
+  typeof ImportApiV1BookContentQueryParams
 >
-export const CreateApiV1CoverFile400Response = FileUploadErrorResponse
-export type CreateApiV1CoverFile400Response = zod.input<
-  typeof CreateApiV1CoverFile400Response
+export const ImportApiV1BookContentBody = ContentInput
+export type ImportApiV1BookContentBody = zod.input<
+  typeof ImportApiV1BookContentBody
 >
-export type CreateApiV1CoverFile400ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile400Response
+export type ImportApiV1BookContentBodyOutput = zod.output<
+  typeof ImportApiV1BookContentBody
 >
-export const CreateApiV1CoverFile405Response = HttpErrorResponse
-export type CreateApiV1CoverFile405Response = zod.input<
-  typeof CreateApiV1CoverFile405Response
+export const ImportApiV1BookContent200Response = ImportResult
+export type ImportApiV1BookContent200Response = zod.input<
+  typeof ImportApiV1BookContent200Response
 >
-export type CreateApiV1CoverFile405ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile405Response
+export type ImportApiV1BookContent200ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent200Response
 >
-export const CreateApiV1CoverFile413Response = FileUploadErrorResponse
-export type CreateApiV1CoverFile413Response = zod.input<
-  typeof CreateApiV1CoverFile413Response
+export const ImportApiV1BookContent404Response = BookErrorResponse
+export type ImportApiV1BookContent404Response = zod.input<
+  typeof ImportApiV1BookContent404Response
 >
-export type CreateApiV1CoverFile413ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile413Response
+export type ImportApiV1BookContent404ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent404Response
 >
-export const CreateApiV1CoverFile415Response = CoverFileErrorResponse
-export type CreateApiV1CoverFile415Response = zod.input<
-  typeof CreateApiV1CoverFile415Response
+export const ImportApiV1BookContent405Response = HttpErrorResponse
+export type ImportApiV1BookContent405Response = zod.input<
+  typeof ImportApiV1BookContent405Response
 >
-export type CreateApiV1CoverFile415ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile415Response
+export type ImportApiV1BookContent405ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent405Response
 >
-export const CreateApiV1CoverFile422Response = zod.union([
-  CoverFileErrorResponse,
+export const ImportApiV1BookContent409Response = ContentErrorResponse
+export type ImportApiV1BookContent409Response = zod.input<
+  typeof ImportApiV1BookContent409Response
+>
+export type ImportApiV1BookContent409ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent409Response
+>
+export const ImportApiV1BookContent413Response = ContentErrorResponse
+export type ImportApiV1BookContent413Response = zod.input<
+  typeof ImportApiV1BookContent413Response
+>
+export type ImportApiV1BookContent413ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent413Response
+>
+export const ImportApiV1BookContent422Response = zod.union([
+  ContentValidationResponse,
   ValidationErrorResponse,
 ])
-export type CreateApiV1CoverFile422Response = zod.input<
-  typeof CreateApiV1CoverFile422Response
+export type ImportApiV1BookContent422Response = zod.input<
+  typeof ImportApiV1BookContent422Response
 >
-export type CreateApiV1CoverFile422ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile422Response
+export type ImportApiV1BookContent422ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent422Response
 >
-export const CreateApiV1CoverFile500Response = InternalErrorResponse
-export type CreateApiV1CoverFile500Response = zod.input<
-  typeof CreateApiV1CoverFile500Response
+export const ImportApiV1BookContent500Response = InternalErrorResponse
+export type ImportApiV1BookContent500Response = zod.input<
+  typeof ImportApiV1BookContent500Response
 >
-export type CreateApiV1CoverFile500ResponseOutput = zod.output<
-  typeof CreateApiV1CoverFile500Response
+export type ImportApiV1BookContent500ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent500Response
 >
 /**
- * Retrieve a prepared file, including before linking it to a book.
- *
- * Range, If-Range, and file headers follow Starlette's native FileResponse behavior.
- * @summary Get Cover File
+ * @summary Get Content
  */
-export const getApiV1CoverFilePathFileIdExclusiveMin = 0
-export const getApiV1CoverFilePathFileIdMax = 9223372036854776000
-export const GetApiV1CoverFileParams = zod.object({
-  file_id: zod
+export const getApiV1BookContentPathBookIdExclusiveMin = 0
+export const getApiV1BookContentPathBookIdMax = 9223372036854776000
+export const GetApiV1BookContentParams = zod.object({
+  book_id: zod
     .int()
-    .gt(getApiV1CoverFilePathFileIdExclusiveMin)
-    .max(getApiV1CoverFilePathFileIdMax),
+    .gt(getApiV1BookContentPathBookIdExclusiveMin)
+    .max(getApiV1BookContentPathBookIdMax),
 })
-export type GetApiV1CoverFileParams = zod.input<typeof GetApiV1CoverFileParams>
-export type GetApiV1CoverFileParamsOutput = zod.output<
-  typeof GetApiV1CoverFileParams
+export type GetApiV1BookContentParams = zod.input<
+  typeof GetApiV1BookContentParams
 >
-export const GetApiV1CoverFileHeader = zod.object({
-  Range: zod
-    .string()
-    .optional()
-    .describe('Byte range or ranges, such as bytes=0-65535'),
-  'If-Range': zod
-    .string()
-    .optional()
-    .describe('ETag or Last-Modified validator for the range'),
-})
-export type GetApiV1CoverFileHeader = zod.input<typeof GetApiV1CoverFileHeader>
-export type GetApiV1CoverFileHeaderOutput = zod.output<
-  typeof GetApiV1CoverFileHeader
+export type GetApiV1BookContentParamsOutput = zod.output<
+  typeof GetApiV1BookContentParams
 >
-export const GetApiV1CoverFile200Response = zod.unknown()
-export type GetApiV1CoverFile200Response = zod.input<
-  typeof GetApiV1CoverFile200Response
+export const GetApiV1BookContent200Response = ContentManifest
+export type GetApiV1BookContent200Response = zod.input<
+  typeof GetApiV1BookContent200Response
 >
-export type GetApiV1CoverFile200ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile200Response
+export type GetApiV1BookContent200ResponseOutput = zod.output<
+  typeof GetApiV1BookContent200Response
 >
-export const GetApiV1CoverFile206Response = zod.unknown()
-export type GetApiV1CoverFile206Response = zod.input<
-  typeof GetApiV1CoverFile206Response
+export const GetApiV1BookContent404Response = BookErrorResponse
+export type GetApiV1BookContent404Response = zod.input<
+  typeof GetApiV1BookContent404Response
 >
-export type GetApiV1CoverFile206ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile206Response
+export type GetApiV1BookContent404ResponseOutput = zod.output<
+  typeof GetApiV1BookContent404Response
 >
-export const GetApiV1CoverFile400Response = zod.string()
-export type GetApiV1CoverFile400Response = zod.input<
-  typeof GetApiV1CoverFile400Response
+export const GetApiV1BookContent405Response = HttpErrorResponse
+export type GetApiV1BookContent405Response = zod.input<
+  typeof GetApiV1BookContent405Response
 >
-export type GetApiV1CoverFile400ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile400Response
+export type GetApiV1BookContent405ResponseOutput = zod.output<
+  typeof GetApiV1BookContent405Response
 >
-export const GetApiV1CoverFile404Response = CoverFileErrorResponse
-export type GetApiV1CoverFile404Response = zod.input<
-  typeof GetApiV1CoverFile404Response
+export const GetApiV1BookContent422Response = HTTPValidationError
+export type GetApiV1BookContent422Response = zod.input<
+  typeof GetApiV1BookContent422Response
 >
-export type GetApiV1CoverFile404ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile404Response
+export type GetApiV1BookContent422ResponseOutput = zod.output<
+  typeof GetApiV1BookContent422Response
 >
-export const GetApiV1CoverFile405Response = HttpErrorResponse
-export type GetApiV1CoverFile405Response = zod.input<
-  typeof GetApiV1CoverFile405Response
+export const GetApiV1BookContent500Response = InternalErrorResponse
+export type GetApiV1BookContent500Response = zod.input<
+  typeof GetApiV1BookContent500Response
 >
-export type GetApiV1CoverFile405ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile405Response
->
-export const GetApiV1CoverFile416Response = zod.unknown()
-export type GetApiV1CoverFile416Response = zod.input<
-  typeof GetApiV1CoverFile416Response
->
-export type GetApiV1CoverFile416ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile416Response
->
-export const GetApiV1CoverFile422Response = ValidationErrorResponse
-export type GetApiV1CoverFile422Response = zod.input<
-  typeof GetApiV1CoverFile422Response
->
-export type GetApiV1CoverFile422ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile422Response
->
-export const GetApiV1CoverFile500Response = InternalErrorResponse
-export type GetApiV1CoverFile500Response = zod.input<
-  typeof GetApiV1CoverFile500Response
->
-export type GetApiV1CoverFile500ResponseOutput = zod.output<
-  typeof GetApiV1CoverFile500Response
+export type GetApiV1BookContent500ResponseOutput = zod.output<
+  typeof GetApiV1BookContent500Response
 >
 /**
- * Return file headers without the body, including native range handling.
- * @summary Head Cover File
+ * Purge PDF/audio/text together, preserving cover and descriptive book metadata.
+ * @summary Purge Content
  */
-export const headApiV1CoverFilePathFileIdExclusiveMin = 0
-export const headApiV1CoverFilePathFileIdMax = 9223372036854776000
-export const HeadApiV1CoverFileParams = zod.object({
-  file_id: zod
+export const purgeApiV1BookContentPathBookIdExclusiveMin = 0
+export const purgeApiV1BookContentPathBookIdMax = 9223372036854776000
+export const PurgeApiV1BookContentParams = zod.object({
+  book_id: zod
     .int()
-    .gt(headApiV1CoverFilePathFileIdExclusiveMin)
-    .max(headApiV1CoverFilePathFileIdMax),
+    .gt(purgeApiV1BookContentPathBookIdExclusiveMin)
+    .max(purgeApiV1BookContentPathBookIdMax),
 })
-export type HeadApiV1CoverFileParams = zod.input<
-  typeof HeadApiV1CoverFileParams
+export type PurgeApiV1BookContentParams = zod.input<
+  typeof PurgeApiV1BookContentParams
 >
-export type HeadApiV1CoverFileParamsOutput = zod.output<
-  typeof HeadApiV1CoverFileParams
+export type PurgeApiV1BookContentParamsOutput = zod.output<
+  typeof PurgeApiV1BookContentParams
 >
-export const HeadApiV1CoverFileHeader = zod.object({
-  Range: zod
-    .string()
-    .optional()
-    .describe('Byte range or ranges, such as bytes=0-65535'),
-  'If-Range': zod
-    .string()
-    .optional()
-    .describe('ETag or Last-Modified validator for the range'),
+export const purgeApiV1BookContentHeaderIfMatchDefault = ``
+export const PurgeApiV1BookContentHeader = zod.object({
+  'if-match': zod.string().default(purgeApiV1BookContentHeaderIfMatchDefault),
 })
-export type HeadApiV1CoverFileHeader = zod.input<
-  typeof HeadApiV1CoverFileHeader
+export type PurgeApiV1BookContentHeader = zod.input<
+  typeof PurgeApiV1BookContentHeader
 >
-export type HeadApiV1CoverFileHeaderOutput = zod.output<
-  typeof HeadApiV1CoverFileHeader
+export type PurgeApiV1BookContentHeaderOutput = zod.output<
+  typeof PurgeApiV1BookContentHeader
 >
-export const HeadApiV1CoverFile200Response = zod.unknown()
-export type HeadApiV1CoverFile200Response = zod.input<
-  typeof HeadApiV1CoverFile200Response
+export const PurgeApiV1BookContent204Response = zod.void()
+export type PurgeApiV1BookContent204Response = zod.input<
+  typeof PurgeApiV1BookContent204Response
 >
-export type HeadApiV1CoverFile200ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile200Response
+export type PurgeApiV1BookContent204ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent204Response
 >
-export const HeadApiV1CoverFile206Response = zod.unknown()
-export type HeadApiV1CoverFile206Response = zod.input<
-  typeof HeadApiV1CoverFile206Response
+export const PurgeApiV1BookContent404Response = BookErrorResponse
+export type PurgeApiV1BookContent404Response = zod.input<
+  typeof PurgeApiV1BookContent404Response
 >
-export type HeadApiV1CoverFile206ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile206Response
+export type PurgeApiV1BookContent404ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent404Response
 >
-export const HeadApiV1CoverFile400Response = zod.unknown()
-export type HeadApiV1CoverFile400Response = zod.input<
-  typeof HeadApiV1CoverFile400Response
+export const PurgeApiV1BookContent405Response = HttpErrorResponse
+export type PurgeApiV1BookContent405Response = zod.input<
+  typeof PurgeApiV1BookContent405Response
 >
-export type HeadApiV1CoverFile400ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile400Response
+export type PurgeApiV1BookContent405ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent405Response
 >
-export const HeadApiV1CoverFile404Response = CoverFileErrorResponse
-export type HeadApiV1CoverFile404Response = zod.input<
-  typeof HeadApiV1CoverFile404Response
+export const PurgeApiV1BookContent412Response = ContentErrorResponse
+export type PurgeApiV1BookContent412Response = zod.input<
+  typeof PurgeApiV1BookContent412Response
 >
-export type HeadApiV1CoverFile404ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile404Response
+export type PurgeApiV1BookContent412ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent412Response
 >
-export const HeadApiV1CoverFile405Response = HttpErrorResponse
-export type HeadApiV1CoverFile405Response = zod.input<
-  typeof HeadApiV1CoverFile405Response
+export const PurgeApiV1BookContent422Response = HTTPValidationError
+export type PurgeApiV1BookContent422Response = zod.input<
+  typeof PurgeApiV1BookContent422Response
 >
-export type HeadApiV1CoverFile405ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile405Response
+export type PurgeApiV1BookContent422ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent422Response
 >
-export const HeadApiV1CoverFile416Response = zod.unknown()
-export type HeadApiV1CoverFile416Response = zod.input<
-  typeof HeadApiV1CoverFile416Response
+export const PurgeApiV1BookContent428Response = ContentErrorResponse
+export type PurgeApiV1BookContent428Response = zod.input<
+  typeof PurgeApiV1BookContent428Response
 >
-export type HeadApiV1CoverFile416ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile416Response
+export type PurgeApiV1BookContent428ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent428Response
 >
-export const HeadApiV1CoverFile422Response = ValidationErrorResponse
-export type HeadApiV1CoverFile422Response = zod.input<
-  typeof HeadApiV1CoverFile422Response
+export const PurgeApiV1BookContent500Response = InternalErrorResponse
+export type PurgeApiV1BookContent500Response = zod.input<
+  typeof PurgeApiV1BookContent500Response
 >
-export type HeadApiV1CoverFile422ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile422Response
->
-export const HeadApiV1CoverFile500Response = InternalErrorResponse
-export type HeadApiV1CoverFile500Response = zod.input<
-  typeof HeadApiV1CoverFile500Response
->
-export type HeadApiV1CoverFile500ResponseOutput = zod.output<
-  typeof HeadApiV1CoverFile500Response
+export type PurgeApiV1BookContent500ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent500Response
 >
 /**
- * Remove an unlinked cover and queue its stored bytes for maintenance.
- * @summary Delete Cover File
+ * Prepare a file independently of book create/save; return its ID for linking.
+ * @summary Create File
  */
-export const deleteApiV1CoverFilePathFileIdExclusiveMin = 0
-export const deleteApiV1CoverFilePathFileIdMax = 9223372036854776000
-export const DeleteApiV1CoverFileParams = zod.object({
-  file_id: zod
-    .int()
-    .gt(deleteApiV1CoverFilePathFileIdExclusiveMin)
-    .max(deleteApiV1CoverFilePathFileIdMax),
+export const CreateApiV1FileParams = zod.object({
+  kind: zod.enum(['cover', 'source_pdf', 'audio_chapter']),
 })
-export type DeleteApiV1CoverFileParams = zod.input<
-  typeof DeleteApiV1CoverFileParams
+export type CreateApiV1FileParams = zod.input<typeof CreateApiV1FileParams>
+export type CreateApiV1FileParamsOutput = zod.output<
+  typeof CreateApiV1FileParams
 >
-export type DeleteApiV1CoverFileParamsOutput = zod.output<
-  typeof DeleteApiV1CoverFileParams
+export const CreateApiV1FileBody = BodyCreateApiV1File
+export type CreateApiV1FileBody = zod.input<typeof CreateApiV1FileBody>
+export type CreateApiV1FileBodyOutput = zod.output<typeof CreateApiV1FileBody>
+export const CreateApiV1File201Response = FileResponse
+export type CreateApiV1File201Response = zod.input<
+  typeof CreateApiV1File201Response
 >
-export const DeleteApiV1CoverFile204Response = zod.void()
-export type DeleteApiV1CoverFile204Response = zod.input<
-  typeof DeleteApiV1CoverFile204Response
+export type CreateApiV1File201ResponseOutput = zod.output<
+  typeof CreateApiV1File201Response
 >
-export type DeleteApiV1CoverFile204ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile204Response
+export const CreateApiV1File400Response = FileUploadErrorResponse
+export type CreateApiV1File400Response = zod.input<
+  typeof CreateApiV1File400Response
 >
-export const DeleteApiV1CoverFile404Response = CoverFileErrorResponse
-export type DeleteApiV1CoverFile404Response = zod.input<
-  typeof DeleteApiV1CoverFile404Response
+export type CreateApiV1File400ResponseOutput = zod.output<
+  typeof CreateApiV1File400Response
 >
-export type DeleteApiV1CoverFile404ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile404Response
+export const CreateApiV1File405Response = HttpErrorResponse
+export type CreateApiV1File405Response = zod.input<
+  typeof CreateApiV1File405Response
 >
-export const DeleteApiV1CoverFile405Response = HttpErrorResponse
-export type DeleteApiV1CoverFile405Response = zod.input<
-  typeof DeleteApiV1CoverFile405Response
+export type CreateApiV1File405ResponseOutput = zod.output<
+  typeof CreateApiV1File405Response
 >
-export type DeleteApiV1CoverFile405ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile405Response
+export const CreateApiV1File413Response = FileUploadErrorResponse
+export type CreateApiV1File413Response = zod.input<
+  typeof CreateApiV1File413Response
 >
-export const DeleteApiV1CoverFile409Response = CoverFileErrorResponse
-export type DeleteApiV1CoverFile409Response = zod.input<
-  typeof DeleteApiV1CoverFile409Response
+export type CreateApiV1File413ResponseOutput = zod.output<
+  typeof CreateApiV1File413Response
 >
-export type DeleteApiV1CoverFile409ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile409Response
+export const CreateApiV1File415Response = FileErrorResponse
+export type CreateApiV1File415Response = zod.input<
+  typeof CreateApiV1File415Response
 >
-export const DeleteApiV1CoverFile422Response = ValidationErrorResponse
-export type DeleteApiV1CoverFile422Response = zod.input<
-  typeof DeleteApiV1CoverFile422Response
+export type CreateApiV1File415ResponseOutput = zod.output<
+  typeof CreateApiV1File415Response
 >
-export type DeleteApiV1CoverFile422ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile422Response
->
-export const DeleteApiV1CoverFile500Response = InternalErrorResponse
-export type DeleteApiV1CoverFile500Response = zod.input<
-  typeof DeleteApiV1CoverFile500Response
->
-export type DeleteApiV1CoverFile500ResponseOutput = zod.output<
-  typeof DeleteApiV1CoverFile500Response
->
-/**
- * Upload and prepare a PDF. Link its returned ID through an explicit book create/save.
- * @summary Create Source Pdf File
- */
-export const CreateApiV1SourcePdfFileBody = BodyCreateApiV1SourcePdfFile
-export type CreateApiV1SourcePdfFileBody = zod.input<
-  typeof CreateApiV1SourcePdfFileBody
->
-export type CreateApiV1SourcePdfFileBodyOutput = zod.output<
-  typeof CreateApiV1SourcePdfFileBody
->
-export const CreateApiV1SourcePdfFile201Response = SourcePdfFileResponse
-export type CreateApiV1SourcePdfFile201Response = zod.input<
-  typeof CreateApiV1SourcePdfFile201Response
->
-export type CreateApiV1SourcePdfFile201ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile201Response
->
-export const CreateApiV1SourcePdfFile400Response = FileUploadErrorResponse
-export type CreateApiV1SourcePdfFile400Response = zod.input<
-  typeof CreateApiV1SourcePdfFile400Response
->
-export type CreateApiV1SourcePdfFile400ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile400Response
->
-export const CreateApiV1SourcePdfFile405Response = HttpErrorResponse
-export type CreateApiV1SourcePdfFile405Response = zod.input<
-  typeof CreateApiV1SourcePdfFile405Response
->
-export type CreateApiV1SourcePdfFile405ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile405Response
->
-export const CreateApiV1SourcePdfFile413Response = FileUploadErrorResponse
-export type CreateApiV1SourcePdfFile413Response = zod.input<
-  typeof CreateApiV1SourcePdfFile413Response
->
-export type CreateApiV1SourcePdfFile413ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile413Response
->
-export const CreateApiV1SourcePdfFile422Response = zod.union([
-  SourcePdfFileErrorResponse,
+export const CreateApiV1File422Response = zod.union([
+  FileErrorResponse,
   ValidationErrorResponse,
 ])
-export type CreateApiV1SourcePdfFile422Response = zod.input<
-  typeof CreateApiV1SourcePdfFile422Response
+export type CreateApiV1File422Response = zod.input<
+  typeof CreateApiV1File422Response
 >
-export type CreateApiV1SourcePdfFile422ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile422Response
+export type CreateApiV1File422ResponseOutput = zod.output<
+  typeof CreateApiV1File422Response
 >
-export const CreateApiV1SourcePdfFile500Response = InternalErrorResponse
-export type CreateApiV1SourcePdfFile500Response = zod.input<
-  typeof CreateApiV1SourcePdfFile500Response
+export const CreateApiV1File500Response = InternalErrorResponse
+export type CreateApiV1File500Response = zod.input<
+  typeof CreateApiV1File500Response
 >
-export type CreateApiV1SourcePdfFile500ResponseOutput = zod.output<
-  typeof CreateApiV1SourcePdfFile500Response
+export type CreateApiV1File500ResponseOutput = zod.output<
+  typeof CreateApiV1File500Response
 >
 /**
- * Retrieve a prepared file, including before linking it to a book.
- *
- * Range, If-Range, and file headers follow Starlette's native FileResponse behavior.
- * @summary Get Source Pdf File
+ * Deliver prepared bytes with native Range, If-Range, and conditional headers.
+ * @summary Get File
  */
-export const getApiV1SourcePdfFilePathFileIdExclusiveMin = 0
-export const getApiV1SourcePdfFilePathFileIdMax = 9223372036854776000
-export const GetApiV1SourcePdfFileParams = zod.object({
+export const getApiV1FilePathFileIdExclusiveMin = 0
+export const getApiV1FilePathFileIdMax = 9223372036854776000
+export const GetApiV1FileParams = zod.object({
   file_id: zod
     .int()
-    .gt(getApiV1SourcePdfFilePathFileIdExclusiveMin)
-    .max(getApiV1SourcePdfFilePathFileIdMax),
+    .gt(getApiV1FilePathFileIdExclusiveMin)
+    .max(getApiV1FilePathFileIdMax),
 })
-export type GetApiV1SourcePdfFileParams = zod.input<
-  typeof GetApiV1SourcePdfFileParams
->
-export type GetApiV1SourcePdfFileParamsOutput = zod.output<
-  typeof GetApiV1SourcePdfFileParams
->
-export const GetApiV1SourcePdfFileHeader = zod.object({
+export type GetApiV1FileParams = zod.input<typeof GetApiV1FileParams>
+export type GetApiV1FileParamsOutput = zod.output<typeof GetApiV1FileParams>
+export const GetApiV1FileHeader = zod.object({
   Range: zod
     .string()
     .optional()
@@ -1098,87 +1335,62 @@ export const GetApiV1SourcePdfFileHeader = zod.object({
     .optional()
     .describe('ETag or Last-Modified validator for the range'),
 })
-export type GetApiV1SourcePdfFileHeader = zod.input<
-  typeof GetApiV1SourcePdfFileHeader
+export type GetApiV1FileHeader = zod.input<typeof GetApiV1FileHeader>
+export type GetApiV1FileHeaderOutput = zod.output<typeof GetApiV1FileHeader>
+export const GetApiV1File200Response = zod.unknown()
+export type GetApiV1File200Response = zod.input<typeof GetApiV1File200Response>
+export type GetApiV1File200ResponseOutput = zod.output<
+  typeof GetApiV1File200Response
 >
-export type GetApiV1SourcePdfFileHeaderOutput = zod.output<
-  typeof GetApiV1SourcePdfFileHeader
+export const GetApiV1File206Response = zod.unknown()
+export type GetApiV1File206Response = zod.input<typeof GetApiV1File206Response>
+export type GetApiV1File206ResponseOutput = zod.output<
+  typeof GetApiV1File206Response
 >
-export const GetApiV1SourcePdfFile200Response = zod.unknown()
-export type GetApiV1SourcePdfFile200Response = zod.input<
-  typeof GetApiV1SourcePdfFile200Response
+export const GetApiV1File400Response = zod.string()
+export type GetApiV1File400Response = zod.input<typeof GetApiV1File400Response>
+export type GetApiV1File400ResponseOutput = zod.output<
+  typeof GetApiV1File400Response
 >
-export type GetApiV1SourcePdfFile200ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile200Response
+export const GetApiV1File404Response = FileErrorResponse
+export type GetApiV1File404Response = zod.input<typeof GetApiV1File404Response>
+export type GetApiV1File404ResponseOutput = zod.output<
+  typeof GetApiV1File404Response
 >
-export const GetApiV1SourcePdfFile206Response = zod.unknown()
-export type GetApiV1SourcePdfFile206Response = zod.input<
-  typeof GetApiV1SourcePdfFile206Response
+export const GetApiV1File405Response = HttpErrorResponse
+export type GetApiV1File405Response = zod.input<typeof GetApiV1File405Response>
+export type GetApiV1File405ResponseOutput = zod.output<
+  typeof GetApiV1File405Response
 >
-export type GetApiV1SourcePdfFile206ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile206Response
+export const GetApiV1File416Response = zod.unknown()
+export type GetApiV1File416Response = zod.input<typeof GetApiV1File416Response>
+export type GetApiV1File416ResponseOutput = zod.output<
+  typeof GetApiV1File416Response
 >
-export const GetApiV1SourcePdfFile400Response = zod.string()
-export type GetApiV1SourcePdfFile400Response = zod.input<
-  typeof GetApiV1SourcePdfFile400Response
+export const GetApiV1File422Response = ValidationErrorResponse
+export type GetApiV1File422Response = zod.input<typeof GetApiV1File422Response>
+export type GetApiV1File422ResponseOutput = zod.output<
+  typeof GetApiV1File422Response
 >
-export type GetApiV1SourcePdfFile400ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile400Response
->
-export const GetApiV1SourcePdfFile404Response = SourcePdfFileErrorResponse
-export type GetApiV1SourcePdfFile404Response = zod.input<
-  typeof GetApiV1SourcePdfFile404Response
->
-export type GetApiV1SourcePdfFile404ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile404Response
->
-export const GetApiV1SourcePdfFile405Response = HttpErrorResponse
-export type GetApiV1SourcePdfFile405Response = zod.input<
-  typeof GetApiV1SourcePdfFile405Response
->
-export type GetApiV1SourcePdfFile405ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile405Response
->
-export const GetApiV1SourcePdfFile416Response = zod.unknown()
-export type GetApiV1SourcePdfFile416Response = zod.input<
-  typeof GetApiV1SourcePdfFile416Response
->
-export type GetApiV1SourcePdfFile416ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile416Response
->
-export const GetApiV1SourcePdfFile422Response = ValidationErrorResponse
-export type GetApiV1SourcePdfFile422Response = zod.input<
-  typeof GetApiV1SourcePdfFile422Response
->
-export type GetApiV1SourcePdfFile422ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile422Response
->
-export const GetApiV1SourcePdfFile500Response = InternalErrorResponse
-export type GetApiV1SourcePdfFile500Response = zod.input<
-  typeof GetApiV1SourcePdfFile500Response
->
-export type GetApiV1SourcePdfFile500ResponseOutput = zod.output<
-  typeof GetApiV1SourcePdfFile500Response
+export const GetApiV1File500Response = InternalErrorResponse
+export type GetApiV1File500Response = zod.input<typeof GetApiV1File500Response>
+export type GetApiV1File500ResponseOutput = zod.output<
+  typeof GetApiV1File500Response
 >
 /**
- * Return file headers without the body, including native range handling.
- * @summary Head Source Pdf File
+ * @summary Head File
  */
-export const headApiV1SourcePdfFilePathFileIdExclusiveMin = 0
-export const headApiV1SourcePdfFilePathFileIdMax = 9223372036854776000
-export const HeadApiV1SourcePdfFileParams = zod.object({
+export const headApiV1FilePathFileIdExclusiveMin = 0
+export const headApiV1FilePathFileIdMax = 9223372036854776000
+export const HeadApiV1FileParams = zod.object({
   file_id: zod
     .int()
-    .gt(headApiV1SourcePdfFilePathFileIdExclusiveMin)
-    .max(headApiV1SourcePdfFilePathFileIdMax),
+    .gt(headApiV1FilePathFileIdExclusiveMin)
+    .max(headApiV1FilePathFileIdMax),
 })
-export type HeadApiV1SourcePdfFileParams = zod.input<
-  typeof HeadApiV1SourcePdfFileParams
->
-export type HeadApiV1SourcePdfFileParamsOutput = zod.output<
-  typeof HeadApiV1SourcePdfFileParams
->
-export const HeadApiV1SourcePdfFileHeader = zod.object({
+export type HeadApiV1FileParams = zod.input<typeof HeadApiV1FileParams>
+export type HeadApiV1FileParamsOutput = zod.output<typeof HeadApiV1FileParams>
+export const HeadApiV1FileHeader = zod.object({
   Range: zod
     .string()
     .optional()
@@ -1188,127 +1400,120 @@ export const HeadApiV1SourcePdfFileHeader = zod.object({
     .optional()
     .describe('ETag or Last-Modified validator for the range'),
 })
-export type HeadApiV1SourcePdfFileHeader = zod.input<
-  typeof HeadApiV1SourcePdfFileHeader
+export type HeadApiV1FileHeader = zod.input<typeof HeadApiV1FileHeader>
+export type HeadApiV1FileHeaderOutput = zod.output<typeof HeadApiV1FileHeader>
+export const HeadApiV1File200Response = zod.unknown()
+export type HeadApiV1File200Response = zod.input<
+  typeof HeadApiV1File200Response
 >
-export type HeadApiV1SourcePdfFileHeaderOutput = zod.output<
-  typeof HeadApiV1SourcePdfFileHeader
+export type HeadApiV1File200ResponseOutput = zod.output<
+  typeof HeadApiV1File200Response
 >
-export const HeadApiV1SourcePdfFile200Response = zod.unknown()
-export type HeadApiV1SourcePdfFile200Response = zod.input<
-  typeof HeadApiV1SourcePdfFile200Response
+export const HeadApiV1File206Response = zod.unknown()
+export type HeadApiV1File206Response = zod.input<
+  typeof HeadApiV1File206Response
 >
-export type HeadApiV1SourcePdfFile200ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile200Response
+export type HeadApiV1File206ResponseOutput = zod.output<
+  typeof HeadApiV1File206Response
 >
-export const HeadApiV1SourcePdfFile206Response = zod.unknown()
-export type HeadApiV1SourcePdfFile206Response = zod.input<
-  typeof HeadApiV1SourcePdfFile206Response
+export const HeadApiV1File400Response = zod.unknown()
+export type HeadApiV1File400Response = zod.input<
+  typeof HeadApiV1File400Response
 >
-export type HeadApiV1SourcePdfFile206ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile206Response
+export type HeadApiV1File400ResponseOutput = zod.output<
+  typeof HeadApiV1File400Response
 >
-export const HeadApiV1SourcePdfFile400Response = zod.unknown()
-export type HeadApiV1SourcePdfFile400Response = zod.input<
-  typeof HeadApiV1SourcePdfFile400Response
+export const HeadApiV1File404Response = FileErrorResponse
+export type HeadApiV1File404Response = zod.input<
+  typeof HeadApiV1File404Response
 >
-export type HeadApiV1SourcePdfFile400ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile400Response
+export type HeadApiV1File404ResponseOutput = zod.output<
+  typeof HeadApiV1File404Response
 >
-export const HeadApiV1SourcePdfFile404Response = SourcePdfFileErrorResponse
-export type HeadApiV1SourcePdfFile404Response = zod.input<
-  typeof HeadApiV1SourcePdfFile404Response
+export const HeadApiV1File405Response = HttpErrorResponse
+export type HeadApiV1File405Response = zod.input<
+  typeof HeadApiV1File405Response
 >
-export type HeadApiV1SourcePdfFile404ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile404Response
+export type HeadApiV1File405ResponseOutput = zod.output<
+  typeof HeadApiV1File405Response
 >
-export const HeadApiV1SourcePdfFile405Response = HttpErrorResponse
-export type HeadApiV1SourcePdfFile405Response = zod.input<
-  typeof HeadApiV1SourcePdfFile405Response
+export const HeadApiV1File416Response = zod.unknown()
+export type HeadApiV1File416Response = zod.input<
+  typeof HeadApiV1File416Response
 >
-export type HeadApiV1SourcePdfFile405ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile405Response
+export type HeadApiV1File416ResponseOutput = zod.output<
+  typeof HeadApiV1File416Response
 >
-export const HeadApiV1SourcePdfFile416Response = zod.unknown()
-export type HeadApiV1SourcePdfFile416Response = zod.input<
-  typeof HeadApiV1SourcePdfFile416Response
+export const HeadApiV1File422Response = ValidationErrorResponse
+export type HeadApiV1File422Response = zod.input<
+  typeof HeadApiV1File422Response
 >
-export type HeadApiV1SourcePdfFile416ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile416Response
+export type HeadApiV1File422ResponseOutput = zod.output<
+  typeof HeadApiV1File422Response
 >
-export const HeadApiV1SourcePdfFile422Response = ValidationErrorResponse
-export type HeadApiV1SourcePdfFile422Response = zod.input<
-  typeof HeadApiV1SourcePdfFile422Response
+export const HeadApiV1File500Response = InternalErrorResponse
+export type HeadApiV1File500Response = zod.input<
+  typeof HeadApiV1File500Response
 >
-export type HeadApiV1SourcePdfFile422ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile422Response
->
-export const HeadApiV1SourcePdfFile500Response = InternalErrorResponse
-export type HeadApiV1SourcePdfFile500Response = zod.input<
-  typeof HeadApiV1SourcePdfFile500Response
->
-export type HeadApiV1SourcePdfFile500ResponseOutput = zod.output<
-  typeof HeadApiV1SourcePdfFile500Response
+export type HeadApiV1File500ResponseOutput = zod.output<
+  typeof HeadApiV1File500Response
 >
 /**
- * Remove an unlinked PDF and queue its stored bytes for maintenance.
- * @summary Delete Source Pdf File
+ * @summary Delete File
  */
-export const deleteApiV1SourcePdfFilePathFileIdExclusiveMin = 0
-export const deleteApiV1SourcePdfFilePathFileIdMax = 9223372036854776000
-export const DeleteApiV1SourcePdfFileParams = zod.object({
+export const deleteApiV1FilePathFileIdExclusiveMin = 0
+export const deleteApiV1FilePathFileIdMax = 9223372036854776000
+export const DeleteApiV1FileParams = zod.object({
   file_id: zod
     .int()
-    .gt(deleteApiV1SourcePdfFilePathFileIdExclusiveMin)
-    .max(deleteApiV1SourcePdfFilePathFileIdMax),
+    .gt(deleteApiV1FilePathFileIdExclusiveMin)
+    .max(deleteApiV1FilePathFileIdMax),
 })
-export type DeleteApiV1SourcePdfFileParams = zod.input<
-  typeof DeleteApiV1SourcePdfFileParams
+export type DeleteApiV1FileParams = zod.input<typeof DeleteApiV1FileParams>
+export type DeleteApiV1FileParamsOutput = zod.output<
+  typeof DeleteApiV1FileParams
 >
-export type DeleteApiV1SourcePdfFileParamsOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFileParams
+export const DeleteApiV1File204Response = zod.void()
+export type DeleteApiV1File204Response = zod.input<
+  typeof DeleteApiV1File204Response
 >
-export const DeleteApiV1SourcePdfFile204Response = zod.void()
-export type DeleteApiV1SourcePdfFile204Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile204Response
+export type DeleteApiV1File204ResponseOutput = zod.output<
+  typeof DeleteApiV1File204Response
 >
-export type DeleteApiV1SourcePdfFile204ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile204Response
+export const DeleteApiV1File404Response = FileErrorResponse
+export type DeleteApiV1File404Response = zod.input<
+  typeof DeleteApiV1File404Response
 >
-export const DeleteApiV1SourcePdfFile404Response = SourcePdfFileErrorResponse
-export type DeleteApiV1SourcePdfFile404Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile404Response
+export type DeleteApiV1File404ResponseOutput = zod.output<
+  typeof DeleteApiV1File404Response
 >
-export type DeleteApiV1SourcePdfFile404ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile404Response
+export const DeleteApiV1File405Response = HttpErrorResponse
+export type DeleteApiV1File405Response = zod.input<
+  typeof DeleteApiV1File405Response
 >
-export const DeleteApiV1SourcePdfFile405Response = HttpErrorResponse
-export type DeleteApiV1SourcePdfFile405Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile405Response
+export type DeleteApiV1File405ResponseOutput = zod.output<
+  typeof DeleteApiV1File405Response
 >
-export type DeleteApiV1SourcePdfFile405ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile405Response
+export const DeleteApiV1File409Response = FileErrorResponse
+export type DeleteApiV1File409Response = zod.input<
+  typeof DeleteApiV1File409Response
 >
-export const DeleteApiV1SourcePdfFile409Response = SourcePdfFileErrorResponse
-export type DeleteApiV1SourcePdfFile409Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile409Response
+export type DeleteApiV1File409ResponseOutput = zod.output<
+  typeof DeleteApiV1File409Response
 >
-export type DeleteApiV1SourcePdfFile409ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile409Response
+export const DeleteApiV1File422Response = ValidationErrorResponse
+export type DeleteApiV1File422Response = zod.input<
+  typeof DeleteApiV1File422Response
 >
-export const DeleteApiV1SourcePdfFile422Response = ValidationErrorResponse
-export type DeleteApiV1SourcePdfFile422Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile422Response
+export type DeleteApiV1File422ResponseOutput = zod.output<
+  typeof DeleteApiV1File422Response
 >
-export type DeleteApiV1SourcePdfFile422ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile422Response
+export const DeleteApiV1File500Response = InternalErrorResponse
+export type DeleteApiV1File500Response = zod.input<
+  typeof DeleteApiV1File500Response
 >
-export const DeleteApiV1SourcePdfFile500Response = InternalErrorResponse
-export type DeleteApiV1SourcePdfFile500Response = zod.input<
-  typeof DeleteApiV1SourcePdfFile500Response
->
-export type DeleteApiV1SourcePdfFile500ResponseOutput = zod.output<
-  typeof DeleteApiV1SourcePdfFile500Response
+export type DeleteApiV1File500ResponseOutput = zod.output<
+  typeof DeleteApiV1File500Response
 >
 /**
  * @summary Check API liveness

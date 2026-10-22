@@ -4,8 +4,7 @@ import {
   BookList,
   BookPatch,
   BookResponse,
-  BodyCreateApiV1CoverFile,
-  BodyCreateApiV1SourcePdfFile,
+  BodyCreateApiV1File,
   BookErrorResponse,
   ValidationErrorResponse,
   type BookResponseOutput,
@@ -14,7 +13,7 @@ import {
 import type {
   GetApiV1BookApiResponse,
   ListApiV1BooksApiResponse,
-  CreateApiV1CoverFileApiArg,
+  CreateApiV1FileApiArg,
 } from '../../src/api-client/generated/endpoints'
 import { book } from './fixtures/book'
 
@@ -22,9 +21,9 @@ describe('generated contracts', () => {
   it('keeps RTK results and Zod output types consistent', () => {
     expectTypeOf<GetApiV1BookApiResponse>().toEqualTypeOf<BookResponseOutput>()
     expectTypeOf<ListApiV1BooksApiResponse>().toEqualTypeOf<BookListOutput>()
-    expectTypeOf<
-      CreateApiV1CoverFileApiArg['bodyCreateApiV1CoverFile']
-    >().toEqualTypeOf<{ file: Blob }>()
+    expectTypeOf<CreateApiV1FileApiArg['bodyCreateApiV1File']>().toEqualTypeOf<{
+      file: Blob
+    }>()
   })
 
   it('parses Unicode books and paginated lists without date coercion', () => {
@@ -123,15 +122,15 @@ describe('generated contracts', () => {
   it('validates multipart Blob/File fields without treating them as JSON strings', () => {
     const image = new File(['image'], 'cover.png', { type: 'image/png' })
     const pdf = new Blob(['%PDF-test'], { type: 'application/pdf' })
-    expect(BodyCreateApiV1CoverFile.parse({ file: image })).toEqual({
+    expect(BodyCreateApiV1File.parse({ file: image })).toEqual({
       file: image,
     })
-    expect(BodyCreateApiV1SourcePdfFile.parse({ file: pdf })).toEqual({
+    expect(BodyCreateApiV1File.parse({ file: pdf })).toEqual({
       file: pdf,
     })
-    expect(
-      BodyCreateApiV1CoverFile.safeParse({ file: 'cover.png' }).success,
-    ).toBe(false)
-    expect(BodyCreateApiV1SourcePdfFile.safeParse({}).success).toBe(false)
+    expect(BodyCreateApiV1File.safeParse({ file: 'cover.png' }).success).toBe(
+      false,
+    )
+    expect(BodyCreateApiV1File.safeParse({}).success).toBe(false)
   })
 })
