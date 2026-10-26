@@ -3,6 +3,11 @@
 A local React and TypeScript application scaffolded with Vite, styled with
 Tailwind CSS 4, and configured as an installable PWA.
 
+Library books open a minimal loading page and synchronize their structured data
+into Dexie. See [content synchronization](docs/content-sync.md) for cache,
+offline, cancellation, and version-invalidation behavior. The text reader follows
+in phase 11.
+
 ## Development
 
 Use Node.js **22.18 or newer** (Node 24 LTS recommended). The shell and IDE must

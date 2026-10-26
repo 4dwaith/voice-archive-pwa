@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from './layout/AppLayout'
 import { LibraryPage } from './pages/LibraryPage'
 import { RecordingsPage } from './pages/RecordingsPage'
+import { BookPage } from './pages/BookPage'
 import { useAppSelector } from './store/hooks'
 import { selectTextSizePercent } from './store/textSizeSlice'
 
@@ -22,6 +23,7 @@ function App() {
       <Route element={<AppLayout />}>
         <Route index element={<LibraryPage />} />
         <Route path="recordings" element={<RecordingsPage />} />
+        <Route path="books/:bookId" element={<BookPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -102,6 +102,7 @@ try {
   temporaryDirectory = await mkdtemp(resolve(tmpdir(), 'voice-archive-e2e-'))
   process.env.VITE_API_BASE_URL = apiUrl
   process.env.VITE_COVERAGE = coverage ? 'true' : 'false'
+  process.env.VITE_E2E_TESTING_HARNESS = 'true'
   if (coverage) {
     await rm(resolve(root, '.nyc_output'), { recursive: true, force: true })
     await rm(resolve(root, 'coverage/cypress'), {

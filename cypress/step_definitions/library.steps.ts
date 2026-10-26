@@ -124,6 +124,22 @@ Given('a library with more than one page and no automatic scrolling', () => {
     Reflect.deleteProperty(window, 'IntersectionObserver')
   })
 })
+Given('a library whose next page has failed to load', () => {
+  interceptLibrary(paginatedBooks(), { paginated: true, failOnce: true })
+  cy.visit('/')
+
+  cy.findByRole('button', { name: bookName }).should('be.visible')
+  cy.scrollTo('bottom')
+
+  // Start the retry scenario from a confirmed failure with the first page intact.
+  cy.findByRole('alert').should('contain.text', 'More books couldn’t be loaded')
+  cy.findAllByRole('article').should('have.length', 24)
+})
+
+When('I wait for the library to finish loading', () => {
+  cy.wait('@library')
+})
+
 When('I open the library', () => {
   cy.visit('/')
 })
@@ -138,10 +154,7 @@ When('I use the load more button', () => {
   cy.findByRole('button', { name: 'Load more books' }).click()
 })
 Then('I can select a book', () => {
-  cy.findByRole('button', { name: bookName })
-    .click()
-    .should('have.attr', 'aria-pressed', 'true')
-  cy.contains('ರುದ್ರ ಚಮಕ selected').should('exist')
+  cy.findByRole('button', { name: bookName }).should('be.enabled')
 })
 Then('the Kannada book shows its title initials', () => {
   cy.findByRole('button', { name: bookName })

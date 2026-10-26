@@ -1,15 +1,28 @@
-import { configureStore } from '@reduxjs/toolkit'
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import type { ThunkDispatch, UnknownAction } from '@reduxjs/toolkit'
 import textSizeReducer from './textSizeSlice'
+import bookDownloadsReducer from './bookDownloadsSlice'
+import { createBookDownloadsListener } from './bookDownloadsListener'
 import { archiveApi } from '../api-client/archiveApi'
 
-export const store = configureStore({
-  reducer: {
-    textSize: textSizeReducer,
-    [archiveApi.reducerPath]: archiveApi.reducer,
-  },
-  middleware: (defaults) => defaults().concat(archiveApi.middleware),
+const rootReducer = combineReducers({
+  textSize: textSizeReducer,
+  bookDownloads: bookDownloadsReducer,
+  [archiveApi.reducerPath]: archiveApi.reducer,
 })
+export type RootState = ReturnType<typeof rootReducer>
+export type AppDispatch = ThunkDispatch<RootState, undefined, UnknownAction>
 
-export type AppStore = typeof store
-export type RootState = ReturnType<AppStore['getState']>
-export type AppDispatch = AppStore['dispatch']
+// Each store owns its listener instances, including isolated integration tests.
+export function createAppStore() {
+  const bookDownloadsListener = createBookDownloadsListener()
+  return configureStore({
+    reducer: rootReducer,
+    middleware: (defaults) =>
+      defaults()
+        .prepend(bookDownloadsListener.middleware)
+        .concat(archiveApi.middleware),
+  })
+}
+export const store = createAppStore()
+export type AppStore = ReturnType<typeof createAppStore>

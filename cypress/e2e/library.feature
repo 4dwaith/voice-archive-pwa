@@ -35,7 +35,8 @@ Feature: Library
     Given a slow library
     When I open the library
     Then I see the library loading status
-    And the books eventually appear
+    When I wait for the library to finish loading
+    Then the books eventually appear
 
   Scenario: A broken cover shows title initials
     Given a library with a broken cover
@@ -49,11 +50,14 @@ Feature: Library
     Then the remaining books appear
     And I reach the end of the library
 
-  Scenario: A later loading failure keeps existing books and can be retried
+  Scenario: A later loading failure keeps existing books
     Given the next page fails to load once
     When I open the library
     And I scroll to the end of the shelf
     Then I see a loading more error with existing books
+
+  Scenario: A failed later page can be retried
+    Given a library whose next page has failed to load
     When I retry
     Then the remaining books appear
 

@@ -3,8 +3,10 @@ import { configureStore } from '@reduxjs/toolkit'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import { Provider } from 'react-redux'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { BookListOutput } from '../../src/api-client/generated/schemas'
+import { useAppLocation } from '../../src/routing/navigation'
 import { LibraryPage } from '../../src/pages/LibraryPage'
 import { book } from '../api-client/fixtures/book'
 
@@ -46,9 +48,28 @@ afterEach(cleanup)
 function mount() {
   const store = configureStore({ reducer: () => ({}) })
 
-  return render(<LibraryPage />, {
-    wrapper: ({ children }) => <Provider store={store}>{children}</Provider>,
-  })
+  return render(
+    <Routes>
+      <Route path="/" element={<LibraryPage />} />
+      <Route path="/books/:bookId" element={<Destination />} />
+    </Routes>,
+    {
+      wrapper: ({ children }) => (
+        <Provider store={store}>
+          <MemoryRouter>{children}</MemoryRouter>
+        </Provider>
+      ),
+    },
+  )
+}
+
+function Destination() {
+  const location = useAppLocation()
+  return (
+    <p>
+      {location.pathname}: {location.state?.book?.title}
+    </p>
+  )
 }
 
 const page: BookListOutput = { items: [book], offset: 0, limit: 24, total: 1 }
@@ -82,7 +103,7 @@ it('renders overlapping book IDs once, using the latest page values', () => {
   ).toBeNull()
 })
 
-it('keeps selection in the page and passes it back to the shelf', () => {
+it('opens the selected book and passes library metadata to its route', () => {
   query.result.data = { pages: [page] }
 
   mount()
@@ -93,7 +114,7 @@ it('keeps selection in the page and passes it back to the shelf', () => {
 
   fireEvent.click(card)
 
-  expect(card).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText(`/books/${book.id}: ${book.title}`)).toBeVisible()
 })
 
 it('connects the shelf load action to the next-page request', () => {

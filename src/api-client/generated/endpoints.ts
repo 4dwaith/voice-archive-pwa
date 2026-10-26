@@ -79,6 +79,36 @@ const injectedRtkApi = api.injectEndpoints({
         },
       }),
     }),
+    listApiV1BookSections: build.query<
+      ListApiV1BookSectionsApiResponse,
+      ListApiV1BookSectionsApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/books/${queryArg.bookId}/sections`,
+        headers: {
+          'if-content-version': queryArg['if-content-version'],
+        },
+        params: {
+          limit: queryArg.limit,
+          offset: queryArg.offset,
+        },
+      }),
+    }),
+    listApiV1BookSegments: build.query<
+      ListApiV1BookSegmentsApiResponse,
+      ListApiV1BookSegmentsApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/books/${queryArg.bookId}/segments`,
+        headers: {
+          'if-content-version': queryArg['if-content-version'],
+        },
+        params: {
+          limit: queryArg.limit,
+          offset: queryArg.offset,
+        },
+      }),
+    }),
     createApiV1File: build.mutation<
       CreateApiV1FileApiResponse,
       CreateApiV1FileApiArg
@@ -153,6 +183,22 @@ export type PurgeApiV1BookContentApiResponse = unknown
 export type PurgeApiV1BookContentApiArg = {
   bookId: number
   'if-match'?: string
+}
+export type ListApiV1BookSectionsApiResponse =
+  /** status 200 Successful Response */ SectionPage
+export type ListApiV1BookSectionsApiArg = {
+  bookId: number
+  limit?: number
+  offset?: number
+  'if-content-version': string
+}
+export type ListApiV1BookSegmentsApiResponse =
+  /** status 200 Successful Response */ SegmentPage
+export type ListApiV1BookSegmentsApiArg = {
+  bookId: number
+  limit?: number
+  offset?: number
+  'if-content-version': string
 }
 export type CreateApiV1FileApiResponse =
   /** status 201 Successful Response */ FileResponse
@@ -271,17 +317,18 @@ export type ImportResult = {
   segment_count: number
   content_version: string | null
 }
-export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch =
   {
     code:
       | 'content_exists'
       | 'content_precondition_required'
       | 'content_precondition_failed'
       | 'content_payload_too_large'
+      | 'content_version_mismatch'
     message: string
   }
 export type ContentErrorResponse = {
-  error: ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+  error: ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch
 }
 export type ErrorDetailLiteralContentValidationError = {
   code: 'content_validation_error'
@@ -337,12 +384,34 @@ export type ContentInput = {
   sections: SectionInput[]
   segments: SegmentInput[]
 }
+export type AudioMetadata = {
+  duration_ms: number
+  sample_rate: number
+  channels: number
+  [key: string]: unknown
+}
+export type SourcePdfMetadata = {
+  page_count: number
+  [key: string]: unknown
+}
+export type ContentFile = {
+  id: number
+  kind: 'source_pdf' | 'audio_chapter'
+  book_id: number | null
+  section_id: number | null
+  byte_size: number
+  metadata: AudioMetadata | SourcePdfMetadata
+  url: string
+}
 export type ContentManifest = {
   state: 'empty' | 'pdf_only' | 'published'
   content_version: string | null
   schema_version: number | null
   imported_at: string | null
   source_pdf_file_id: number | null
+  section_count: number
+  segment_count: number
+  files: ContentFile[]
 }
 export type ValidationError = {
   loc: (string | number)[]
@@ -354,11 +423,45 @@ export type ValidationError = {
 export type HttpValidationError = {
   detail?: ValidationError[]
 }
-export type AudioMetadata = {
-  duration_ms: number
-  sample_rate: number
-  channels: number
-  [key: string]: unknown
+export type SectionRead = {
+  id: number
+  source_key: string
+  parent_id: number | null
+  kind: SectionKind
+  title: string
+  sibling_sequence: number
+  sequence: number
+  audio_file_id: number | null
+  first_segment_source_key: string | null
+}
+export type SectionPage = {
+  content_version: string
+  items: SectionRead[]
+  next_offset: number | null
+}
+export type SegmentRead = {
+  id: number
+  source_key: string
+  section_id: number | null
+  sequence: number
+  kind: SegmentKind
+  html_content: string
+  text_content: string
+  language: string | null
+  regions: Region[]
+  page_indexes: number[]
+  narration_start_ms: number | null
+  narration_end_ms: number | null
+  narration_seek_ms: number | null
+  alignment_status: string | null
+  alignment_metadata: {
+    [key: string]: unknown
+  } | null
+}
+export type SegmentPage = {
+  content_version: string
+  items: SegmentRead[]
+  next_offset: number | null
 }
 export type AudioFileResponse = {
   id: number
@@ -378,10 +481,6 @@ export type CoverFileResponse = {
   created_at: string
   kind: 'cover'
   metadata: CoverMetadata
-}
-export type SourcePdfMetadata = {
-  page_count: number
-  [key: string]: unknown
 }
 export type SourcePdfFileResponse = {
   id: number
@@ -429,6 +528,8 @@ export const {
   useImportApiV1BookContentMutation,
   useGetApiV1BookContentQuery,
   usePurgeApiV1BookContentMutation,
+  useListApiV1BookSectionsQuery,
+  useListApiV1BookSegmentsQuery,
   useCreateApiV1FileMutation,
   useDeleteApiV1FileMutation,
   useGetApiV1HealthQuery,

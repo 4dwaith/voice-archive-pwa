@@ -288,30 +288,52 @@ export const BookPatch = zod
   )
 export type BookPatch = zod.input<typeof BookPatch>
 export type BookPatchOutput = zod.output<typeof BookPatch>
-export const ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+export const ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch =
   zod.object({
     code: zod.enum([
       'content_exists',
       'content_precondition_required',
       'content_precondition_failed',
       'content_payload_too_large',
+      'content_version_mismatch',
     ]),
     message: zod.string(),
   })
-export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge =
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch =
   zod.input<
-    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch
   >
-export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeOutput =
+export type ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatchOutput =
   zod.output<
-    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge
+    typeof ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch
   >
 export const ContentErrorResponse = zod.object({
   error:
-    ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLarge,
+    ErrorDetailLiteralContentExistsContentPreconditionRequiredContentPreconditionFailedContentPayloadTooLargeContentVersionMismatch,
 })
 export type ContentErrorResponse = zod.input<typeof ContentErrorResponse>
 export type ContentErrorResponseOutput = zod.output<typeof ContentErrorResponse>
+export const sourcePdfMetadataPageCountExclusiveMin = 0
+export const sourcePdfMetadataPageCountMax = 2147483647
+export const SourcePdfMetadata = zod.looseObject({
+  page_count: zod
+    .int()
+    .gt(sourcePdfMetadataPageCountExclusiveMin)
+    .max(sourcePdfMetadataPageCountMax),
+})
+export type SourcePdfMetadata = zod.input<typeof SourcePdfMetadata>
+export type SourcePdfMetadataOutput = zod.output<typeof SourcePdfMetadata>
+export const ContentFile = zod.object({
+  id: zod.int(),
+  kind: zod.enum(['source_pdf', 'audio_chapter']),
+  book_id: zod.union([zod.int(), zod.null()]),
+  section_id: zod.union([zod.int(), zod.null()]),
+  byte_size: zod.int(),
+  metadata: zod.union([AudioMetadata, SourcePdfMetadata]),
+  url: zod.string(),
+})
+export type ContentFile = zod.input<typeof ContentFile>
+export type ContentFileOutput = zod.output<typeof ContentFile>
 export const SectionKind = zod.enum(['part', 'chapter', 'section'])
 export type SectionKind = zod.input<typeof SectionKind>
 export type SectionKindOutput = zod.output<typeof SectionKind>
@@ -541,6 +563,9 @@ export const ContentManifest = zod.object({
   schema_version: zod.union([zod.int(), zod.null()]),
   imported_at: zod.union([zod.iso.datetime({ offset: true }), zod.null()]),
   source_pdf_file_id: zod.union([zod.int(), zod.null()]),
+  section_count: zod.int(),
+  segment_count: zod.int(),
+  files: zod.array(ContentFile),
 })
 export type ContentManifest = zod.input<typeof ContentManifest>
 export type ContentManifestOutput = zod.output<typeof ContentManifest>
@@ -662,16 +687,6 @@ export type FileErrorResponseOutput = zod.output<typeof FileErrorResponse>
 export const FileKind = zod.enum(['cover', 'source_pdf', 'audio_chapter'])
 export type FileKind = zod.input<typeof FileKind>
 export type FileKindOutput = zod.output<typeof FileKind>
-export const sourcePdfMetadataPageCountExclusiveMin = 0
-export const sourcePdfMetadataPageCountMax = 2147483647
-export const SourcePdfMetadata = zod.looseObject({
-  page_count: zod
-    .int()
-    .gt(sourcePdfMetadataPageCountExclusiveMin)
-    .max(sourcePdfMetadataPageCountMax),
-})
-export type SourcePdfMetadata = zod.input<typeof SourcePdfMetadata>
-export type SourcePdfMetadataOutput = zod.output<typeof SourcePdfMetadata>
 export const sourcePdfFileResponseIdExclusiveMin = 0
 export const sourcePdfFileResponseByteSizeExclusiveMin = 0
 export const SourcePdfFileResponse = zod.object({
@@ -751,6 +766,55 @@ export const NotReadyResponse = zod.object({
 })
 export type NotReadyResponse = zod.input<typeof NotReadyResponse>
 export type NotReadyResponseOutput = zod.output<typeof NotReadyResponse>
+export const SectionRead = zod.object({
+  id: zod.int(),
+  source_key: zod.string(),
+  parent_id: zod.union([zod.int(), zod.null()]),
+  kind: SectionKind,
+  title: zod.string(),
+  sibling_sequence: zod.int(),
+  sequence: zod.int(),
+  audio_file_id: zod.union([zod.int(), zod.null()]),
+  first_segment_source_key: zod.union([zod.string(), zod.null()]),
+})
+export type SectionRead = zod.input<typeof SectionRead>
+export type SectionReadOutput = zod.output<typeof SectionRead>
+export const SectionPage = zod.object({
+  content_version: zod.uuid(),
+  items: zod.array(SectionRead),
+  next_offset: zod.union([zod.int(), zod.null()]),
+})
+export type SectionPage = zod.input<typeof SectionPage>
+export type SectionPageOutput = zod.output<typeof SectionPage>
+export const SegmentRead = zod.object({
+  id: zod.int(),
+  source_key: zod.string(),
+  section_id: zod.union([zod.int(), zod.null()]),
+  sequence: zod.int(),
+  kind: SegmentKind,
+  html_content: zod.string(),
+  text_content: zod.string(),
+  language: zod.union([zod.string(), zod.null()]),
+  regions: zod.array(Region),
+  page_indexes: zod.array(zod.int()),
+  narration_start_ms: zod.union([zod.int(), zod.null()]),
+  narration_end_ms: zod.union([zod.int(), zod.null()]),
+  narration_seek_ms: zod.union([zod.int(), zod.null()]),
+  alignment_status: zod.union([zod.string(), zod.null()]),
+  alignment_metadata: zod.union([
+    zod.record(zod.string(), zod.unknown()),
+    zod.null(),
+  ]),
+})
+export type SegmentRead = zod.input<typeof SegmentRead>
+export type SegmentReadOutput = zod.output<typeof SegmentRead>
+export const SegmentPage = zod.object({
+  content_version: zod.uuid(),
+  items: zod.array(SegmentRead),
+  next_offset: zod.union([zod.int(), zod.null()]),
+})
+export type SegmentPage = zod.input<typeof SegmentPage>
+export type SegmentPageOutput = zod.output<typeof SegmentPage>
 export const ValidationIssue = zod.object({
   location: zod.array(zod.union([zod.string(), zod.int()])),
   code: zod.string(),
@@ -914,8 +978,8 @@ export type GetApiV1Book500ResponseOutput = zod.output<
 /**
  * Update supplied fields. Omission preserves values; only nullable fields accept null.
  *
- * Optional cover/PDF IDs attach prepared files. PDF links may be changed until
- * content is imported; afterward, changing the PDF requires content purge.
+ * Optional cover/PDF IDs attach prepared files. PDF links may be changed if
+ * a book has no content; afterward, changing the PDF requires content purge.
  * @summary Patch Book
  */
 export const patchApiV1BookPathBookIdExclusiveMin = 0
@@ -1244,6 +1308,188 @@ export type PurgeApiV1BookContent500Response = zod.input<
 >
 export type PurgeApiV1BookContent500ResponseOutput = zod.output<
   typeof PurgeApiV1BookContent500Response
+>
+/**
+ * @summary List Sections
+ */
+export const listApiV1BookSectionsPathBookIdExclusiveMin = 0
+export const listApiV1BookSectionsPathBookIdMax = 9223372036854776000
+export const ListApiV1BookSectionsParams = zod.object({
+  book_id: zod
+    .int()
+    .gt(listApiV1BookSectionsPathBookIdExclusiveMin)
+    .max(listApiV1BookSectionsPathBookIdMax),
+})
+export type ListApiV1BookSectionsParams = zod.input<
+  typeof ListApiV1BookSectionsParams
+>
+export type ListApiV1BookSectionsParamsOutput = zod.output<
+  typeof ListApiV1BookSectionsParams
+>
+export const listApiV1BookSectionsQueryLimitDefault = 2000
+export const listApiV1BookSectionsQueryLimitMax = 5000
+export const listApiV1BookSectionsQueryOffsetDefault = 0
+export const listApiV1BookSectionsQueryOffsetMin = 0
+export const listApiV1BookSectionsQueryOffsetMax = 2147483647
+export const ListApiV1BookSectionsQueryParams = zod.object({
+  limit: zod
+    .int()
+    .min(1)
+    .max(listApiV1BookSectionsQueryLimitMax)
+    .default(listApiV1BookSectionsQueryLimitDefault),
+  offset: zod
+    .int()
+    .min(listApiV1BookSectionsQueryOffsetMin)
+    .max(listApiV1BookSectionsQueryOffsetMax)
+    .default(listApiV1BookSectionsQueryOffsetDefault),
+})
+export type ListApiV1BookSectionsQueryParams = zod.input<
+  typeof ListApiV1BookSectionsQueryParams
+>
+export type ListApiV1BookSectionsQueryParamsOutput = zod.output<
+  typeof ListApiV1BookSectionsQueryParams
+>
+export const ListApiV1BookSectionsHeader = zod.object({
+  'if-content-version': zod.uuid(),
+})
+export type ListApiV1BookSectionsHeader = zod.input<
+  typeof ListApiV1BookSectionsHeader
+>
+export type ListApiV1BookSectionsHeaderOutput = zod.output<
+  typeof ListApiV1BookSectionsHeader
+>
+export const ListApiV1BookSections200Response = SectionPage
+export type ListApiV1BookSections200Response = zod.input<
+  typeof ListApiV1BookSections200Response
+>
+export type ListApiV1BookSections200ResponseOutput = zod.output<
+  typeof ListApiV1BookSections200Response
+>
+export const ListApiV1BookSections404Response = BookErrorResponse
+export type ListApiV1BookSections404Response = zod.input<
+  typeof ListApiV1BookSections404Response
+>
+export type ListApiV1BookSections404ResponseOutput = zod.output<
+  typeof ListApiV1BookSections404Response
+>
+export const ListApiV1BookSections405Response = HttpErrorResponse
+export type ListApiV1BookSections405Response = zod.input<
+  typeof ListApiV1BookSections405Response
+>
+export type ListApiV1BookSections405ResponseOutput = zod.output<
+  typeof ListApiV1BookSections405Response
+>
+export const ListApiV1BookSections412Response = ContentErrorResponse
+export type ListApiV1BookSections412Response = zod.input<
+  typeof ListApiV1BookSections412Response
+>
+export type ListApiV1BookSections412ResponseOutput = zod.output<
+  typeof ListApiV1BookSections412Response
+>
+export const ListApiV1BookSections422Response = ValidationErrorResponse
+export type ListApiV1BookSections422Response = zod.input<
+  typeof ListApiV1BookSections422Response
+>
+export type ListApiV1BookSections422ResponseOutput = zod.output<
+  typeof ListApiV1BookSections422Response
+>
+export const ListApiV1BookSections500Response = InternalErrorResponse
+export type ListApiV1BookSections500Response = zod.input<
+  typeof ListApiV1BookSections500Response
+>
+export type ListApiV1BookSections500ResponseOutput = zod.output<
+  typeof ListApiV1BookSections500Response
+>
+/**
+ * @summary List Segments
+ */
+export const listApiV1BookSegmentsPathBookIdExclusiveMin = 0
+export const listApiV1BookSegmentsPathBookIdMax = 9223372036854776000
+export const ListApiV1BookSegmentsParams = zod.object({
+  book_id: zod
+    .int()
+    .gt(listApiV1BookSegmentsPathBookIdExclusiveMin)
+    .max(listApiV1BookSegmentsPathBookIdMax),
+})
+export type ListApiV1BookSegmentsParams = zod.input<
+  typeof ListApiV1BookSegmentsParams
+>
+export type ListApiV1BookSegmentsParamsOutput = zod.output<
+  typeof ListApiV1BookSegmentsParams
+>
+export const listApiV1BookSegmentsQueryLimitDefault = 500
+export const listApiV1BookSegmentsQueryLimitMax = 1000
+export const listApiV1BookSegmentsQueryOffsetDefault = 0
+export const listApiV1BookSegmentsQueryOffsetMin = 0
+export const listApiV1BookSegmentsQueryOffsetMax = 2147483647
+export const ListApiV1BookSegmentsQueryParams = zod.object({
+  limit: zod
+    .int()
+    .min(1)
+    .max(listApiV1BookSegmentsQueryLimitMax)
+    .default(listApiV1BookSegmentsQueryLimitDefault),
+  offset: zod
+    .int()
+    .min(listApiV1BookSegmentsQueryOffsetMin)
+    .max(listApiV1BookSegmentsQueryOffsetMax)
+    .default(listApiV1BookSegmentsQueryOffsetDefault),
+})
+export type ListApiV1BookSegmentsQueryParams = zod.input<
+  typeof ListApiV1BookSegmentsQueryParams
+>
+export type ListApiV1BookSegmentsQueryParamsOutput = zod.output<
+  typeof ListApiV1BookSegmentsQueryParams
+>
+export const ListApiV1BookSegmentsHeader = zod.object({
+  'if-content-version': zod.uuid(),
+})
+export type ListApiV1BookSegmentsHeader = zod.input<
+  typeof ListApiV1BookSegmentsHeader
+>
+export type ListApiV1BookSegmentsHeaderOutput = zod.output<
+  typeof ListApiV1BookSegmentsHeader
+>
+export const ListApiV1BookSegments200Response = SegmentPage
+export type ListApiV1BookSegments200Response = zod.input<
+  typeof ListApiV1BookSegments200Response
+>
+export type ListApiV1BookSegments200ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments200Response
+>
+export const ListApiV1BookSegments404Response = BookErrorResponse
+export type ListApiV1BookSegments404Response = zod.input<
+  typeof ListApiV1BookSegments404Response
+>
+export type ListApiV1BookSegments404ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments404Response
+>
+export const ListApiV1BookSegments405Response = HttpErrorResponse
+export type ListApiV1BookSegments405Response = zod.input<
+  typeof ListApiV1BookSegments405Response
+>
+export type ListApiV1BookSegments405ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments405Response
+>
+export const ListApiV1BookSegments412Response = ContentErrorResponse
+export type ListApiV1BookSegments412Response = zod.input<
+  typeof ListApiV1BookSegments412Response
+>
+export type ListApiV1BookSegments412ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments412Response
+>
+export const ListApiV1BookSegments422Response = ValidationErrorResponse
+export type ListApiV1BookSegments422Response = zod.input<
+  typeof ListApiV1BookSegments422Response
+>
+export type ListApiV1BookSegments422ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments422Response
+>
+export const ListApiV1BookSegments500Response = InternalErrorResponse
+export type ListApiV1BookSegments500Response = zod.input<
+  typeof ListApiV1BookSegments500Response
+>
+export type ListApiV1BookSegments500ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments500Response
 >
 /**
  * Prepare a file independently of book create/save; return its ID for linking.

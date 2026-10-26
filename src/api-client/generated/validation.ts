@@ -14,6 +14,12 @@ export const endpointEnhancements = {
   getApiV1BookContent: {
     responseSchema: schemas.GetApiV1BookContent200Response,
   },
+  listApiV1BookSections: {
+    responseSchema: schemas.ListApiV1BookSections200Response,
+  },
+  listApiV1BookSegments: {
+    responseSchema: schemas.ListApiV1BookSegments200Response,
+  },
   createApiV1File: { responseSchema: schemas.CreateApiV1File201Response },
   getApiV1Health: { responseSchema: schemas.GetApiV1Health200Response },
   getApiV1Ready: { responseSchema: schemas.GetApiV1Ready200Response },
@@ -71,6 +77,20 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
     '422': schemas.PurgeApiV1BookContent422Response,
     '428': schemas.PurgeApiV1BookContent428Response,
     '500': schemas.PurgeApiV1BookContent500Response,
+  },
+  listApiV1BookSections: {
+    '404': schemas.ListApiV1BookSections404Response,
+    '405': schemas.ListApiV1BookSections405Response,
+    '412': schemas.ListApiV1BookSections412Response,
+    '422': schemas.ListApiV1BookSections422Response,
+    '500': schemas.ListApiV1BookSections500Response,
+  },
+  listApiV1BookSegments: {
+    '404': schemas.ListApiV1BookSegments404Response,
+    '405': schemas.ListApiV1BookSegments405Response,
+    '412': schemas.ListApiV1BookSegments412Response,
+    '422': schemas.ListApiV1BookSegments422Response,
+    '500': schemas.ListApiV1BookSegments500Response,
   },
   createApiV1File: {
     '400': schemas.CreateApiV1File400Response,
