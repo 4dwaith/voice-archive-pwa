@@ -1,7 +1,6 @@
 import { useId, useLayoutEffect, useRef } from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 import type { ReaderSection } from '../../../models/reader'
-import styles from './ReaderTableOfContents.module.css'
 
 function ReaderSectionList({
   childrenByParent,
@@ -20,16 +19,16 @@ function ReaderSectionList({
   } = useReaderContext()
 
   return (
-    <ul hidden={isHidden}>
+    <ul hidden={isHidden} className="m-0 list-none p-0">
       {(childrenByParent.get(parentId) ?? []).map((section) => {
         const hasChildren = childrenByParent.has(section.id)
         const isExpanded = isSectionExpanded(section.id)
 
         return (
-          <li key={section.id}>
+          <li key={section.id} className="relative">
             <button
               type="button"
-              className={styles.section}
+              className="ms-8 block min-h-11 w-[calc(100%-2rem)] cursor-pointer p-2 text-start wrap-anywhere aria-[current=true]:bg-[#dbeafe] aria-[current=true]:font-bold! focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
               aria-current={
                 selectedSectionId === section.id ? 'true' : undefined
               }
@@ -40,6 +39,7 @@ function ReaderSectionList({
             {hasChildren && (
               <details open={isExpanded}>
                 <summary
+                  className="absolute start-0 top-0 min-h-11 w-8 cursor-pointer p-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
                   aria-label={`Subsections of ${section.title}`}
                   aria-expanded={isExpanded}
                   onClick={(event) => {
@@ -107,12 +107,13 @@ export function ReaderTableOfContents({
     <nav
       ref={navRef}
       aria-label="Table of contents"
-      className={styles.toc}
+      className="flex max-h-full min-w-0 flex-col bg-white text-[#172033] data-[presentation=dimmed]:opacity-70 data-[presentation=dimmed]:focus-within:opacity-100 [&_ul_ul]:ps-3 [&_ul_ul_ul_ul_ul]:ps-0"
       data-presentation={tocPresentation}
     >
       <button
         ref={toggleRef}
         type="button"
+        className="min-h-11 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
         aria-controls={bodyId}
         aria-expanded={!isCollapsed}
         aria-label={
@@ -123,7 +124,7 @@ export function ReaderTableOfContents({
         <span aria-hidden="true">☰</span>
         {!isCollapsed && ' Table of contents'}
       </button>
-      <div id={bodyId} hidden={isCollapsed} className={styles.body}>
+      <div id={bodyId} hidden={isCollapsed} className="min-h-0 overflow-auto">
         {sections.length ? (
           <ReaderSectionList
             childrenByParent={childrenByParent}

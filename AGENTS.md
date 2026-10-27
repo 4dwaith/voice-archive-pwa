@@ -52,6 +52,8 @@
 
 ## Existing coding and reader contracts
 
+- Prefer Tailwind utilities for component styling. Retain CSS for imported content
+  formatting and complex descendant rules where it is clearer.
 - Use explicit verbs/verb phrases for functions, and is/has/can for predicates.
 - Separate test setup, action and assertion groups with blank lines. Apply the
   same readable spacing to stories/helpers; leave untouched files alone.

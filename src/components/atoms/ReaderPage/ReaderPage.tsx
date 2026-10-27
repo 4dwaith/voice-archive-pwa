@@ -2,7 +2,6 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 import type { ReaderSegment } from '../../../models/reader'
 import { ReaderSegmentContent } from '../ReaderSegmentContent/ReaderSegmentContent'
-import styles from './ReaderPage.module.css'
 
 export function ReaderPage({
   segments,
@@ -89,7 +88,8 @@ export function ReaderPage({
 
   return (
     <article
-      className={styles.page}
+      className="box-border h-full min-h-0 w-full min-w-0 overflow-clip bg-page p-[20px] leading-[1.65] text-ink [--reader-column-gap:32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+      dir="ltr"
       aria-label={label}
       aria-busy={pageCount === null}
       tabIndex={0}
@@ -125,10 +125,14 @@ export function ReaderPage({
           )
       }}
     >
-      <div ref={windowRef} className={styles.window} data-reader-page-window>
+      <div
+        ref={windowRef}
+        className="h-full w-full overflow-clip"
+        data-reader-page-window
+      >
         <div
           ref={columnsRef}
-          className={styles.columns}
+          className="h-full w-full columns-1 [column-fill:auto] [column-gap:var(--reader-column-gap)] [orphans:1] [widows:1] [writing-mode:horizontal-tb]"
           data-reader-page-columns
           style={{
             transform: `translateX(calc(${1 - currentPage} * (100% + var(--reader-column-gap))))`,

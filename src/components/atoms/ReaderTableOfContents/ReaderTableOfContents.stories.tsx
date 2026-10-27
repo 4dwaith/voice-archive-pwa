@@ -48,7 +48,7 @@ const ProvideTocStory: Decorator<StoryArgs> = function ProvideTocStory(Story) {
 
   return (
     <ReaderContext value={value}>
-      <div style={{ width: args.width, height: 320 }}>
+      <div className="h-[320px]" style={{ width: args.width }}>
         <Story />
       </div>
     </ReaderContext>

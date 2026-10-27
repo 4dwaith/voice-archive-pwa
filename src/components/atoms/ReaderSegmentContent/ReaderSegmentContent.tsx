@@ -46,7 +46,7 @@ export function ReaderSegmentContent({
 
   return (
     <div
-      className="reader-segment"
+      className="reader-segment leading-[1.65] wrap-anywhere text-ink focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
       data-reader-segment-id={segment.id}
       data-reader-source-key={segment.source_key}
       data-reader-kind={segment.kind}
