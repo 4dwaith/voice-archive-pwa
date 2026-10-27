@@ -85,6 +85,8 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+export const Flat: Story = { args: { sections: readerSections.filter((s) => !s.parent_id) } }
+
 export const Nested: Story = {}
 
 export const DimmedNarrow: Story = {
