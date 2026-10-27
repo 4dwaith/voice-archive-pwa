@@ -53,6 +53,12 @@ export function ReaderPageHarness({
   )
 
   const value: ReaderContextValue = {
+    selectedSectionId: null,
+    isSectionExpanded: () => true,
+    tocPresentation: 'shown',
+    selectSection: () => undefined,
+    setSectionExpanded: () => undefined,
+    setTocPresentation: () => undefined,
     ...inputs,
     pageCount,
     reportPageCount,

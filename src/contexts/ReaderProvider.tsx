@@ -1,15 +1,21 @@
 import { useMemo, type ReactNode } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
+  selectSection,
+  setSectionExpanded,
+  setTocPresentation,
+  getSelectedSectionId,
+  getSectionExpansionPredicate,
+  getTocPresentation,
   selectSegment,
   highlightSegment,
   reportSegmentError,
   setCurrentPage,
   reportPageCount,
-  selectSelectedSegmentId,
-  selectHighlightedSegmentId,
-  selectCurrentPage,
-  selectPageCount,
+  getSelectedSegmentId,
+  getHighlightedSegmentId,
+  getCurrentPage,
+  getPageCount,
 } from '../store/readerSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
 import { ReaderContext, type ReaderContextValue } from './ReaderContext'
@@ -17,10 +23,13 @@ import { ReaderContext, type ReaderContextValue } from './ReaderContext'
 // Reader content is passed to components; this adapter supplies shared state/actions.
 export function ReaderProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
-  const selectedSegmentId = useAppSelector(selectSelectedSegmentId)
-  const highlightedSegmentId = useAppSelector(selectHighlightedSegmentId)
-  const currentPage = useAppSelector(selectCurrentPage)
-  const pageCount = useAppSelector(selectPageCount)
+  const selectedSectionId = useAppSelector(getSelectedSectionId)
+  const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
+  const tocPresentation = useAppSelector(getTocPresentation)
+  const selectedSegmentId = useAppSelector(getSelectedSegmentId)
+  const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
+  const currentPage = useAppSelector(getCurrentPage)
+  const pageCount = useAppSelector(getPageCount)
   const textSizePercent = useAppSelector(selectTextSizePercent)
   const actions = useMemo<
     Pick<
@@ -30,9 +39,21 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       | 'reportSegmentError'
       | 'setCurrentPage'
       | 'reportPageCount'
+      | 'selectSection'
+      | 'setSectionExpanded'
+      | 'setTocPresentation'
     >
   >(
     () => ({
+      selectSection: (sectionId) => {
+        dispatch(selectSection(sectionId))
+      },
+      setSectionExpanded: (change) => {
+        dispatch(setSectionExpanded(change))
+      },
+      setTocPresentation: (presentation) => {
+        dispatch(setTocPresentation(presentation))
+      },
       selectSegment: (segmentId) => {
         dispatch(selectSegment(segmentId))
       },
@@ -53,6 +74,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   )
   const value = useMemo<ReaderContextValue>(
     () => ({
+      selectedSectionId,
+      isSectionExpanded,
+      tocPresentation,
       currentPage,
       pageCount,
       textSizePercent,
@@ -61,6 +85,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       ...actions,
     }),
     [
+      selectedSectionId,
+      isSectionExpanded,
+      tocPresentation,
       currentPage,
       pageCount,
       textSizePercent,

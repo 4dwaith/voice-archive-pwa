@@ -21,6 +21,12 @@ afterEach(() => {
 
 function createContextValue(): ReaderContextValue {
   return {
+    selectedSectionId: null,
+    isSectionExpanded: () => true,
+    tocPresentation: 'shown',
+    selectSection: vi.fn(),
+    setSectionExpanded: vi.fn(),
+    setTocPresentation: vi.fn(),
     currentPage: 1,
     pageCount: null,
     textSizePercent: 100,

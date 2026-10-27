@@ -1,7 +1,19 @@
 import { createContext, useContext } from 'react'
-import type { ReaderSegmentError } from '../models/reader'
+import type {
+  ReaderSegmentError,
+  ReaderTocPresentation,
+} from '../models/reader'
 
 export type ReaderContextValue = {
+  selectedSectionId: number | null
+  isSectionExpanded: (sectionId: number) => boolean
+  tocPresentation: ReaderTocPresentation
+  selectSection: (sectionId: number | null) => void
+  setSectionExpanded: (change: {
+    sectionId: number
+    isExpanded: boolean
+  }) => void
+  setTocPresentation: (presentation: ReaderTocPresentation) => void
   currentPage: number
   pageCount: number | null
   textSizePercent: number

@@ -23,6 +23,12 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
     const [args, updateArgs] = useArgs<ReaderStoryArgs>()
 
     const value: ReaderContextValue = {
+      selectedSectionId: null,
+      isSectionExpanded: () => true,
+      tocPresentation: 'shown',
+      selectSection: () => undefined,
+      setSectionExpanded: () => undefined,
+      setTocPresentation: () => undefined,
       currentPage: 1,
       pageCount: null,
       textSizePercent: 100,

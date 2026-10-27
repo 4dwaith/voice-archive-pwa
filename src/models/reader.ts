@@ -1,4 +1,14 @@
-import type { SegmentReadOutput } from '../api-client/generated/schemas'
+import type {
+  SectionReadOutput,
+  SegmentReadOutput,
+} from '../api-client/generated/schemas'
+
+export type ReaderSection = Pick<
+  SectionReadOutput,
+  'id' | 'parent_id' | 'title' | 'sequence'
+>
+
+export type ReaderTocPresentation = 'shown' | 'dimmed' | 'collapsed'
 
 export type ReaderSegment = Pick<
   SegmentReadOutput,
