@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { BookResponseOutput } from '../../api-client/generated/schemas'
+import type { BookResponseOutput } from '../../../api-client/generated/schemas'
 import { titleInitials } from './titleInitials'
 
 type BookProps = {

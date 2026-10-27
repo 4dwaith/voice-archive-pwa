@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookShelf } from '../../src/components/BookShelf/BookShelf'
+import { BookShelf } from '../../src/components/molecules/BookShelf/BookShelf'
 import { scrollingBooks } from '../../src/mock-data/books'
 
 const batchSize = 12

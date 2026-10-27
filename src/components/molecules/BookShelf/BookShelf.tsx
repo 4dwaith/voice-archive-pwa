@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { BookResponseOutput } from '../../api-client/generated/schemas'
-import { Book } from '../Book/Book'
+import type { BookResponseOutput } from '../../../api-client/generated/schemas'
+import { Book } from '../../atoms/Book/Book'
 
 export type BookShelfProps = {
   books: BookResponseOutput[]

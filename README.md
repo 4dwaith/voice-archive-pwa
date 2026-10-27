@@ -86,7 +86,7 @@ directly, retaining `cover_url`; there is no separate presentation book model.
 two title words, preserving combined Kannada characters and emoji. Single-word
 titles use one grapheme. Failed images immediately use the same fallback.
 
-Storybook's **Library/BookShelf** entries cover initial loading, empty, unavailable,
+Storybook's **Molecules/Library/BookShelf** entries cover initial loading, empty, unavailable,
 loading more, later failure, more available, end, multilingual/long titles, and
 interactive loading/selection. Storybook uses generated-schema-validated fixtures
 and needs no backend. Development sample books were added once through the API;
@@ -195,7 +195,10 @@ needs the backend; the test configuration does not.
 Run Storybook to view and exercise reusable components in isolation:
 
 Each reusable component has its own folder under `src/components/`, with its
-component, stories, and private helpers together (`Book/` and `BookShelf/`).
+component, stories, and private helpers together. `Book` and `ReaderSegmentContent`
+live in `atoms/Book/` and `atoms/ReaderSegmentContent/`; `BookShelf` lives in
+`molecules/BookShelf/`. The library components use the Storybook groups
+**Atoms/Library/Book** and **Molecules/Library/BookShelf**.
 Behavioral tests remain under `tests/components/`.
 
 ```bash

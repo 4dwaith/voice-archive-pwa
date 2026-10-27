@@ -1,6 +1,6 @@
 import { useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { books, makeBookFixture } from '../../mock-data/books'
+import { books, makeBookFixture } from '../../../mock-data/books'
 import { Book } from './Book'
 
 const baseBook = books[0]
@@ -27,7 +27,7 @@ function InteractiveBook(props: ComponentProps<typeof Book>) {
 }
 
 const meta = {
-  title: 'Library/Book',
+  title: 'Atoms/Library/Book',
   component: Book,
   tags: ['autodocs'],
   args: {

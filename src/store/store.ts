@@ -2,12 +2,14 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import type { ThunkDispatch, UnknownAction } from '@reduxjs/toolkit'
 import textSizeReducer from './textSizeSlice'
 import bookDownloadsReducer from './bookDownloadsSlice'
+import readerReducer from './readerSlice'
 import { createBookDownloadsListener } from './bookDownloadsListener'
 import { archiveApi } from '../api-client/archiveApi'
 
 const rootReducer = combineReducers({
   textSize: textSizeReducer,
   bookDownloads: bookDownloadsReducer,
+  reader: readerReducer,
   [archiveApi.reducerPath]: archiveApi.reducer,
 })
 export type RootState = ReturnType<typeof rootReducer>

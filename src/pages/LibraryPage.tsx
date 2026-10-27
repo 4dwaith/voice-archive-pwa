@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useAppNavigate } from '../routing/navigation'
 import { useSelector } from 'react-redux'
 import { booksApi } from '../api-client/resources/booksApi'
-import { BookShelf } from '../components/BookShelf/BookShelf'
+import { BookShelf } from '../components/molecules/BookShelf/BookShelf'
 
 const selectLibrary = booksApi.endpoints.libraryBooks.select()
 

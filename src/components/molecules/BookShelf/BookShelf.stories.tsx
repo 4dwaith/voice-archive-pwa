@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { BookShelf } from './BookShelf'
-import { books, makeBookFixture } from '../../mock-data/books'
-import { ScrollingShelf } from '../../../.storybook/helpers/ScrollingShelf'
+import { books, makeBookFixture } from '../../../mock-data/books'
+import { ScrollingShelf } from '../../../../.storybook/helpers/ScrollingShelf'
 
 const meta = {
-  title: 'Library/BookShelf',
+  title: 'Molecules/Library/BookShelf',
   component: BookShelf,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },
