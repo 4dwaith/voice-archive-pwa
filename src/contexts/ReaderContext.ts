@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type {
   ReaderPageNavigation,
+  ReaderPageMeasurement,
   ReaderSegmentError,
   ReaderTocPresentation,
 } from '../models/reader'
@@ -28,6 +29,7 @@ export type ReaderContextValue = {
     isPageNavigationPending: boolean
     requestPageNavigation: (intent: ReaderPageNavigation) => void
     setCurrentPage: (pageNumber: number) => void
+    reportPageMeasurement: (report: ReaderPageMeasurement) => void
     reportPageCount: (pageCount: number | null) => void
   }
   reader: {

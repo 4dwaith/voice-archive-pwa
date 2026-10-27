@@ -26,6 +26,7 @@ it('fills the footer with page cells and jumps directly to a clicked destination
       isPageNavigationPending: false,
       requestPageNavigation,
       setCurrentPage: () => undefined,
+      reportPageMeasurement: () => undefined,
       reportPageCount: () => undefined,
     },
     reader: {

@@ -62,6 +62,7 @@ const ProvideProgressStory: Decorator<StoryArgs> =
           )
         },
         setCurrentPage: () => undefined,
+        reportPageMeasurement: () => undefined,
         reportPageCount: () => undefined,
       },
       reader: {

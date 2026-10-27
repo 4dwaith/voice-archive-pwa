@@ -50,6 +50,7 @@ export function ReaderSegmentContent({
       data-reader-segment-id={segment.id}
       data-reader-source-key={segment.source_key}
       data-reader-kind={segment.kind}
+      data-reader-mappable={result.isValid}
       data-reader-selected={isSelected || undefined}
       data-reader-highlighted={highlightedSegmentId === segment.id || undefined}
       lang={segment.language ?? undefined}

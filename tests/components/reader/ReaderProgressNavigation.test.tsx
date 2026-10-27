@@ -37,6 +37,7 @@ function renderNavigation(
       isPageNavigationPending: false,
       requestPageNavigation: vi.fn(),
       setCurrentPage: vi.fn(),
+      reportPageMeasurement: () => undefined,
       reportPageCount: vi.fn(),
       ...overrides,
     },

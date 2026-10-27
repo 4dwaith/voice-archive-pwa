@@ -24,3 +24,26 @@ export type ReaderSegmentError =
   | 'unsupported-markup'
   | 'text-mismatch'
   | 'sanitizer-unavailable'
+
+export type ReaderMeasurementTarget = { chapterId: string; layoutId: string }
+
+type ReaderTextPosition = {
+  segmentId: number
+  sourceKey: string
+  offset: number
+}
+
+export type ReaderLayoutMeasurement = {
+  width: number
+  height: number
+  textSizePercent: number
+  pages: {
+    localPage: number
+    start: ReaderTextPosition | null
+    end: ReaderTextPosition | null
+  }[]
+  unmappableSegmentIds: number[]
+}
+
+export type ReaderPageMeasurement = ReaderMeasurementTarget &
+  ReaderLayoutMeasurement

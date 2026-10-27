@@ -1,7 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 import type { ReaderSegment } from '../../../models/reader'
-import { ReaderSegmentContent } from '../ReaderSegmentContent/ReaderSegmentContent'
+import { ReaderChapterLayout } from '../ReaderChapterLayout/ReaderChapterLayout'
 
 export function ReaderPage({
   segments,
@@ -13,86 +13,26 @@ export function ReaderPage({
   const { currentPage, pageCount, setCurrentPage, reportPageCount } =
     useReaderContext().navigation
   const { textSizePercent } = useReaderContext().reader
-  const columnsRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
-  const [{ width, height }, setSize] = useState({ width: 0, height: 0 })
 
-  useLayoutEffect(() => {
-    const columns = columnsRef.current!
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect
-      setSize((previous) =>
-        previous.width === width && previous.height === height
-          ? previous
-          : { width, height },
-      )
-    })
-    observer.observe(columns)
-    return () => observer.disconnect()
-  }, [])
-
-  useLayoutEffect(() => {
-    reportPageCount(null)
-    const columns = columnsRef.current!
-    const document = columns.ownerDocument
-    const window = document.defaultView!
-    let isCancelled = false
-    let frame = 0
-
-    const measurePageCount = async () => {
-      if (segments.length === 0) {
-        reportPageCount(0)
-        return
-      }
-      if (width <= 0 || height <= 0) return
-
-      const font = window.getComputedStyle(columns)
-      // A failed webfont uses CSS fallback; wait for all used fonts before measuring.
-      await document.fonts
-        .load(`${font.fontSize} ${font.fontFamily}`)
-        .catch(() => [])
-      await document.fonts.ready
-      if (isCancelled) return
-
-      frame = window.requestAnimationFrame(() => {
-        if (isCancelled) return
-
-        const gap = parseFloat(window.getComputedStyle(columns).columnGap)
-        // CSS widths can be fractional; scrollWidth is integer-rounded.
-        reportPageCount(
-          Math.max(1, Math.round((columns.scrollWidth + gap) / (width + gap))),
-        )
-      })
-    }
-
-    void measurePageCount()
-    document.fonts.addEventListener('loadingdone', measurePageCount)
-    return () => {
-      isCancelled = true
-      window.cancelAnimationFrame(frame)
-      document.fonts.removeEventListener('loadingdone', measurePageCount)
-      reportPageCount(null)
-    }
-  }, [segments, width, height, textSizePercent, reportPageCount])
-
-  useLayoutEffect(() => {
-    if (pageCount === null) return
-
-    const page = Math.max(1, Math.min(currentPage, pageCount))
-    if (page !== currentPage) setCurrentPage(page)
-  }, [currentPage, pageCount, setCurrentPage])
+  useLayoutEffect(
+    function clampVisiblePageToPageCount() {
+      if (pageCount === null) return
+      const page = Math.max(1, Math.min(currentPage, pageCount))
+      if (page !== currentPage) setCurrentPage(page)
+    },
+    [currentPage, pageCount, setCurrentPage],
+  )
 
   return (
     <article
-      className="box-border h-full min-h-0 w-full min-w-0 overflow-clip bg-page p-[20px] leading-[1.65] text-ink [--reader-column-gap:32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-      dir="ltr"
+      className="h-full min-h-0 w-full min-w-0 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
       aria-label={label}
       aria-busy={pageCount === null}
       tabIndex={0}
       data-reader-page={currentPage}
       data-reader-page-count={pageCount ?? undefined}
       data-reader-layout-ready={pageCount !== null}
-      style={{ fontSize: (16 * textSizePercent) / 100 }}
       onFocusCapture={(event) => {
         if (event.target === event.currentTarget) return
 
@@ -108,7 +48,12 @@ export function ReaderPage({
           return
 
         const first = fragments[0]
-        const gap = parseFloat(getComputedStyle(columnsRef.current!).columnGap)
+        const gap = parseFloat(
+          getComputedStyle(windowRef.current!).getPropertyValue(
+            '--reader-column-gap',
+          ),
+        )
+
         if (first)
           setCurrentPage(
             Math.max(
@@ -121,24 +66,14 @@ export function ReaderPage({
           )
       }}
     >
-      <div
-        ref={windowRef}
-        className="h-full w-full overflow-clip"
-        data-reader-page-window
-      >
-        <div
-          ref={columnsRef}
-          className="h-full w-full columns-1 [column-fill:auto] [column-gap:var(--reader-column-gap)] [orphans:1] [widows:1] [writing-mode:horizontal-tb]"
-          data-reader-page-columns
-          style={{
-            transform: `translateX(calc(${1 - currentPage} * (100% + var(--reader-column-gap))))`,
-          }}
-        >
-          {segments.map((segment) => (
-            <ReaderSegmentContent key={segment.id} segment={segment} />
-          ))}
-        </div>
-      </div>
+      <ReaderChapterLayout
+        segments={segments}
+        page={currentPage}
+        textSizePercent={textSizePercent}
+        shouldCount
+        reportPageCount={reportPageCount}
+        viewportRef={windowRef}
+      />
     </article>
   )
 }

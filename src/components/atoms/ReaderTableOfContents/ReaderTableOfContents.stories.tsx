@@ -50,6 +50,7 @@ const ProvideTocStory: Decorator<StoryArgs> = function ProvideTocStory(Story) {
       currentPage: 1,
       pageCount: null,
       setCurrentPage: () => undefined,
+      reportPageMeasurement: () => undefined,
       reportPageCount: () => undefined,
     },
     reader: {

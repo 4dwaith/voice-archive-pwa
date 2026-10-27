@@ -5,37 +5,51 @@ import {
 } from '@reduxjs/toolkit'
 import type {
   ReaderPageNavigation,
+  ReaderPageMeasurement,
+  ReaderMeasurementTarget,
   ReaderSegmentError,
   ReaderTocPresentation,
 } from '../models/reader'
 
 export type ReaderState = {
+  measuredTargets: ReaderMeasurementTarget[]
   selectedSectionId: number | null
   sectionExpansion: Record<number, boolean>
   tocPresentation: ReaderTocPresentation
-  currentPage: number
-  pageCount: number | null
+
   pageScope: ReaderPageNavigation['scope']
+
+  currentPage: number
   globalPage: number | null
+
+  pageCount: number | null
   totalPageCount: number | null
   indexedPageCount: number
+
   pageNavigationIntent: ReaderPageNavigation | null
+
   selectedSegmentId: number | null
   highlightedSegmentId: number | null
   segmentErrors: Record<number, ReaderSegmentError>
 }
 
 const initialState: ReaderState = {
+  measuredTargets: [],
   selectedSectionId: null,
   sectionExpansion: {},
   tocPresentation: 'shown',
-  currentPage: 1,
-  pageCount: null,
+
   pageScope: 'local',
+
+  currentPage: 1,
   globalPage: null,
+
+  pageCount: null,
   totalPageCount: null,
   indexedPageCount: 0,
+
   pageNavigationIntent: null,
+
   selectedSegmentId: null,
   highlightedSegmentId: null,
   segmentErrors: {},
@@ -52,6 +66,17 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    reportPageMeasurement(state, action: PayloadAction<ReaderPageMeasurement>) {
+      const { chapterId, layoutId } = action.payload
+      if (
+        !state.measuredTargets.some(
+          (target) =>
+            target.chapterId === chapterId && target.layoutId === layoutId,
+        )
+      ) {
+        state.measuredTargets.push({ chapterId, layoutId })
+      }
+    },
     setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
       state.pageScope = action.payload
     },
@@ -114,6 +139,7 @@ const readerSlice = createSlice({
 })
 
 export const {
+  reportPageMeasurement,
   setPageScope,
   requestPageNavigation,
   selectSection,

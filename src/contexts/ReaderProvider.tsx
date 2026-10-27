@@ -19,6 +19,7 @@ import {
   reportSegmentError,
   setCurrentPage,
   reportPageCount,
+  reportPageMeasurement,
   getSelectedSegmentId,
   getHighlightedSegmentId,
   getCurrentPage,
@@ -53,6 +54,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       | 'requestPageNavigation'
       | 'setCurrentPage'
       | 'reportPageCount'
+      | 'reportPageMeasurement'
       | 'setPageScope'
     >
     reader: Pick<
@@ -81,6 +83,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         },
         setCurrentPage: (pageNumber) => {
           dispatch(setCurrentPage(pageNumber))
+        },
+        reportPageMeasurement: (report) => {
+          dispatch(reportPageMeasurement(report))
         },
         reportPageCount: (count) => {
           dispatch(reportPageCount(count))

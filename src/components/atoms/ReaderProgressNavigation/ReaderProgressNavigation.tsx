@@ -34,7 +34,6 @@ function NavigationArrows({
 }
 
 export function ReaderProgressNavigation() {
-
   const {
     pageScope,
     setPageScope,

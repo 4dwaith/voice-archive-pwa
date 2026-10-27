@@ -42,6 +42,7 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
         currentPage: 1,
         pageCount: null,
         setCurrentPage: () => undefined,
+        reportPageMeasurement: () => undefined,
         reportPageCount: () => undefined,
       },
       reader: {

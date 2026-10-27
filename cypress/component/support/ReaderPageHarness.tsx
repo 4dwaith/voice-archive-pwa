@@ -1,10 +1,20 @@
-import { useCallback, useImperativeHandle, useState, type Ref } from 'react'
+import {
+  useCallback,
+  useImperativeHandle,
+  useState,
+  type Ref,
+  type ReactNode,
+} from 'react'
+import { ReaderChapterLayout } from '../../../src/components/atoms/ReaderChapterLayout/ReaderChapterLayout'
 import { ReaderPage } from '../../../src/components/atoms/ReaderPage/ReaderPage'
 import {
   ReaderContext,
   type ReaderContextValue,
 } from '../../../src/contexts/ReaderContext'
-import type { ReaderSegment } from '../../../src/models/reader'
+import type {
+  ReaderPageMeasurement,
+  ReaderSegment,
+} from '../../../src/models/reader'
 
 export type ReaderPageInputs = Pick<
   ReaderContextValue['navigation'],
@@ -22,11 +32,17 @@ export function ReaderPageHarness({
   height,
   ref,
   onReportPageCount,
+  onReportPageMeasurement,
+  children,
+  layoutOnly = false,
 }: {
   segments: ReaderSegment[]
   width: number
   height: number
   ref: Ref<ReaderPageControls>
+  children?: ReactNode
+  layoutOnly?: boolean
+  onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
   onReportPageCount?: (count: number | null) => void
 }) {
   const [inputs, setInputs] = useState<ReaderPageInputs>({
@@ -41,6 +57,11 @@ export function ReaderPageHarness({
       setPageCount(count)
     },
     [onReportPageCount],
+  )
+
+  const reportPageMeasurement = useCallback(
+    (report: ReaderPageMeasurement) => onReportPageMeasurement?.(report),
+    [onReportPageMeasurement],
   )
 
   useImperativeHandle(
@@ -73,6 +94,7 @@ export function ReaderPageHarness({
       currentPage: inputs.currentPage,
       pageCount,
       reportPageCount,
+      reportPageMeasurement,
       setCurrentPage: (currentPage) =>
         setInputs((previous) => ({ ...previous, currentPage })),
     },
@@ -88,8 +110,28 @@ export function ReaderPageHarness({
 
   return (
     <ReaderContext value={value}>
-      <div data-reader-host style={{ width, height, fontFamily: 'monospace' }}>
-        <ReaderPage segments={segments} label="A synthetic chapter" />
+      <div
+        data-reader-host
+        data-reader-layout-host={layoutOnly || undefined}
+        data-layout-page={layoutOnly ? inputs.currentPage : undefined}
+        data-layout-page-count={
+          layoutOnly ? (pageCount ?? undefined) : undefined
+        }
+        data-layout-ready={layoutOnly ? pageCount !== null : undefined}
+        style={{ width, height, fontFamily: 'monospace' }}
+      >
+        {children ??
+          (layoutOnly ? (
+            <ReaderChapterLayout
+              segments={segments}
+              page={inputs.currentPage}
+              textSizePercent={inputs.textSizePercent}
+              shouldCount
+              reportPageCount={reportPageCount}
+            />
+          ) : (
+            <ReaderPage segments={segments} label="A synthetic chapter" />
+          ))}
       </div>
     </ReaderContext>
   )

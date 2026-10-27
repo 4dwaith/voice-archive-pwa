@@ -1,6 +1,9 @@
-import { createRef } from 'react'
+import { createRef, type ReactNode } from 'react'
 import { readerPageSegments } from '../../../src/mock-data/readerPages'
-import type { ReaderSegment } from '../../../src/models/reader'
+import type {
+  ReaderPageMeasurement,
+  ReaderSegment,
+} from '../../../src/models/reader'
 import {
   ReaderPageHarness,
   type ReaderPageControls,
@@ -13,11 +16,17 @@ export function mountReaderPage({
   height = 252,
   waitForLayout = true,
   onReportPageCount,
+  onReportPageMeasurement,
+  children,
+  layoutOnly = false,
 }: {
   segments?: ReaderSegment[]
   width?: number
   height?: number
   waitForLayout?: boolean
+  children?: ReactNode
+  layoutOnly?: boolean
+  onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
   onReportPageCount?: (count: number | null) => void
 } = {}) {
   const controls = createRef<ReaderPageControls>()
@@ -28,16 +37,57 @@ export function mountReaderPage({
       width={width}
       height={height}
       ref={controls}
+      layoutOnly={layoutOnly}
       onReportPageCount={onReportPageCount}
-    />,
+      onReportPageMeasurement={onReportPageMeasurement}
+    >
+      {children}
+    </ReaderPageHarness>,
   )
-  if (waitForLayout) waitForReaderLayout()
+  if (waitForLayout) {
+    if (layoutOnly) waitForChapterLayout()
+    else waitForReaderLayout()
+  }
 
   return {
     updateContext(updates: Partial<ReaderPageInputs>) {
       return cy.then(() => controls.current!.updateContext(updates))
     },
   }
+}
+
+export function mountReaderChapterLayout(
+  options: {
+    segments?: ReaderSegment[]
+    width?: number
+    height?: number
+    waitForLayout?: boolean
+    onReportPageCount?: (count: number | null) => void
+  } = {},
+) {
+  const reader = mountReaderPage({ ...options, layoutOnly: true })
+
+  return {
+    updateProps({
+      page,
+      textSizePercent,
+    }: {
+      page?: number
+      textSizePercent?: number
+    }) {
+      const updates: Partial<ReaderPageInputs> = {}
+      if (page !== undefined) updates.currentPage = page
+      if (textSizePercent !== undefined)
+        updates.textSizePercent = textSizePercent
+      return reader.updateContext(updates)
+    },
+  }
+}
+
+export function waitForChapterLayout() {
+  return cy
+    .get('[data-reader-layout-host]')
+    .should('have.attr', 'data-layout-ready', 'true')
 }
 
 export function waitForReaderLayout() {
@@ -68,8 +118,7 @@ export function assertTextIsOnVisiblePage(
     const hasVisibleMatch = [...$elements].some((element) => {
       const document = element.ownerDocument
       const windowRect = element
-        .closest('[data-reader-page]')!
-        .querySelector('[data-reader-page-window]')!
+        .closest('[data-reader-page-window]')!
         .getBoundingClientRect()
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
 

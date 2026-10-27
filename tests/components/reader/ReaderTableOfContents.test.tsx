@@ -48,6 +48,7 @@ function renderToc(
       currentPage: 1,
       pageCount: null,
       setCurrentPage: vi.fn(),
+      reportPageMeasurement: () => undefined,
       reportPageCount: vi.fn(),
     },
     reader: {
