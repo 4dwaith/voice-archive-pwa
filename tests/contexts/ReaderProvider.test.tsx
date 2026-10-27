@@ -15,23 +15,23 @@ import {
 afterEach(cleanup)
 
 function ShowReaderActions() {
-  const context = useReaderContext()
+  const { reader } = useReaderContext()
 
   return (
     <>
       <output aria-label="Selected segment">
-        {context.selectedSegmentId ?? 'none'}
+        {reader.selectedSegmentId ?? 'none'}
       </output>
       <output aria-label="Highlighted segment">
-        {context.highlightedSegmentId ?? 'none'}
+        {reader.highlightedSegmentId ?? 'none'}
       </output>
-      <button onClick={() => context.selectSegment(2)}>Select segment</button>
-      <button onClick={() => context.highlightSegment(1)}>
+      <button onClick={() => reader.selectSegment(2)}>Select segment</button>
+      <button onClick={() => reader.highlightSegment(1)}>
         Highlight segment
       </button>
       <button
         onClick={() =>
-          context.reportSegmentError({
+          reader.reportSegmentError({
             segmentId: 7,
             error: 'unsupported-markup',
           })
@@ -40,9 +40,7 @@ function ShowReaderActions() {
         Report segment error
       </button>
       <button
-        onClick={() =>
-          context.reportSegmentError({ segmentId: 7, error: null })
-        }
+        onClick={() => reader.reportSegmentError({ segmentId: 7, error: null })}
       >
         Clear segment error
       </button>

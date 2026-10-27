@@ -9,7 +9,7 @@ import { ReaderTableOfContents } from './ReaderTableOfContents'
 import { readerSections } from '../../../mock-data/readerSections.ts'
 
 type StoryArgs = Pick<
-  ReaderContextValue,
+  ReaderContextValue['toc'],
   'selectedSectionId' | 'tocPresentation'
 > & {
   sectionExpansion: Record<number, boolean>
@@ -25,30 +25,44 @@ const ProvideTocStory: Decorator<StoryArgs> = function ProvideTocStory(Story) {
   )
 
   const value: ReaderContextValue = {
-    selectedSectionId: args.selectedSectionId,
-    isSectionExpanded,
-    tocPresentation: args.tocPresentation,
-    selectSection: (selectedSectionId) => updateArgs({ selectedSectionId }),
-    setSectionExpanded: ({ sectionId, isExpanded }) =>
-      updateArgs({
-        sectionExpansion: { ...args.sectionExpansion, [sectionId]: isExpanded },
-      }),
-    setTocPresentation: (tocPresentation) => updateArgs({ tocPresentation }),
-    currentPage: 1,
-    pageCount: null,
-    textSizePercent: 100,
-    selectedSegmentId: null,
-    highlightedSegmentId: null,
-    setCurrentPage: () => undefined,
-    reportPageCount: () => undefined,
-    selectSegment: () => undefined,
-    highlightSegment: () => undefined,
-    reportSegmentError: () => undefined,
+    toc: {
+      selectedSectionId: args.selectedSectionId,
+      isSectionExpanded,
+      tocPresentation: args.tocPresentation,
+      selectSection: (selectedSectionId) => updateArgs({ selectedSectionId }),
+      setSectionExpanded: ({ sectionId, isExpanded }) =>
+        updateArgs({
+          sectionExpansion: {
+            ...args.sectionExpansion,
+            [sectionId]: isExpanded,
+          },
+        }),
+      setTocPresentation: (tocPresentation) => updateArgs({ tocPresentation }),
+    },
+    navigation: {
+      globalPage: null,
+      totalPageCount: null,
+      indexedPageCount: 0,
+      isPageNavigationPending: false,
+      requestPageNavigation: () => undefined,
+      currentPage: 1,
+      pageCount: null,
+      setCurrentPage: () => undefined,
+      reportPageCount: () => undefined,
+    },
+    reader: {
+      textSizePercent: 100,
+      selectedSegmentId: null,
+      highlightedSegmentId: null,
+      selectSegment: () => undefined,
+      highlightSegment: () => undefined,
+      reportSegmentError: () => undefined,
+    },
   }
 
   return (
     <ReaderContext value={value}>
-      <div className="h-[320px]" style={{ width: args.width }}>
+      <div className="h-80" style={{ width: args.width }}>
         <Story />
       </div>
     </ReaderContext>
@@ -85,7 +99,9 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Flat: Story = { args: { sections: readerSections.filter((s) => !s.parent_id) } }
+export const Flat: Story = {
+  args: { sections: readerSections.filter((s) => !s.parent_id) },
+}
 
 export const Nested: Story = {}
 

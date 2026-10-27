@@ -7,9 +7,10 @@ import {
 import type { ReaderSegment } from '../../../src/models/reader'
 
 export type ReaderPageInputs = Pick<
-  ReaderContextValue,
-  'currentPage' | 'textSizePercent' | 'selectedSegmentId'
->
+  ReaderContextValue['navigation'],
+  'currentPage'
+> &
+  Pick<ReaderContextValue['reader'], 'textSizePercent' | 'selectedSegmentId'>
 
 export type ReaderPageControls = {
   updateContext: (updates: Partial<ReaderPageInputs>) => void
@@ -53,21 +54,34 @@ export function ReaderPageHarness({
   )
 
   const value: ReaderContextValue = {
-    selectedSectionId: null,
-    isSectionExpanded: () => true,
-    tocPresentation: 'shown',
-    selectSection: () => undefined,
-    setSectionExpanded: () => undefined,
-    setTocPresentation: () => undefined,
-    ...inputs,
-    pageCount,
-    reportPageCount,
-    setCurrentPage: (currentPage) =>
-      setInputs((previous) => ({ ...previous, currentPage })),
-    highlightedSegmentId: null,
-    selectSegment: () => undefined,
-    highlightSegment: () => undefined,
-    reportSegmentError: () => undefined,
+    toc: {
+      selectedSectionId: null,
+      isSectionExpanded: () => true,
+      tocPresentation: 'shown',
+      selectSection: () => undefined,
+      setSectionExpanded: () => undefined,
+      setTocPresentation: () => undefined,
+    },
+    navigation: {
+      globalPage: null,
+      totalPageCount: null,
+      indexedPageCount: 0,
+      isPageNavigationPending: false,
+      requestPageNavigation: () => undefined,
+      currentPage: inputs.currentPage,
+      pageCount,
+      reportPageCount,
+      setCurrentPage: (currentPage) =>
+        setInputs((previous) => ({ ...previous, currentPage })),
+    },
+    reader: {
+      textSizePercent: inputs.textSizePercent,
+      selectedSegmentId: inputs.selectedSegmentId,
+      highlightedSegmentId: null,
+      selectSegment: () => undefined,
+      highlightSegment: () => undefined,
+      reportSegmentError: () => undefined,
+    },
   }
 
   return (

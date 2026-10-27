@@ -9,7 +9,7 @@ import type { ReaderSegmentContent } from '../../src/components/atoms/ReaderSegm
 import type { ReaderSegment } from '../../src/models/reader'
 
 type ReaderStoryState = Pick<
-  ReaderContextValue,
+  ReaderContextValue['reader'],
   'selectedSegmentId' | 'highlightedSegmentId'
 >
 
@@ -23,24 +23,35 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
     const [args, updateArgs] = useArgs<ReaderStoryArgs>()
 
     const value: ReaderContextValue = {
-      selectedSectionId: null,
-      isSectionExpanded: () => true,
-      tocPresentation: 'shown',
-      selectSection: () => undefined,
-      setSectionExpanded: () => undefined,
-      setTocPresentation: () => undefined,
-      currentPage: 1,
-      pageCount: null,
-      textSizePercent: 100,
-      setCurrentPage: () => undefined,
-      reportPageCount: () => undefined,
-      selectedSegmentId: args.selectedSegmentId,
-      highlightedSegmentId: args.highlightedSegmentId,
-      selectSegment: (segmentId) =>
-        updateArgs({ selectedSegmentId: segmentId }),
-      highlightSegment: (segmentId) =>
-        updateArgs({ highlightedSegmentId: segmentId }),
-      reportSegmentError: () => undefined,
+      toc: {
+        selectedSectionId: null,
+        isSectionExpanded: () => true,
+        tocPresentation: 'shown',
+        selectSection: () => undefined,
+        setSectionExpanded: () => undefined,
+        setTocPresentation: () => undefined,
+      },
+      navigation: {
+        globalPage: null,
+        totalPageCount: null,
+        indexedPageCount: 0,
+        isPageNavigationPending: false,
+        requestPageNavigation: () => undefined,
+        currentPage: 1,
+        pageCount: null,
+        setCurrentPage: () => undefined,
+        reportPageCount: () => undefined,
+      },
+      reader: {
+        textSizePercent: 100,
+        selectedSegmentId: args.selectedSegmentId,
+        highlightedSegmentId: args.highlightedSegmentId,
+        selectSegment: (segmentId) =>
+          updateArgs({ selectedSegmentId: segmentId }),
+        highlightSegment: (segmentId) =>
+          updateArgs({ highlightedSegmentId: segmentId }),
+        reportSegmentError: () => undefined,
+      },
     }
 
     return (

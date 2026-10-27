@@ -63,7 +63,7 @@ export const unsafeReaderSegment: ReaderSegment = {
   source_key: 'unsafe',
   kind: 'prose',
   html_content:
-    '<p onclick="alert(1)">Rejected text <img src="/must-not-load.png" onerror="alert(1)"></p>',
+    '<p onclick="alert(1)">Rejected text <img src="/must-not-load.png" onerror="alert(1)" alt=""></p>',
   text_content: 'Rejected text ',
   language: 'en',
 }

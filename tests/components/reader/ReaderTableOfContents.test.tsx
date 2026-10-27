@@ -14,33 +14,44 @@ afterEach(cleanup)
 
 function renderToc(sections = readerSections) {
   const context: ReaderContextValue = {
-    selectedSectionId: null,
-    isSectionExpanded: () => true,
-    tocPresentation: 'shown',
-    selectSection: vi.fn((selectedSectionId) =>
-      updateContext({ selectedSectionId }),
-    ),
-    setSectionExpanded: vi.fn(({ sectionId, isExpanded }) => {
-      const wasSectionExpanded = context.isSectionExpanded
+    toc: {
+      selectedSectionId: null,
+      isSectionExpanded: () => true,
+      tocPresentation: 'shown',
+      selectSection: vi.fn((selectedSectionId) =>
+        updateContext({ selectedSectionId }),
+      ),
+      setSectionExpanded: vi.fn(({ sectionId, isExpanded }) => {
+        const wasSectionExpanded = context.toc.isSectionExpanded
 
-      updateContext({
-        isSectionExpanded: (id) =>
-          id === sectionId ? isExpanded : wasSectionExpanded(id),
-      })
-    }),
-    setTocPresentation: vi.fn((tocPresentation) =>
-      updateContext({ tocPresentation }),
-    ),
-    currentPage: 1,
-    pageCount: null,
-    textSizePercent: 100,
-    selectedSegmentId: null,
-    highlightedSegmentId: null,
-    setCurrentPage: vi.fn(),
-    reportPageCount: vi.fn(),
-    selectSegment: vi.fn(),
-    highlightSegment: vi.fn(),
-    reportSegmentError: vi.fn(),
+        updateContext({
+          isSectionExpanded: (id) =>
+            id === sectionId ? isExpanded : wasSectionExpanded(id),
+        })
+      }),
+      setTocPresentation: vi.fn((tocPresentation) =>
+        updateContext({ tocPresentation }),
+      ),
+    },
+    navigation: {
+      globalPage: null,
+      totalPageCount: null,
+      indexedPageCount: 0,
+      isPageNavigationPending: false,
+      requestPageNavigation: () => undefined,
+      currentPage: 1,
+      pageCount: null,
+      setCurrentPage: vi.fn(),
+      reportPageCount: vi.fn(),
+    },
+    reader: {
+      textSizePercent: 100,
+      selectedSegmentId: null,
+      highlightedSegmentId: null,
+      selectSegment: vi.fn(),
+      highlightSegment: vi.fn(),
+      reportSegmentError: vi.fn(),
+    },
   }
 
   function renderContent() {
@@ -53,8 +64,8 @@ function renderToc(sections = readerSections) {
 
   const view = render(renderContent())
 
-  function updateContext(change: Partial<ReaderContextValue>) {
-    Object.assign(context, change)
+  function updateContext(change: Partial<ReaderContextValue['toc']>) {
+    Object.assign(context.toc, change)
     view.rerender(renderContent())
   }
 
@@ -76,7 +87,7 @@ it('nests by parent, orders by sequence and selects a repeated title by identity
 
   await userEvent.setup().click(repeatedTitle)
 
-  expect(context.selectSection).toHaveBeenCalledExactlyOnceWith(7)
+  expect(context.toc.selectSection).toHaveBeenCalledExactlyOnceWith(7)
   expect(repeatedTitle).toHaveAttribute('aria-current', 'true')
   expect(
     screen.getAllByRole('button', { name: 'Beginning' })[0],
@@ -91,11 +102,11 @@ it('discloses independently of selection and hides closed descendants from Tab',
 
   await user.click(disclosure)
 
-  expect(context.setSectionExpanded).toHaveBeenCalledExactlyOnceWith({
+  expect(context.toc.setSectionExpanded).toHaveBeenCalledExactlyOnceWith({
     sectionId: 1,
     isExpanded: false,
   })
-  expect(context.selectSection).not.toHaveBeenCalled()
+  expect(context.toc.selectSection).not.toHaveBeenCalled()
   expect(disclosure.closest('details')).not.toHaveAttribute('open')
   expect(
     screen.getByRole('button', { name: /deep leaf/, hidden: true }),
@@ -136,7 +147,9 @@ it('collapses through context, recovers focus and exposes a named reopen control
 
   await userEvent.setup().click(reopen)
 
-  expect(context.setTocPresentation).toHaveBeenCalledExactlyOnceWith('shown')
+  expect(context.toc.setTocPresentation).toHaveBeenCalledExactlyOnceWith(
+    'shown',
+  )
   expect(
     screen.getByRole('button', {
       name: 'Collapse table of contents',

@@ -119,7 +119,7 @@ describe('reader sanitization boundary', () => {
     { rule: 'script', html: '<p><script>alert(1)</script>x</p>' },
     {
       rule: 'external resource',
-      html: '<p><img src="https://example.invalid/image">x</p>',
+      html: '<p><img src="https://example.invalid/image" alt="">x</p>',
     },
     { rule: 'unsupported harmless tag', html: '<p><span>x</span></p>' },
   ])(
@@ -143,7 +143,7 @@ describe('reader sanitization boundary', () => {
 
   it('inspects attributes on document wrappers that fragment parsing would discard', () => {
     const segment = createSegment(
-      '<html onclick="alert(1)"><body><p>x</p></body></html>',
+      '<html onclick="alert(1)" lang="en-US"><body><p>x</p></body></html>',
     )
 
     const result = sanitizeReaderSegment(segment)

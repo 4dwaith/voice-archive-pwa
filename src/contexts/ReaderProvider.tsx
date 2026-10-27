@@ -1,6 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
+  requestPageNavigation,
+  getGlobalPage,
+  getTotalPageCount,
+  getIndexedPageCount,
+  isPageNavigationPending,
   selectSection,
   setSectionExpanded,
   setTocPresentation,
@@ -30,59 +35,85 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
   const currentPage = useAppSelector(getCurrentPage)
   const pageCount = useAppSelector(getPageCount)
+  const globalPage = useAppSelector(getGlobalPage)
+  const totalPageCount = useAppSelector(getTotalPageCount)
+  const indexedPageCount = useAppSelector(getIndexedPageCount)
+  const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
   const textSizePercent = useAppSelector(selectTextSizePercent)
-  const actions = useMemo<
-    Pick<
-      ReaderContextValue,
-      | 'selectSegment'
-      | 'highlightSegment'
-      | 'reportSegmentError'
-      | 'setCurrentPage'
-      | 'reportPageCount'
-      | 'selectSection'
-      | 'setSectionExpanded'
-      | 'setTocPresentation'
+  const actions = useMemo<{
+    toc: Pick<
+      ReaderContextValue['toc'],
+      'selectSection' | 'setSectionExpanded' | 'setTocPresentation'
     >
-  >(
+    navigation: Pick<
+      ReaderContextValue['navigation'],
+      'requestPageNavigation' | 'setCurrentPage' | 'reportPageCount'
+    >
+    reader: Pick<
+      ReaderContextValue['reader'],
+      'selectSegment' | 'highlightSegment' | 'reportSegmentError'
+    >
+  }>(
     () => ({
-      selectSection: (sectionId) => {
-        dispatch(selectSection(sectionId))
+      toc: {
+        selectSection: (sectionId) => {
+          dispatch(selectSection(sectionId))
+        },
+        setSectionExpanded: (change) => {
+          dispatch(setSectionExpanded(change))
+        },
+        setTocPresentation: (presentation) => {
+          dispatch(setTocPresentation(presentation))
+        },
       },
-      setSectionExpanded: (change) => {
-        dispatch(setSectionExpanded(change))
+      navigation: {
+        requestPageNavigation: (intent) => {
+          dispatch(requestPageNavigation(intent))
+        },
+        setCurrentPage: (pageNumber) => {
+          dispatch(setCurrentPage(pageNumber))
+        },
+        reportPageCount: (count) => {
+          dispatch(reportPageCount(count))
+        },
       },
-      setTocPresentation: (presentation) => {
-        dispatch(setTocPresentation(presentation))
-      },
-      selectSegment: (segmentId) => {
-        dispatch(selectSegment(segmentId))
-      },
-      highlightSegment: (segmentId) => {
-        dispatch(highlightSegment(segmentId))
-      },
-      reportSegmentError: (report) => {
-        dispatch(reportSegmentError(report))
-      },
-      setCurrentPage: (pageNumber) => {
-        dispatch(setCurrentPage(pageNumber))
-      },
-      reportPageCount: (count) => {
-        dispatch(reportPageCount(count))
+      reader: {
+        selectSegment: (segmentId) => {
+          dispatch(selectSegment(segmentId))
+        },
+        highlightSegment: (segmentId) => {
+          dispatch(highlightSegment(segmentId))
+        },
+        reportSegmentError: (report) => {
+          dispatch(reportSegmentError(report))
+        },
       },
     }),
     [dispatch],
   )
   const value = useMemo<ReaderContextValue>(
     () => ({
-      selectedSectionId,
-      isSectionExpanded,
-      tocPresentation,
-      currentPage,
-      pageCount,
-      textSizePercent,
-      selectedSegmentId,
-      highlightedSegmentId,
-      ...actions,
+      toc: {
+        selectedSectionId,
+        isSectionExpanded,
+        tocPresentation,
+        ...actions.toc,
+      },
+      navigation: {
+        currentPage,
+        pageCount,
+        globalPage,
+        totalPageCount,
+        indexedPageCount,
+        isPageNavigationPending: hasPendingPageNavigation,
+        ...actions.navigation,
+      },
+      reader: {
+        textSizePercent,
+        selectedSegmentId,
+        highlightedSegmentId,
+        ...actions.reader,
+      },
     }),
     [
       selectedSectionId,
@@ -90,6 +121,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       tocPresentation,
       currentPage,
       pageCount,
+      globalPage,
+      totalPageCount,
+      indexedPageCount,
+      hasPendingPageNavigation,
       textSizePercent,
       selectedSegmentId,
       highlightedSegmentId,

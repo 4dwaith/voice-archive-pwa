@@ -21,22 +21,33 @@ afterEach(() => {
 
 function createContextValue(): ReaderContextValue {
   return {
-    selectedSectionId: null,
-    isSectionExpanded: () => true,
-    tocPresentation: 'shown',
-    selectSection: vi.fn(),
-    setSectionExpanded: vi.fn(),
-    setTocPresentation: vi.fn(),
-    currentPage: 1,
-    pageCount: null,
-    textSizePercent: 100,
-    setCurrentPage: vi.fn(),
-    reportPageCount: vi.fn(),
-    selectedSegmentId: null,
-    highlightedSegmentId: null,
-    selectSegment: vi.fn(),
-    highlightSegment: vi.fn(),
-    reportSegmentError: vi.fn(),
+    toc: {
+      selectedSectionId: null,
+      isSectionExpanded: () => true,
+      tocPresentation: 'shown',
+      selectSection: vi.fn(),
+      setSectionExpanded: vi.fn(),
+      setTocPresentation: vi.fn(),
+    },
+    navigation: {
+      globalPage: null,
+      totalPageCount: null,
+      indexedPageCount: 0,
+      isPageNavigationPending: false,
+      requestPageNavigation: () => undefined,
+      currentPage: 1,
+      pageCount: null,
+      setCurrentPage: vi.fn(),
+      reportPageCount: vi.fn(),
+    },
+    reader: {
+      textSizePercent: 100,
+      selectedSegmentId: null,
+      highlightedSegmentId: null,
+      selectSegment: vi.fn(),
+      highlightSegment: vi.fn(),
+      reportSegmentError: vi.fn(),
+    },
   }
 }
 
@@ -171,7 +182,7 @@ describe('ReaderSegmentContent', () => {
 
       fireEvent.click(container.querySelector('[data-reader-segment-id="7"]')!)
 
-      expect(context.selectSegment).not.toHaveBeenCalled()
+      expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
 
     it('reports an invalid segment through context', () => {
@@ -179,10 +190,12 @@ describe('ReaderSegmentContent', () => {
 
       renderSegmentContent(unsafeReaderSegment, context)
 
-      expect(context.reportSegmentError).toHaveBeenCalledExactlyOnceWith({
-        segmentId: 7,
-        error: 'unsupported-markup',
-      })
+      expect(context.reader.reportSegmentError).toHaveBeenCalledExactlyOnceWith(
+        {
+          segmentId: 7,
+          error: 'unsupported-markup',
+        },
+      )
     })
 
     it('revalidates changed HTML and reports that its error has cleared', () => {
@@ -193,7 +206,7 @@ describe('ReaderSegmentContent', () => {
         html_content: '<p>Corrected</p>',
         text_content: 'Corrected',
       }
-      vi.mocked(context.reportSegmentError).mockClear()
+      vi.mocked(context.reader.reportSegmentError).mockClear()
 
       view.rerender(
         <ReaderContext value={context}>
@@ -202,10 +215,12 @@ describe('ReaderSegmentContent', () => {
       )
 
       expect(screen.getByText('Corrected')).toBeVisible()
-      expect(context.reportSegmentError).toHaveBeenCalledExactlyOnceWith({
-        segmentId: 7,
-        error: null,
-      })
+      expect(context.reader.reportSegmentError).toHaveBeenCalledExactlyOnceWith(
+        {
+          segmentId: 7,
+          error: null,
+        },
+      )
     })
   })
 
@@ -216,7 +231,7 @@ describe('ReaderSegmentContent', () => {
 
       fireEvent.click(screen.getByText('and italic'))
 
-      expect(context.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
+      expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
     })
 
     it.each(['Enter', ' '])(
@@ -231,7 +246,7 @@ describe('ReaderSegmentContent', () => {
 
         fireEvent.keyDown(segment, { key })
 
-        expect(context.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
+        expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
       },
     )
   })
@@ -249,7 +264,8 @@ describe('ReaderSegmentContent', () => {
     })
 
     it('uses the selected segment as the sole keyboard entry', async () => {
-      const context = { ...createContextValue(), selectedSegmentId: 2 }
+      const context = createContextValue()
+      context.reader.selectedSegmentId = 2
       const { container } = renderKeyboardEntries(context)
 
       await userEvent.setup().tab()
@@ -274,7 +290,7 @@ describe('ReaderSegmentContent', () => {
       fireEvent.click(block)
 
       expect(selection.toString()).toBe(readerSegments[1].text_content)
-      expect(context.selectSegment).not.toHaveBeenCalled()
+      expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
 
     it('suppresses activation after dragging when no native selection remains', () => {
@@ -286,7 +302,7 @@ describe('ReaderSegmentContent', () => {
       dispatchPointerEvent(block, 'pointermove', 25)
       fireEvent.click(block)
 
-      expect(context.selectSegment).not.toHaveBeenCalled()
+      expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
 
     it('allows a fresh click after a previous drag', () => {
@@ -300,7 +316,7 @@ describe('ReaderSegmentContent', () => {
       dispatchPointerEvent(block, 'pointerdown', 25)
       fireEvent.click(block)
 
-      expect(context.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
+      expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
     })
   })
 
@@ -327,11 +343,9 @@ describe('ReaderSegmentContent', () => {
     ])(
       'marks a segment as $state from context',
       ({ selectedSegmentId, highlightedSegmentId, attribute }) => {
-        const context = {
-          ...createContextValue(),
-          selectedSegmentId,
-          highlightedSegmentId,
-        }
+        const context = createContextValue()
+        context.reader.selectedSegmentId = selectedSegmentId
+        context.reader.highlightedSegmentId = highlightedSegmentId
 
         const { container } = renderSegmentContent(readerSegments[1], context)
 

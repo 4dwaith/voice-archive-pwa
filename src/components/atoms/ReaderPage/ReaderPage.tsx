@@ -10,13 +10,9 @@ export function ReaderPage({
   segments: ReaderSegment[]
   label: string
 }) {
-  const {
-    currentPage,
-    pageCount,
-    textSizePercent,
-    setCurrentPage,
-    reportPageCount,
-  } = useReaderContext()
+  const { currentPage, pageCount, setCurrentPage, reportPageCount } =
+    useReaderContext().navigation
+  const { textSizePercent } = useReaderContext().reader
   const columnsRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
   const [{ width, height }, setSize] = useState({ width: 0, height: 0 })

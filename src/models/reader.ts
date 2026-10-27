@@ -10,6 +10,10 @@ export type ReaderSection = Pick<
 
 export type ReaderTocPresentation = 'shown' | 'dimmed' | 'collapsed'
 
+export type ReaderPageNavigation = { scope: 'local' | 'global' } & (
+  { kind: 'absolute'; pageNumber: number } | { kind: 'relative'; delta: number }
+)
+
 export type ReaderSegment = Pick<
   SegmentReadOutput,
   'id' | 'source_key' | 'kind' | 'html_content' | 'text_content' | 'language'

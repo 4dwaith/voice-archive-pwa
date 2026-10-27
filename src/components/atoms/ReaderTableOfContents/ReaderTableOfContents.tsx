@@ -16,7 +16,7 @@ function ReaderSectionList({
     isSectionExpanded,
     selectSection,
     setSectionExpanded,
-  } = useReaderContext()
+  } = useReaderContext().toc
 
   return (
     <ul hidden={isHidden} className="m-0 list-none p-0">
@@ -28,7 +28,7 @@ function ReaderSectionList({
           <li key={section.id} className="relative">
             <button
               type="button"
-              className="ms-8 block min-h-11 w-[calc(100%-2rem)] cursor-pointer p-2 text-start wrap-anywhere aria-[current=true]:bg-[#dbeafe] aria-[current=true]:font-bold! focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
+              className="ms-8 block min-h-11 w-[calc(100%-2rem)] cursor-pointer p-2 text-start wrap-anywhere aria-current:bg-[#dbeafe] aria-current:font-bold! focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1d4ed8]"
               aria-current={
                 selectedSectionId === section.id ? 'true' : undefined
               }
@@ -39,7 +39,7 @@ function ReaderSectionList({
             {hasChildren && (
               <details open={isExpanded}>
                 <summary
-                  className="absolute start-0 top-0 min-h-11 w-8 cursor-pointer p-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
+                  className="absolute inset-s-0 top-0 min-h-11 w-8 cursor-pointer p-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1d4ed8]"
                   aria-label={`Subsections of ${section.title}`}
                   aria-expanded={isExpanded}
                   onClick={(event) => {
@@ -70,7 +70,7 @@ export function ReaderTableOfContents({
   sections: ReaderSection[]
 }) {
   const { isSectionExpanded, tocPresentation, setTocPresentation } =
-    useReaderContext()
+    useReaderContext().toc
 
   const navRef = useRef<HTMLElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -107,13 +107,13 @@ export function ReaderTableOfContents({
     <nav
       ref={navRef}
       aria-label="Table of contents"
-      className="flex max-h-full min-w-0 flex-col bg-white text-[#172033] data-[presentation=dimmed]:opacity-70 data-[presentation=dimmed]:focus-within:opacity-100 [&_ul_ul]:ps-3 [&_ul_ul_ul_ul_ul]:ps-0"
+      className="flex max-h-full min-w-0 flex-col bg-white text-[#172033] data-[presentation=dimmed]:focus-within:opacity-100 [&_ul_ul]:ps-3"
       data-presentation={tocPresentation}
     >
       <button
         ref={toggleRef}
         type="button"
-        className="min-h-11 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1d4ed8]"
+        className="min-h-11 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1d4ed8]"
         aria-controls={bodyId}
         aria-expanded={!isCollapsed}
         aria-label={

@@ -4,6 +4,7 @@ import {
   type PayloadAction,
 } from '@reduxjs/toolkit'
 import type {
+  ReaderPageNavigation,
   ReaderSegmentError,
   ReaderTocPresentation,
 } from '../models/reader'
@@ -14,6 +15,10 @@ export type ReaderState = {
   tocPresentation: ReaderTocPresentation
   currentPage: number
   pageCount: number | null
+  globalPage: number | null
+  totalPageCount: number | null
+  indexedPageCount: number
+  pageNavigationIntent: ReaderPageNavigation | null
   selectedSegmentId: number | null
   highlightedSegmentId: number | null
   segmentErrors: Record<number, ReaderSegmentError>
@@ -25,6 +30,10 @@ const initialState: ReaderState = {
   tocPresentation: 'shown',
   currentPage: 1,
   pageCount: null,
+  globalPage: null,
+  totalPageCount: null,
+  indexedPageCount: 0,
+  pageNavigationIntent: null,
   selectedSegmentId: null,
   highlightedSegmentId: null,
   segmentErrors: {},
@@ -41,6 +50,9 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    requestPageNavigation(state, action: PayloadAction<ReaderPageNavigation>) {
+      state.pageNavigationIntent = action.payload
+    },
     selectSection(state, action: PayloadAction<number | null>) {
       state.selectedSectionId = action.payload
     },
@@ -86,12 +98,17 @@ const readerSlice = createSlice({
     getTocPresentation: (state) => state.tocPresentation,
     getCurrentPage: (state) => state.currentPage,
     getPageCount: (state) => state.pageCount,
+    getGlobalPage: (state) => state.globalPage,
+    getTotalPageCount: (state) => state.totalPageCount,
+    getIndexedPageCount: (state) => state.indexedPageCount,
+    isPageNavigationPending: (state) => state.pageNavigationIntent !== null,
     getSelectedSegmentId: (state) => state.selectedSegmentId,
     getHighlightedSegmentId: (state) => state.highlightedSegmentId,
   },
 })
 
 export const {
+  requestPageNavigation,
   selectSection,
   setSectionExpanded,
   setTocPresentation,
@@ -102,6 +119,10 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getGlobalPage,
+  getTotalPageCount,
+  getIndexedPageCount,
+  isPageNavigationPending,
   getSelectedSectionId,
   isSectionExpanded,
   getSectionExpansionPredicate,

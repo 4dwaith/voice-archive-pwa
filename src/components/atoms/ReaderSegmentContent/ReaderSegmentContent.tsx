@@ -33,7 +33,7 @@ export function ReaderSegmentContent({
     highlightedSegmentId,
     selectSegment,
     reportSegmentError,
-  } = useReaderContext()
+  } = useReaderContext().reader
   const result = useMemo(() => sanitizeReaderSegment(segment), [segment])
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const hasDragged = useRef(false)

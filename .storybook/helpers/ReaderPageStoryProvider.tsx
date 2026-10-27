@@ -30,23 +30,34 @@ export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
     )
 
     const value: ReaderContextValue = {
-      selectedSectionId: null,
-      isSectionExpanded: () => true,
-      tocPresentation: 'shown',
-      selectSection: () => undefined,
-      setSectionExpanded: () => undefined,
-      setTocPresentation: () => undefined,
-      currentPage: args.currentPage,
-      pageCount: args.pageCount,
-      textSizePercent: args.textSizePercent,
-      setCurrentPage: (currentPage) => updateArgs({ currentPage }),
-      reportPageCount,
-      selectedSegmentId: args.selectedSegmentId,
-      highlightedSegmentId: args.highlightedSegmentId,
-      selectSegment: (selectedSegmentId) => updateArgs({ selectedSegmentId }),
-      highlightSegment: (highlightedSegmentId) =>
-        updateArgs({ highlightedSegmentId }),
-      reportSegmentError: () => undefined,
+      toc: {
+        selectedSectionId: null,
+        isSectionExpanded: () => true,
+        tocPresentation: 'shown',
+        selectSection: () => undefined,
+        setSectionExpanded: () => undefined,
+        setTocPresentation: () => undefined,
+      },
+      navigation: {
+        globalPage: null,
+        totalPageCount: null,
+        indexedPageCount: 0,
+        isPageNavigationPending: false,
+        requestPageNavigation: () => undefined,
+        currentPage: args.currentPage,
+        pageCount: args.pageCount,
+        setCurrentPage: (currentPage) => updateArgs({ currentPage }),
+        reportPageCount,
+      },
+      reader: {
+        textSizePercent: args.textSizePercent,
+        selectedSegmentId: args.selectedSegmentId,
+        highlightedSegmentId: args.highlightedSegmentId,
+        selectSegment: (selectedSegmentId) => updateArgs({ selectedSegmentId }),
+        highlightSegment: (highlightedSegmentId) =>
+          updateArgs({ highlightedSegmentId }),
+        reportSegmentError: () => undefined,
+      },
     }
 
     return (
