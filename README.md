@@ -201,6 +201,19 @@ live in `atoms/Book/` and `atoms/ReaderSegmentContent/`; `BookShelf` lives in
 **Atoms/Library/Book** and **Molecules/Library/BookShelf**.
 Behavioral tests remain under `tests/components/`.
 
+`ReaderPage` lives in `atoms/ReaderPage/`, with six **Atoms/Reader/ReaderPage**
+stories. It takes ordered segments and an accessible label, fills a fixed-size
+parent, and uses CSS Modules for its column viewport. ReaderContext supplies the
+controlled page/count, existing text-size preference and actions; ReaderProvider
+maps these to Redux. ReaderPage observes its actual dimensions and cancels obsolete
+font/layout work locally before reporting a plain page count. No layout/session
+models are required. Stories supply context directly from Controls, without
+Redux. The reader is not wired into the book route yet.
+
+Run `npm run cy:run:component` for independent Chrome viewport/measurement
+checks, or `npm run cy:open:component` for interactive component tests. See
+[browser tests](docs/browser-tests.md) for setup and coverage details.
+
 ```bash
 npm run storybook
 ```

@@ -2,6 +2,11 @@ import { createContext, useContext } from 'react'
 import type { ReaderSegmentError } from '../models/reader'
 
 export type ReaderContextValue = {
+  currentPage: number
+  pageCount: number | null
+  textSizePercent: number
+  setCurrentPage: (pageNumber: number) => void
+  reportPageCount: (pageCount: number | null) => void
   selectedSegmentId: number | null
   highlightedSegmentId: number | null
   selectSegment: (segmentId: number | null) => void

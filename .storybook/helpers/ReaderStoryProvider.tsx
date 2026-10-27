@@ -23,6 +23,11 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
     const [args, updateArgs] = useArgs<ReaderStoryArgs>()
 
     const value: ReaderContextValue = {
+      currentPage: 1,
+      pageCount: null,
+      textSizePercent: 100,
+      setCurrentPage: () => undefined,
+      reportPageCount: () => undefined,
       selectedSegmentId: args.selectedSegmentId,
       highlightedSegmentId: args.highlightedSegmentId,
       selectSegment: (segmentId) =>

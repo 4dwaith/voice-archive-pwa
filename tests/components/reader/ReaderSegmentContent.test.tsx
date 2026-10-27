@@ -21,6 +21,11 @@ afterEach(() => {
 
 function createContextValue(): ReaderContextValue {
   return {
+    currentPage: 1,
+    pageCount: null,
+    textSizePercent: 100,
+    setCurrentPage: vi.fn(),
+    reportPageCount: vi.fn(),
     selectedSegmentId: null,
     highlightedSegmentId: null,
     selectSegment: vi.fn(),

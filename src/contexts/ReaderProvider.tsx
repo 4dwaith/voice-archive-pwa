@@ -4,20 +4,32 @@ import {
   selectSegment,
   highlightSegment,
   reportSegmentError,
+  setCurrentPage,
+  reportPageCount,
   selectSelectedSegmentId,
   selectHighlightedSegmentId,
+  selectCurrentPage,
+  selectPageCount,
 } from '../store/readerSlice'
+import { selectTextSizePercent } from '../store/textSizeSlice'
 import { ReaderContext, type ReaderContextValue } from './ReaderContext'
 
-// The only reader UI adapter to Redux. Content remains in read models/Dexie.
+// Reader content is passed to components; this adapter supplies shared state/actions.
 export function ReaderProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   const selectedSegmentId = useAppSelector(selectSelectedSegmentId)
   const highlightedSegmentId = useAppSelector(selectHighlightedSegmentId)
+  const currentPage = useAppSelector(selectCurrentPage)
+  const pageCount = useAppSelector(selectPageCount)
+  const textSizePercent = useAppSelector(selectTextSizePercent)
   const actions = useMemo<
     Pick<
       ReaderContextValue,
-      'selectSegment' | 'highlightSegment' | 'reportSegmentError'
+      | 'selectSegment'
+      | 'highlightSegment'
+      | 'reportSegmentError'
+      | 'setCurrentPage'
+      | 'reportPageCount'
     >
   >(
     () => ({
@@ -30,12 +42,33 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       reportSegmentError: (report) => {
         dispatch(reportSegmentError(report))
       },
+      setCurrentPage: (pageNumber) => {
+        dispatch(setCurrentPage(pageNumber))
+      },
+      reportPageCount: (count) => {
+        dispatch(reportPageCount(count))
+      },
     }),
     [dispatch],
   )
   const value = useMemo<ReaderContextValue>(
-    () => ({ selectedSegmentId, highlightedSegmentId, ...actions }),
-    [selectedSegmentId, highlightedSegmentId, actions],
+    () => ({
+      currentPage,
+      pageCount,
+      textSizePercent,
+      selectedSegmentId,
+      highlightedSegmentId,
+      ...actions,
+    }),
+    [
+      currentPage,
+      pageCount,
+      textSizePercent,
+      selectedSegmentId,
+      highlightedSegmentId,
+      actions,
+    ],
   )
+
   return <ReaderContext value={value}>{children}</ReaderContext>
 }

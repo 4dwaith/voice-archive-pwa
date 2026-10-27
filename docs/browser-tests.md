@@ -34,6 +34,39 @@ IntersectionObserver. Successful wire fixtures and the 500 body are validated
 against generated Zod schemas. The invalid payload deliberately fails that
 validation. Assertions use accessible roles/names and visible text.
 
+## Reader component tests
+
+`npm run cy:run:component` runs the React component suite in headless Chrome;
+`npm run cy:open:component` opens the component runner. These use the `component`
+section of the same Cypress configuration, with a Vite React/Tailwind dev server,
+`cypress/support/component.tsx`, and specs under `cypress/component/reader/`.
+They need no backend or separately running frontend. The existing BDD feature
+configuration, e2e support, launchers and coverage merge command are unchanged.
+`npm run cy:typecheck` checks both TS and TSX component/e2e sources.
+
+ReaderPage mounts independently with a controlled ReaderContext and real renderer
+CSS, without Redux or the application provider. Tests cover parent sizing and
+clipping, prose/verse fragmentation, unbroken text, empty content, focused text
+on a clipped page, width/height/text-size remeasurement, clamping after the count
+shrinks, and cancellation of an obsolete font wait. Assertions compare actual
+fragment rectangles and hit testing with known page contents; remeasurement
+checks show values before and after. There are no geometry mocks or fixed sleeps.
+Support files live in `cypress/component/support/`. Helpers have no separate
+component cases. Application flows and their happy/negative paths belong to the
+feature suite when the document route is composed in 11.10.
+
+Setting `VITE_COVERAGE=true` before a component run enables the existing Istanbul
+instrumenter and code-coverage plugin, using the same application exclusions and
+`coverage/cypress/coverage-final.json` output. Component and e2e capture share that
+output location, so a later capture replaces it. The existing `npm run coverage`
+aggregate still runs Vitest and mock e2e; it does not yet orchestrate component
+tests. Ordinary component runs do not instrument code.
+
+On a restricted Windows agent, the Cypress cache may resolve to a sandbox profile
+instead of the installed user cache. Set `CYPRESS_CACHE_FOLDER` to the actual
+installed cache when needed; do not download another runner merely for that path
+mismatch. Native browser execution may also require normal runtime permissions.
+
 ## Automatically starting the sibling backend
 
 The backend remains a separate Git repository. No backend source changes or

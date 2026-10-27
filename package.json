@@ -24,7 +24,9 @@
     "api:regenerate": "node scripts/api-generate.ts --write",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "cy:run:component": "cypress run --component --browser chrome",
+    "cy:open:component": "cypress open --component"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

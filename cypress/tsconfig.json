@@ -6,11 +6,12 @@
     "moduleResolution": "bundler",
     "types": ["cypress", "@testing-library/cypress", "vite/client"],
     "strict": true,
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "../cypress.config.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "../cypress.config.ts"]
 }
