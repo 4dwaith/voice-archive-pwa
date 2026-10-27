@@ -5,7 +5,36 @@ import {
   resolvePageNumberFromFraction,
 } from './resolvePageNumber'
 
+function NavigationArrows({
+  direction,
+  noOfArrows,
+}: {
+  direction: number
+  noOfArrows: number
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="36"
+      height="24"
+      viewBox="0 0 36 24"
+      fill="currentColor"
+    >
+      <g transform={direction < 0 ? 'rotate(180 18 12)' : undefined}>
+        {Array.from({ length: noOfArrows }, (_, index) => (
+          <path
+            key={index}
+            d="M0 3 L10 12 L0 21Z"
+            transform={`translate(${(36 - noOfArrows * 12) / 2 + index * 12} 0)`}
+          />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
 export function ReaderProgressNavigation() {
+
   const {
     pageScope,
     setPageScope,
@@ -17,12 +46,14 @@ export function ReaderProgressNavigation() {
     isPageNavigationPending,
     requestPageNavigation,
   } = useReaderContext().navigation
+
   const helpId = useId()
   const pointerStart = useRef<{
     x: number
     y: number
     hasDragged: boolean
   } | null>(null)
+
   const isBook = pageScope === 'global'
   const page = isBook ? globalPage : currentPage
   const total = isBook ? totalPageCount : pageCount
@@ -54,7 +85,7 @@ export function ReaderProgressNavigation() {
   return (
     <nav
       aria-label="Page navigation"
-      className="@container mx-auto w-full max-w-[600px] space-y-4 border-t-2 border-black bg-white p-3 text-black"
+      className="@container mx-auto w-full max-w-150 space-y-4 border-t-2 border-black bg-white p-3 text-black"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="group" aria-label="Page view" className="flex">
@@ -196,27 +227,10 @@ export function ReaderProgressNavigation() {
                     requestNavigation(page! + direction * step, 'relative')
                   }
                 >
-                  <svg
-                    aria-hidden="true"
-                    width="36"
-                    height="24"
-                    viewBox="0 0 36 24"
-                    fill="currentColor"
-                  >
-                    <g
-                      transform={
-                        direction < 0 ? 'rotate(180 18 12)' : undefined
-                      }
-                    >
-                      {Array.from({ length: noOfArrows }, (_, index) => (
-                        <path
-                          key={index}
-                          d="M0 3 L10 12 L0 21Z"
-                          transform={`translate(${(36 - noOfArrows * 12) / 2 + index * 12} 0)`}
-                        />
-                      ))}
-                    </g>
-                  </svg>
+                  <NavigationArrows
+                    direction={direction}
+                    noOfArrows={noOfArrows}
+                  />
                   <span className="text-lg font-bold">{step}</span>
                 </button>
               )
