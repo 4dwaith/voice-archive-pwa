@@ -30,6 +30,16 @@
 
 - Vitest: pure rules, meaningful state transitions, and independent component
   behavior/corner cases. Use controlled ReaderContext for reader components.
+- Group tests in `describe` blocks named for the component or rule; use nested
+  groups for distinct concerns. Keep `it` descriptions short and plain, stating
+  one expected outcome. Put shared context in the group name instead of packing
+  several behaviors or implementation terms into a test title.
+- Each test owns its mutable fixtures, mocks and initial state; shared read-only
+  examples are fine. Split separate behaviors into independent cases instead of
+  chaining scenarios to reuse setup.
+  Start directly in the state a case needs. Keep related assertions about one
+  outcome together; one assertion per test is not required. Parameterize cases
+  of the same rule without conditional assertions.
 - Test a behavior once at its lowest useful layer. Do not duplicate the same
   matrix across component, reducer, provider and browser suites. Simple property
   assignment, selector access and one-to-one dispatch wiring need no separate
@@ -52,6 +62,8 @@
 
 ## Existing coding and reader contracts
 
+- Reader UI targets low vision and e-ink: use large, obvious, high-contrast controls
+  with static feedback. Avoid smooth motion, subtle affordances and immersive effects.
 - Prefer Tailwind utilities for component styling. Retain CSS for imported content
   formatting and complex descendant rules where it is clearer.
 - Use explicit verbs/verb phrases for functions, and is/has/can for predicates.

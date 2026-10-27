@@ -1,28 +1,20 @@
-import type { ReaderPageNavigation } from '../../../models/reader'
-
 export function resolvePageNumber(
   requestedPage: number,
   pageCount: number | null,
-  kind: ReaderPageNavigation['kind'],
-): { pageNumber: number | null; error: string | null } {
-  if (pageCount === null)
-    return { pageNumber: null, error: 'Page range is not known yet.' }
-  if (pageCount === 0)
-    return { pageNumber: null, error: 'No pages are available.' }
-
+): number | null {
   if (
-    kind === 'absolute' &&
-    (!Number.isSafeInteger(requestedPage) ||
-      requestedPage < 1 ||
-      requestedPage > pageCount)
+    pageCount === null ||
+    pageCount === 0 ||
+    !Number.isSafeInteger(requestedPage)
   )
-    return {
-      pageNumber: null,
-      error: `Enter a whole page number from 1 to ${pageCount}.`,
-    }
+    return null
 
-  return {
-    pageNumber: Math.max(1, Math.min(requestedPage, pageCount)),
-    error: null,
-  }
+  return Math.max(1, Math.min(requestedPage, pageCount))
+}
+
+export function resolvePageNumberFromFraction(
+  fraction: number,
+  pageCount: number,
+): number | null {
+  return resolvePageNumber(Math.floor(fraction * pageCount) + 1, pageCount)
 }

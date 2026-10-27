@@ -15,6 +15,7 @@ export type ReaderState = {
   tocPresentation: ReaderTocPresentation
   currentPage: number
   pageCount: number | null
+  pageScope: ReaderPageNavigation['scope']
   globalPage: number | null
   totalPageCount: number | null
   indexedPageCount: number
@@ -30,6 +31,7 @@ const initialState: ReaderState = {
   tocPresentation: 'shown',
   currentPage: 1,
   pageCount: null,
+  pageScope: 'local',
   globalPage: null,
   totalPageCount: null,
   indexedPageCount: 0,
@@ -50,6 +52,9 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
+      state.pageScope = action.payload
+    },
     requestPageNavigation(state, action: PayloadAction<ReaderPageNavigation>) {
       state.pageNavigationIntent = action.payload
     },
@@ -98,6 +103,7 @@ const readerSlice = createSlice({
     getTocPresentation: (state) => state.tocPresentation,
     getCurrentPage: (state) => state.currentPage,
     getPageCount: (state) => state.pageCount,
+    getPageScope: (state) => state.pageScope,
     getGlobalPage: (state) => state.globalPage,
     getTotalPageCount: (state) => state.totalPageCount,
     getIndexedPageCount: (state) => state.indexedPageCount,
@@ -108,6 +114,7 @@ const readerSlice = createSlice({
 })
 
 export const {
+  setPageScope,
   requestPageNavigation,
   selectSection,
   setSectionExpanded,
@@ -119,6 +126,7 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getPageScope,
   getGlobalPage,
   getTotalPageCount,
   getIndexedPageCount,

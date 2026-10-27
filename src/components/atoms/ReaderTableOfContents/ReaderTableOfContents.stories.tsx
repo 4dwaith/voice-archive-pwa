@@ -40,6 +40,8 @@ const ProvideTocStory: Decorator<StoryArgs> = function ProvideTocStory(Story) {
       setTocPresentation: (tocPresentation) => updateArgs({ tocPresentation }),
     },
     navigation: {
+      pageScope: 'local',
+      setPageScope: () => undefined,
       globalPage: null,
       totalPageCount: null,
       indexedPageCount: 0,

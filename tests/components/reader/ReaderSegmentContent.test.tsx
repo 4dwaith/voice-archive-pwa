@@ -30,6 +30,8 @@ function createContextValue(): ReaderContextValue {
       setTocPresentation: vi.fn(),
     },
     navigation: {
+      pageScope: 'local',
+      setPageScope: () => undefined,
       globalPage: null,
       totalPageCount: null,
       indexedPageCount: 0,

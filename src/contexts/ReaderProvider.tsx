@@ -1,6 +1,8 @@
 import { useMemo, type ReactNode } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
+  setPageScope,
+  getPageScope,
   requestPageNavigation,
   getGlobalPage,
   getTotalPageCount,
@@ -35,6 +37,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
   const currentPage = useAppSelector(getCurrentPage)
   const pageCount = useAppSelector(getPageCount)
+  const pageScope = useAppSelector(getPageScope)
   const globalPage = useAppSelector(getGlobalPage)
   const totalPageCount = useAppSelector(getTotalPageCount)
   const indexedPageCount = useAppSelector(getIndexedPageCount)
@@ -47,7 +50,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
     >
     navigation: Pick<
       ReaderContextValue['navigation'],
-      'requestPageNavigation' | 'setCurrentPage' | 'reportPageCount'
+      | 'requestPageNavigation'
+      | 'setCurrentPage'
+      | 'reportPageCount'
+      | 'setPageScope'
     >
     reader: Pick<
       ReaderContextValue['reader'],
@@ -67,6 +73,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         },
       },
       navigation: {
+        setPageScope: (scope) => {
+          dispatch(setPageScope(scope))
+        },
         requestPageNavigation: (intent) => {
           dispatch(requestPageNavigation(intent))
         },
@@ -100,6 +109,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         ...actions.toc,
       },
       navigation: {
+        pageScope,
         currentPage,
         pageCount,
         globalPage,
@@ -121,6 +131,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
       tocPresentation,
       currentPage,
       pageCount,
+      pageScope,
       globalPage,
       totalPageCount,
       indexedPageCount,

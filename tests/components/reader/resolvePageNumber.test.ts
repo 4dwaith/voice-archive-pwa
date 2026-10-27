@@ -1,29 +1,43 @@
-import { expect, it } from 'vitest'
-import { resolvePageNumber } from '../../../src/components/atoms/ReaderProgressNavigation/resolvePageNumber'
+import { describe, expect, it } from 'vitest'
+import {
+  resolvePageNumber,
+  resolvePageNumberFromFraction,
+} from '../../../src/components/atoms/ReaderProgressNavigation/resolvePageNumber'
 
-it.each([
-  ['relative', -2, 6, 1],
-  ['relative', 2, 6, 2],
-  ['relative', 4, 6, 4],
-  ['relative', 8, 6, 6],
-  ['absolute', 1, 6, 1],
-  ['absolute', 6, 6, 6],
-  ['absolute', 0, 6, null],
-  ['absolute', -1, 6, null],
-  ['absolute', 7, 6, null],
-  ['absolute', 1.5, 6, null],
-  ['absolute', NaN, 6, null],
-  ['absolute', Infinity, 6, null],
-  ['relative', 2, 0, null],
-  ['absolute', 1, 0, null],
-  ['relative', 2, null, null],
-  ['absolute', 1, null, null],
-] as const)(
-  '%s page %s with count %s resolves to %s',
-  (kind, requested, count, expected) => {
-    const result = resolvePageNumber(requested, count, kind)
+describe('resolvePageNumber', () => {
+  it.each([
+    [-22, 1],
+    [0, 1],
+    [1, 1],
+    [4, 4],
+    [6, 6],
+    [28, 6],
+  ])('clamps page %s to %s', (requested, expected) => {
+    expect(resolvePageNumber(requested, 6)).toBe(expected)
+  })
 
-    expect(result.pageNumber).toBe(expected)
-    expect(result.error === null).toBe(expected !== null)
-  },
-)
+  it.each([1.5, NaN, Infinity])('rejects %s', (requested) => {
+    expect(resolvePageNumber(requested, 6)).toBeNull()
+  })
+
+  it('returns no page for an empty range', () => {
+    expect(resolvePageNumber(1, 0)).toBeNull()
+  })
+
+  it('returns no page for an unknown range', () => {
+    expect(resolvePageNumber(1, null)).toBeNull()
+  })
+})
+
+describe('resolvePageNumberFromFraction', () => {
+  it.each([
+    [-0.1, 1],
+    [0, 1],
+    [0.25, 4],
+    [0.999, 12],
+    [1, 12],
+    [1.1, 12],
+  ])('maps %s to page %s', (fraction, expected) => {
+    expect(resolvePageNumberFromFraction(fraction, 12)).toBe(expected)
+  })
+})

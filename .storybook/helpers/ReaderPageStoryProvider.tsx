@@ -39,6 +39,8 @@ export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
         setTocPresentation: () => undefined,
       },
       navigation: {
+        pageScope: 'local',
+        setPageScope: () => undefined,
         globalPage: null,
         totalPageCount: null,
         indexedPageCount: 0,

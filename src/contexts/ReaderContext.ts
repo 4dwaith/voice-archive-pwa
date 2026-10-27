@@ -18,6 +18,8 @@ export type ReaderContextValue = {
     setTocPresentation: (presentation: ReaderTocPresentation) => void
   }
   navigation: {
+    pageScope: ReaderPageNavigation['scope']
+    setPageScope: (scope: ReaderPageNavigation['scope']) => void
     currentPage: number
     pageCount: number | null
     globalPage: number | null

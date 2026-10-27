@@ -9,6 +9,7 @@ import { ReaderProgressNavigation } from './ReaderProgressNavigation'
 
 type StoryArgs = Pick<
   ReaderContextValue['navigation'],
+  | 'pageScope'
   | 'currentPage'
   | 'pageCount'
   | 'globalPage'
@@ -32,6 +33,7 @@ const ProvideProgressStory: Decorator<StoryArgs> =
       },
       navigation: {
         ...args,
+        setPageScope: (pageScope) => updateArgs({ pageScope }),
         requestPageNavigation: (intent) => {
           args.requestPageNavigation(intent)
           const currentPage =
@@ -41,11 +43,22 @@ const ProvideProgressStory: Decorator<StoryArgs> =
               ? intent.pageNumber
               : currentPage + intent.delta
 
-          // These fixtures show one section whose local and book numbers match.
+          // The synthetic book uses equal-length chapters, without loading content.
           updateArgs(
             intent.scope === 'global'
-              ? { currentPage: pageNumber, globalPage: pageNumber }
-              : { currentPage: pageNumber },
+              ? {
+                  globalPage: pageNumber,
+                  currentPage: args.pageCount
+                    ? ((pageNumber - 1) % args.pageCount) + 1
+                    : 1,
+                }
+              : {
+                  currentPage: pageNumber,
+                  globalPage:
+                    args.globalPage === null
+                      ? null
+                      : args.globalPage + pageNumber - args.currentPage,
+                },
           )
         },
         setCurrentPage: () => undefined,
@@ -63,7 +76,7 @@ const ProvideProgressStory: Decorator<StoryArgs> =
 
     return (
       <ReaderContext value={value}>
-        <div className="max-w-sm">
+        <div className="w-[min(600px,calc(100vw-2rem))]">
           <Story />
         </div>
       </ReaderContext>
@@ -77,16 +90,18 @@ const meta = {
   tags: ['autodocs'],
 
   args: {
-    currentPage: 3,
-    pageCount: 6,
-    globalPage: 3,
-    totalPageCount: 6,
-    indexedPageCount: 6,
+    pageScope: 'local',
+    currentPage: 7,
+    pageCount: 24,
+    globalPage: 55,
+    totalPageCount: 120,
+    indexedPageCount: 120,
     isPageNavigationPending: false,
     requestPageNavigation: fn(),
   },
 
   argTypes: {
+    pageScope: { control: 'inline-radio', options: ['local', 'global'] },
     currentPage: { control: { type: 'number', min: 1, step: 1 } },
     pageCount: { control: { type: 'number', min: 0, step: 1 } },
     globalPage: { control: { type: 'number', min: 1, step: 1 } },
@@ -105,7 +120,7 @@ type Story = StoryObj<typeof meta>
 export const KnownTotal: Story = {}
 
 export const PartialIndex: Story = {
-  args: { totalPageCount: null },
+  args: { pageScope: 'global', totalPageCount: null, indexedPageCount: 72 },
 }
 
 export const EmptyUnknownPosition: Story = {

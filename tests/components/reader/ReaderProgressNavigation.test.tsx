@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ReaderContext,
   type ReaderContextValue,
@@ -24,6 +24,11 @@ function renderNavigation(
       setTocPresentation: vi.fn(),
     },
     navigation: {
+      pageScope: 'local',
+      setPageScope: vi.fn((pageScope) => {
+        context.navigation.pageScope = pageScope
+        view.rerender(renderContent())
+      }),
       currentPage: 3,
       pageCount: 6,
       globalPage: 9,
@@ -45,106 +50,154 @@ function renderNavigation(
     },
   }
 
-  render(
-    <ReaderContext value={context}>
-      <ReaderProgressNavigation />
-    </ReaderContext>,
-  )
+  function renderContent() {
+    return (
+      <ReaderContext value={{ ...context }}>
+        <ReaderProgressNavigation />
+      </ReaderContext>
+    )
+  }
+
+  const view = render(renderContent())
 
   return context
 }
 
-it('shows partial progress honestly and explains a jump outside the indexed prefix', async () => {
-  const context = renderNavigation()
-  const user = userEvent.setup()
-  expect(screen.getByText('Section page 3 of 6.')).toBeVisible()
-  expect(screen.getByText('Book page 9; total unknown.')).toBeVisible()
-  expect(screen.getByText('12 book pages indexed.')).toBeVisible()
-  expect(screen.getByRole('slider')).toHaveAttribute('max', '12')
+describe('ReaderProgressNavigation', () => {
+  describe('page view', () => {
+    it('shows the chapter position', () => {
+      renderNavigation()
+      const slider = screen.getByRole('slider', { name: 'Chapter page' })
 
-  await user.type(screen.getByLabelText('Book page'), '13')
-  await user.click(screen.getByRole('button', { name: 'Go' }))
-
-  expect(screen.getByRole('status')).toHaveTextContent(
-    'Enter a whole page number from 1 to 12.',
-  )
-  expect(screen.getByLabelText('Book page')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  )
-  expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
-})
-
-it('submits a numbered book jump explicitly with Enter', async () => {
-  const context = renderNavigation({ totalPageCount: 12 })
-  expect(screen.getByText('Book page 9 of 12.')).toBeVisible()
-  expect(screen.queryByText(/pages indexed/)).toBeNull()
-
-  await userEvent.setup().type(screen.getByLabelText('Book page'), '5{Enter}')
-
-  expect(
-    context.navigation.requestPageNavigation,
-  ).toHaveBeenCalledExactlyOnceWith({
-    scope: 'global',
-    kind: 'absolute',
-    pageNumber: 5,
-  })
-})
-
-it('emits the bounded local delta when the global position is unknown', async () => {
-  const context = renderNavigation({ globalPage: null })
-  expect(
-    screen.getByRole('group', { name: 'Section page steps' }),
-  ).toBeVisible()
-  expect(screen.getByRole('slider')).toBeDisabled()
-
-  await userEvent
-    .setup()
-    .click(screen.getByRole('button', { name: 'Back 5 pages' }))
-
-  expect(
-    context.navigation.requestPageNavigation,
-  ).toHaveBeenCalledExactlyOnceWith({
-    scope: 'local',
-    kind: 'relative',
-    delta: -2,
-  })
-})
-
-it('shows pending status and prevents repeated activation', async () => {
-  const context = renderNavigation({ isPageNavigationPending: true })
-
-  await userEvent
-    .setup()
-    .click(screen.getByRole('button', { name: 'Forward 5 pages' }))
-
-  expect(screen.getByRole('status')).toHaveTextContent('Changing page…')
-  expect(screen.getByLabelText('Book page')).toBeDisabled()
-  expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
-})
-
-it.each([0, null])(
-  'disables unavailable controls for local count %s without showing page zero',
-  (pageCount) => {
-    renderNavigation({
-      pageCount,
-      globalPage: null,
-      totalPageCount: pageCount,
-      indexedPageCount: 0,
+      expect(screen.getByText('Page 3 of 6')).toBeVisible()
+      expect(slider).toHaveAttribute('aria-valuenow', '3')
+      expect(slider).toHaveAttribute('aria-valuemax', '6')
     })
 
-    expect(
-      screen.getByText(
-        pageCount === 0
-          ? 'No book pages.'
-          : 'Book page unknown; total unknown.',
-      ),
-    ).toBeVisible()
-    expect(
-      screen.getByRole('button', { name: 'Forward 1 page' }),
-    ).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Go' })).toBeDisabled()
-    expect(screen.getByLabelText('Book page')).toHaveValue(null)
-    expect(screen.queryByText(/page 0\b/)).toBeNull()
-  },
-)
+    it('shows the book position', () => {
+      renderNavigation({ pageScope: 'global', totalPageCount: 12 })
+      const slider = screen.getByRole('slider', { name: 'Book page' })
+
+      expect(screen.getByText('Page 9 of 12')).toBeVisible()
+      expect(slider).toHaveAttribute('aria-valuenow', '9')
+      expect(slider).toHaveAttribute('aria-valuemax', '12')
+    })
+
+    it.each([
+      { name: 'Book', initial: 'local', target: 'global' },
+      { name: 'Chapter', initial: 'global', target: 'local' },
+    ] as const)('switches to $name', async ({ name, initial, target }) => {
+      const context = renderNavigation({ pageScope: initial })
+
+      await userEvent.setup().click(screen.getByRole('button', { name }))
+
+      expect(context.navigation.setPageScope).toHaveBeenCalledExactlyOnceWith(
+        target,
+      )
+      expect(screen.getByRole('button', { name, pressed: true })).toBeVisible()
+    })
+  })
+
+  describe('page actions', () => {
+    it('clamps forward jumps', async () => {
+      const context = renderNavigation({ pageScope: 'global' })
+
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: 'Forward 25 pages' }))
+
+      expect(
+        context.navigation.requestPageNavigation,
+      ).toHaveBeenCalledExactlyOnceWith({
+        scope: 'global',
+        kind: 'relative',
+        delta: 3,
+      })
+    })
+
+    it('jumps to the last page with End', () => {
+      const context = renderNavigation()
+
+      fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' })
+
+      expect(
+        context.navigation.requestPageNavigation,
+      ).toHaveBeenCalledExactlyOnceWith({
+        scope: 'local',
+        kind: 'absolute',
+        pageNumber: 6,
+      })
+    })
+  })
+
+  describe('page counts', () => {
+    it('shows an unknown book total', () => {
+      renderNavigation({ pageScope: 'global' })
+
+      expect(screen.getByText('Page 9 of ?')).toBeVisible()
+      expect(
+        screen.getByText('12 pages indexed. Book total unknown.'),
+      ).toBeVisible()
+      expect(screen.getByRole('slider')).toHaveAttribute(
+        'aria-valuetext',
+        'Page 9 of ?; 12 pages indexed, total unknown',
+      )
+    })
+
+    it('shows an empty chapter', () => {
+      renderNavigation({ pageCount: 0 })
+
+      expect(screen.getByText('No pages')).toBeVisible()
+      expect(screen.getByText('No chapter pages available.')).toBeVisible()
+    })
+
+    it('shows an unknown chapter count', () => {
+      renderNavigation({ pageCount: null })
+
+      expect(screen.getByText('Page 3 of ?')).toBeVisible()
+      expect(
+        screen.getByText('Chapter pages have not been counted yet.'),
+      ).toBeVisible()
+    })
+
+    it.each([
+      { condition: 'an empty chapter', pageCount: 0 },
+      { condition: 'an unknown count', pageCount: null },
+    ])('disables jumps for $condition', ({ pageCount }) => {
+      renderNavigation({ pageCount })
+
+      expect(
+        screen.getByRole('button', { name: 'Forward 1 page' }),
+      ).toBeDisabled()
+      expect(screen.queryByRole('slider')).toBeNull()
+    })
+  })
+
+  describe('pending navigation', () => {
+    it('shows the pending status', () => {
+      renderNavigation({ isPageNavigationPending: true })
+
+      expect(screen.getByRole('status')).toHaveTextContent('Changing page…')
+    })
+
+    it('disables page controls', () => {
+      renderNavigation({ isPageNavigationPending: true })
+
+      expect(
+        screen.getByRole('button', { name: 'Forward 5 pages' }),
+      ).toBeDisabled()
+      expect(screen.getByRole('slider')).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      )
+    })
+
+    it('ignores jumps while pending', () => {
+      const context = renderNavigation({ isPageNavigationPending: true })
+
+      fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' })
+
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+  })
+})
