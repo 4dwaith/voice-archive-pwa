@@ -60,3 +60,7 @@ export type ReaderMeasurementSave = Pick<
 > & {
   outcome: 'saved' | 'rejected' | 'failed' | null
 }
+
+export type ReaderAnchor = { segmentId: number; offset: number }
+
+export type ReaderScope = { bookId: number; contentVersion: string }

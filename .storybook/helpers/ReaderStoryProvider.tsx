@@ -43,7 +43,6 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
         pageCount: null,
         setCurrentPage: () => undefined,
         reportPageMeasurement: () => undefined,
-        reportPageCount: () => undefined,
       },
       reader: {
         textSizePercent: 100,

@@ -30,7 +30,6 @@ export type ReaderContextValue = {
     requestPageNavigation: (intent: ReaderPageNavigation) => void
     setCurrentPage: (pageNumber: number) => void
     reportPageMeasurement: (report: ReaderPageMeasurement) => void
-    reportPageCount: (pageCount: number | null) => void
   }
   reader: {
     reportLayoutKey: (key: string | null) => void

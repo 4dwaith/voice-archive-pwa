@@ -24,9 +24,7 @@ export function ReaderChapterLayout({
   segments,
   page,
   textSizePercent,
-  shouldCount = false,
   shouldMeasure = false,
-  onPageCount,
   onPageMeasure,
   viewportRef,
   onLayoutKeyChange,
@@ -34,9 +32,7 @@ export function ReaderChapterLayout({
   segments: ReaderSegment[]
   page: number
   textSizePercent: number
-  shouldCount?: boolean
   shouldMeasure?: boolean
-  onPageCount?: (count: number | null) => void
   onPageMeasure?: (measurement: ReaderLayoutMeasurement) => void
   viewportRef?: Ref<HTMLDivElement>
   onLayoutKeyChange?: (key: string | null) => void
@@ -60,21 +56,19 @@ export function ReaderChapterLayout({
       publishedKey.current = null
       onLayoutKeyChange?.(null)
     }
-    if (shouldCount) onPageCount?.(null)
   }
 
   const columnsRef = useRef<HTMLDivElement>(null)
 
   const typographyRevision = useObserveTypographyChanges(
     columnsRef,
-    shouldCount || shouldMeasure || shouldObserveLayoutKey,
+    shouldMeasure || shouldObserveLayoutKey,
     invalidateFontLayout,
   )
 
   const [{ width, height }, setSize] = useState({ width: 0, height: 0 })
   const reportMeasurement = useCallback(
     (columns: HTMLElement, count: number, gap: number, layoutKey: string) => {
-      if (shouldCount) onPageCount?.(count)
       if (shouldMeasure)
         onPageMeasure?.({
           layoutKey,
@@ -84,16 +78,7 @@ export function ReaderChapterLayout({
           ...measurePageBoundaries(columns, segments, count, width, gap),
         })
     },
-    [
-      shouldCount,
-      shouldMeasure,
-      onPageCount,
-      onPageMeasure,
-      width,
-      height,
-      textSizePercent,
-      segments,
-    ],
+    [shouldMeasure, onPageMeasure, width, height, textSizePercent, segments],
   )
 
   useLayoutEffect(function observeReaderViewportSize() {
@@ -111,11 +96,9 @@ export function ReaderChapterLayout({
 
   useLayoutEffect(
     function measureReaderPageLayout() {
-      if (!shouldCount && !shouldMeasure && !shouldObserveLayoutKey) return
+      if (!shouldMeasure && !shouldObserveLayoutKey) return
 
       publishLayoutKey(null)
-
-      if (shouldCount) onPageCount?.(null)
 
       const columns = columnsRef.current!
       const document = columns.ownerDocument
@@ -164,16 +147,13 @@ export function ReaderChapterLayout({
       return () => {
         isCancelled = true
         window.cancelAnimationFrame(frame)
-        if (shouldCount) onPageCount?.(null)
       }
     },
     [
       segments,
       width,
       height,
-      shouldCount,
       shouldMeasure,
-      onPageCount,
       reportMeasurement,
       textSizePercent,
       shouldObserveLayoutKey,

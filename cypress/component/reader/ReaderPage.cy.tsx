@@ -2,7 +2,7 @@ import { mountReaderPage, assertTextIsOnVisiblePage } from '../support/reader'
 
 describe('ReaderPage', () => {
   it('reveals a focused segment on a clipped page', () => {
-    const reader = mountReaderPage()
+    const reader = mountReaderPage({ pageCount: 3 })
 
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="101"]',

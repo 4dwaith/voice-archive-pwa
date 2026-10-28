@@ -4,6 +4,8 @@ import {
   type PayloadAction,
 } from '@reduxjs/toolkit'
 import type {
+  ReaderAnchor,
+  ReaderScope,
   ReaderPageNavigation,
   StoredReaderMeasurement,
   ReaderMeasurementSave,
@@ -20,12 +22,8 @@ export type ReaderState = {
 
   pageScope: ReaderPageNavigation['scope']
 
-  currentPage: number
-  globalPage: number | null
-
-  pageCount: number | null
-  totalPageCount: number | null
-  indexedPageCount: number
+  scope: ReaderScope | null
+  anchor: ReaderAnchor | null
 
   pageNavigationIntent: ReaderPageNavigation | null
 
@@ -43,12 +41,8 @@ const initialState: ReaderState = {
 
   pageScope: 'local',
 
-  currentPage: 1,
-  globalPage: null,
-
-  pageCount: null,
-  totalPageCount: null,
-  indexedPageCount: 0,
+  scope: null,
+  anchor: null,
 
   pageNavigationIntent: null,
 
@@ -63,6 +57,13 @@ const getSectionExpansionPredicateForState = createSelector(
   (sectionExpansion) => (sectionId: number) =>
     sectionExpansion[sectionId] ?? true,
 )
+
+function hasMatchingScope(current: ReaderScope | null, expected: ReaderScope) {
+  return (
+    current?.bookId === expected.bookId &&
+    current.contentVersion === expected.contentVersion
+  )
+}
 
 const readerSlice = createSlice({
   name: 'reader',
@@ -118,11 +119,38 @@ const readerSlice = createSlice({
     setTocPresentation(state, action: PayloadAction<ReaderTocPresentation>) {
       state.tocPresentation = action.payload
     },
-    setCurrentPage(state, action: PayloadAction<number>) {
-      state.currentPage = action.payload
+    openReader(state, action: PayloadAction<ReaderScope>) {
+      state.scope = action.payload
+      state.anchor = null
+      state.layoutKey = null
+      state.measurementSave = null
+      state.pageNavigationIntent = null
     },
-    reportPageCount(state, action: PayloadAction<number | null>) {
-      state.pageCount = action.payload
+    closeReader(state, action: PayloadAction<ReaderScope>) {
+      if (!hasMatchingScope(state.scope, action.payload)) return
+      state.scope = null
+      state.anchor = null
+      state.layoutKey = null
+      state.measurementSave = null
+      state.pageNavigationIntent = null
+    },
+    reconcileReaderAnchor(
+      state,
+      action: PayloadAction<
+        ReaderScope & { hasContent: boolean; firstAnchor: ReaderAnchor | null }
+      >,
+    ) {
+      if (!hasMatchingScope(state.scope, action.payload)) return
+      if (!action.payload.hasContent) state.anchor = null
+      else state.anchor ??= action.payload.firstAnchor
+    },
+    setReaderAnchor(
+      state,
+      action: PayloadAction<ReaderScope & { anchor: ReaderAnchor }>,
+    ) {
+      if (!hasMatchingScope(state.scope, action.payload)) return
+      state.anchor = action.payload.anchor
+      state.pageNavigationIntent = null
     },
     selectSegment(state, action: PayloadAction<number | null>) {
       state.selectedSegmentId = action.payload
@@ -143,18 +171,16 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getReaderAnchor: (state) => state.anchor,
+    getReaderScope: (state) => state.scope,
+    getLayoutKey: (state) => state.layoutKey,
     getMeasurementSave: (state) => state.measurementSave,
     getSelectedSectionId: (state) => state.selectedSectionId,
     isSectionExpanded: (state, sectionId: number) =>
       getSectionExpansionPredicateForState(state)(sectionId),
     getSectionExpansionPredicate: getSectionExpansionPredicateForState,
     getTocPresentation: (state) => state.tocPresentation,
-    getCurrentPage: (state) => state.currentPage,
-    getPageCount: (state) => state.pageCount,
     getPageScope: (state) => state.pageScope,
-    getGlobalPage: (state) => state.globalPage,
-    getTotalPageCount: (state) => state.totalPageCount,
-    getIndexedPageCount: (state) => state.indexedPageCount,
     isPageNavigationPending: (state) => state.pageNavigationIntent !== null,
     getSelectedSegmentId: (state) => state.selectedSegmentId,
     getHighlightedSegmentId: (state) => state.highlightedSegmentId,
@@ -162,6 +188,10 @@ const readerSlice = createSlice({
 })
 
 export const {
+  openReader,
+  closeReader,
+  reconcileReaderAnchor,
+  setReaderAnchor,
   reportLayoutKey,
   reportPageMeasurement,
   recordMeasurementSave,
@@ -170,25 +200,21 @@ export const {
   selectSection,
   setSectionExpanded,
   setTocPresentation,
-  setCurrentPage,
-  reportPageCount,
   selectSegment,
   highlightSegment,
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getReaderAnchor,
+  getReaderScope,
+  getLayoutKey,
   getMeasurementSave,
   getPageScope,
-  getGlobalPage,
-  getTotalPageCount,
-  getIndexedPageCount,
   isPageNavigationPending,
   getSelectedSectionId,
   isSectionExpanded,
   getSectionExpansionPredicate,
   getTocPresentation,
-  getCurrentPage,
-  getPageCount,
   getSelectedSegmentId,
   getHighlightedSegmentId,
 } = readerSlice.selectors

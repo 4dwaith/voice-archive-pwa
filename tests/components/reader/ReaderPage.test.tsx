@@ -39,7 +39,6 @@ describe('ReaderPage', () => {
         isPageNavigationPending: false,
         requestPageNavigation: vi.fn(),
         setCurrentPage,
-        reportPageCount: vi.fn(),
         reportPageMeasurement: vi.fn(),
       },
       reader: {

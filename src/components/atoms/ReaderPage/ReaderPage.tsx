@@ -10,7 +10,7 @@ export function ReaderPage({
   segments: ReaderSegment[]
   label: string
 }) {
-  const { currentPage, pageCount, setCurrentPage, reportPageCount } =
+  const { currentPage, pageCount, setCurrentPage } =
     useReaderContext().navigation
   const { textSizePercent, reportLayoutKey } = useReaderContext().reader
   const windowRef = useRef<HTMLDivElement>(null)
@@ -71,8 +71,6 @@ export function ReaderPage({
         page={currentPage}
         textSizePercent={textSizePercent}
         onLayoutKeyChange={reportLayoutKey}
-        shouldCount
-        onPageCount={reportPageCount}
         viewportRef={windowRef}
       />
     </article>

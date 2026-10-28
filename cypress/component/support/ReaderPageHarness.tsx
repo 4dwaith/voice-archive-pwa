@@ -19,7 +19,7 @@ import type {
 
 export type ReaderPageInputs = Pick<
   ReaderContextValue['navigation'],
-  'currentPage'
+  'currentPage' | 'pageCount'
 > &
   Pick<ReaderContextValue['reader'], 'textSizePercent' | 'selectedSegmentId'>
 
@@ -31,8 +31,8 @@ export function ReaderPageHarness({
   segments,
   width,
   height,
+  pageCount,
   ref,
-  onReportPageCount,
   onLayoutKeyChange,
   onPageMeasure,
   onReportPageMeasurement,
@@ -42,26 +42,36 @@ export function ReaderPageHarness({
   segments: ReaderSegment[]
   width: number
   height: number
+  pageCount: number | null
   ref: Ref<ReaderPageControls>
   children?: ReactNode
   layoutOnly?: boolean
   onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
   onPageMeasure?: (report: ReaderLayoutMeasurement) => void
   onLayoutKeyChange?: (key: string | null) => void
-  onReportPageCount?: (count: number | null) => void
 }) {
   const [inputs, setInputs] = useState<ReaderPageInputs>({
     currentPage: 1,
+    pageCount,
     textSizePercent: 100,
     selectedSegmentId: null,
   })
-  const [pageCount, setPageCount] = useState<number | null>(null)
-  const reportPageCount = useCallback(
-    (count: number | null) => {
-      onReportPageCount?.(count)
-      setPageCount(count)
+  const [measurement, setMeasurement] = useState<ReaderLayoutMeasurement>()
+  const reportLayoutMeasurement = useCallback(
+    (report: ReaderLayoutMeasurement) => {
+      setMeasurement(report)
+      onPageMeasure?.(report)
     },
-    [onReportPageCount],
+    [onPageMeasure],
+  )
+
+  const [layoutKey, setLayoutKey] = useState<string | null>(null)
+  const reportLayoutKey = useCallback(
+    (key: string | null) => {
+      setLayoutKey(key)
+      onLayoutKeyChange?.(key)
+    },
+    [onLayoutKeyChange],
   )
 
   const reportPageMeasurement = useCallback(
@@ -78,6 +88,9 @@ export function ReaderPageHarness({
     }),
     [],
   )
+
+  const hasCurrentMeasurement =
+    layoutKey !== null && measurement?.layoutKey === layoutKey
 
   const value: ReaderContextValue = {
     toc: {
@@ -97,8 +110,7 @@ export function ReaderPageHarness({
       isPageNavigationPending: false,
       requestPageNavigation: () => undefined,
       currentPage: inputs.currentPage,
-      pageCount,
-      reportPageCount,
+      pageCount: inputs.pageCount,
       reportPageMeasurement,
       setCurrentPage: (currentPage) =>
         setInputs((previous) => ({ ...previous, currentPage })),
@@ -109,7 +121,7 @@ export function ReaderPageHarness({
       highlightedSegmentId: null,
       selectSegment: () => undefined,
       highlightSegment: () => undefined,
-      reportLayoutKey: onLayoutKeyChange ?? (() => undefined),
+      reportLayoutKey,
       reportSegmentError: () => undefined,
     },
   }
@@ -118,12 +130,15 @@ export function ReaderPageHarness({
     <ReaderContext value={value}>
       <div
         data-reader-host
+        data-reader-layout-key={layoutKey ?? undefined}
         data-reader-layout-host={layoutOnly || undefined}
         data-layout-page={layoutOnly ? inputs.currentPage : undefined}
         data-layout-page-count={
-          layoutOnly ? (pageCount ?? undefined) : undefined
+          layoutOnly && hasCurrentMeasurement
+            ? measurement.pages.length
+            : undefined
         }
-        data-layout-ready={layoutOnly ? pageCount !== null : undefined}
+        data-layout-ready={layoutOnly ? hasCurrentMeasurement : undefined}
         style={{ width, height, fontFamily: 'monospace' }}
       >
         {children ??
@@ -132,11 +147,9 @@ export function ReaderPageHarness({
               segments={segments}
               page={inputs.currentPage}
               textSizePercent={inputs.textSizePercent}
-              onLayoutKeyChange={onLayoutKeyChange}
-              shouldMeasure={onPageMeasure !== undefined}
-              onPageMeasure={onPageMeasure}
-              shouldCount
-              onPageCount={reportPageCount}
+              onLayoutKeyChange={reportLayoutKey}
+              shouldMeasure
+              onPageMeasure={reportLayoutMeasurement}
             />
           ) : (
             <ReaderPage segments={segments} label="A synthetic chapter" />

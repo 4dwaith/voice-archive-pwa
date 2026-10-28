@@ -16,7 +16,7 @@ afterEach(() => {
 })
 
 describe('ReaderChapterLayout', () => {
-  it('reports an empty layout key without enabling count or measurement', () => {
+  it('reports an empty layout key without enabling measurement', () => {
     const reportKey = cy.stub()
 
     mountReaderPage({
@@ -300,7 +300,6 @@ describe('ReaderChapterLayout', () => {
 
   it('does not publish keys or results from cancelled font work', () => {
     let finishOldLoad: () => void
-    const reportPageCount = cy.stub()
     const reportMeasurement = cy.stub()
     const reportKey = cy.stub()
 
@@ -317,7 +316,6 @@ describe('ReaderChapterLayout', () => {
 
     const layout = mountReaderChapterLayout({
       waitForLayout: false,
-      onReportPageCount: reportPageCount,
       onPageMeasure: reportMeasurement,
       onLayoutKeyChange: reportKey,
     })
@@ -348,13 +346,8 @@ describe('ReaderChapterLayout', () => {
     )
 
     cy.then(() => {
-      const completedCounts = reportPageCount
-        .getCalls()
-        .map((call) => call.args[0])
-        .filter((count) => count !== null)
-
-      expect(completedCounts).to.deep.equal([4])
       expect(reportMeasurement).to.have.been.calledOnce
+      expect(reportMeasurement.firstCall.args[0].pages).to.have.length(4)
       expect(reportMeasurement.firstCall.args[0].layoutKey).to.equal(
         reportKey.lastCall.args[0],
       )
@@ -369,7 +362,6 @@ describe('ReaderChapterLayout', () => {
 
   it('reports exact canonical boundaries for the rendered chapter', () => {
     const report = cy.stub()
-    const count = cy.stub()
     const reportKey = cy.stub()
     const segment = {
       ...continuingReaderSegment,
@@ -391,10 +383,8 @@ describe('ReaderChapterLayout', () => {
           segments={[segment]}
           page={2}
           textSizePercent={100}
-          shouldCount
           shouldMeasure
           onLayoutKeyChange={reportKey}
-          onPageCount={count}
           onPageMeasure={report}
         />
       ),
@@ -423,12 +413,6 @@ describe('ReaderChapterLayout', () => {
           },
         })),
       )
-      expect(
-        count
-          .getCalls()
-          .map((call) => call.args[0])
-          .filter((value) => value !== null),
-      ).to.deep.equal([3])
     })
     cy.get('[data-reader-page-columns]').should('exist')
   })

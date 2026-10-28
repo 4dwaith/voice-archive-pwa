@@ -1,13 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
+import { useReaderNavigation } from '../hooks/useReaderNavigation'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   reportLayoutKey,
   setPageScope,
   getPageScope,
   requestPageNavigation,
-  getGlobalPage,
-  getTotalPageCount,
-  getIndexedPageCount,
   isPageNavigationPending,
   selectSection,
   setSectionExpanded,
@@ -18,13 +16,9 @@ import {
   selectSegment,
   highlightSegment,
   reportSegmentError,
-  setCurrentPage,
-  reportPageCount,
   reportPageMeasurement,
   getSelectedSegmentId,
   getHighlightedSegmentId,
-  getCurrentPage,
-  getPageCount,
 } from '../store/readerSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
 import { ReaderContext, type ReaderContextValue } from './ReaderContext'
@@ -40,17 +34,20 @@ export function ReaderProvider({
   contentVersion?: string
 }) {
   const dispatch = useAppDispatch()
+  const {
+    currentPage,
+    pageCount,
+    globalPage,
+    totalPageCount,
+    indexedPageCount,
+    setCurrentPage,
+  } = useReaderNavigation(bookId, contentVersion)
   const selectedSectionId = useAppSelector(getSelectedSectionId)
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
   const tocPresentation = useAppSelector(getTocPresentation)
   const selectedSegmentId = useAppSelector(getSelectedSegmentId)
   const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
-  const currentPage = useAppSelector(getCurrentPage)
-  const pageCount = useAppSelector(getPageCount)
   const pageScope = useAppSelector(getPageScope)
-  const globalPage = useAppSelector(getGlobalPage)
-  const totalPageCount = useAppSelector(getTotalPageCount)
-  const indexedPageCount = useAppSelector(getIndexedPageCount)
   const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
   const textSizePercent = useAppSelector(selectTextSizePercent)
   const actions = useMemo<{
@@ -60,11 +57,7 @@ export function ReaderProvider({
     >
     navigation: Pick<
       ReaderContextValue['navigation'],
-      | 'requestPageNavigation'
-      | 'setCurrentPage'
-      | 'reportPageCount'
-      | 'reportPageMeasurement'
-      | 'setPageScope'
+      'requestPageNavigation' | 'reportPageMeasurement' | 'setPageScope'
     >
     reader: Pick<
       ReaderContextValue['reader'],
@@ -93,17 +86,11 @@ export function ReaderProvider({
         requestPageNavigation: (intent) => {
           dispatch(requestPageNavigation(intent))
         },
-        setCurrentPage: (pageNumber) => {
-          dispatch(setCurrentPage(pageNumber))
-        },
         reportPageMeasurement: (report) => {
           if (bookId !== undefined && contentVersion)
             dispatch(
               reportPageMeasurement({ ...report, bookId, contentVersion }),
             )
-        },
-        reportPageCount: (count) => {
-          dispatch(reportPageCount(count))
         },
       },
       reader: {
@@ -133,13 +120,14 @@ export function ReaderProvider({
       },
       navigation: {
         pageScope,
-        currentPage,
+        currentPage: currentPage ?? 1,
         pageCount,
         globalPage,
         totalPageCount,
         indexedPageCount,
         isPageNavigationPending: hasPendingPageNavigation,
         ...actions.navigation,
+        setCurrentPage,
       },
       reader: {
         textSizePercent,
@@ -163,6 +151,7 @@ export function ReaderProvider({
       selectedSegmentId,
       highlightedSegmentId,
       actions,
+      setCurrentPage,
     ],
   )
 

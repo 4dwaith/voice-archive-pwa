@@ -38,7 +38,6 @@ function renderNavigation(
       requestPageNavigation: vi.fn(),
       setCurrentPage: vi.fn(),
       reportPageMeasurement: () => undefined,
-      reportPageCount: vi.fn(),
       ...overrides,
     },
     reader: {

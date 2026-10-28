@@ -49,7 +49,6 @@ function renderToc(
       pageCount: null,
       setCurrentPage: vi.fn(),
       reportPageMeasurement: () => undefined,
-      reportPageCount: vi.fn(),
     },
     reader: {
       textSizePercent: 100,

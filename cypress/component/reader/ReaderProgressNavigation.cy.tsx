@@ -27,7 +27,6 @@ it('fills the footer with page cells and jumps directly to a clicked destination
       requestPageNavigation,
       setCurrentPage: () => undefined,
       reportPageMeasurement: () => undefined,
-      reportPageCount: () => undefined,
     },
     reader: {
       textSizePercent: 100,

@@ -43,7 +43,6 @@ function createContextValue(): ReaderContextValue {
       isPageNavigationPending: false,
       requestPageNavigation: vi.fn(),
       setCurrentPage: vi.fn(),
-      reportPageCount: vi.fn(),
       reportPageMeasurement: vi.fn(),
     },
     reader: {

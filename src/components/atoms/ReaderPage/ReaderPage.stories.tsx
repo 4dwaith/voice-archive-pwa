@@ -23,7 +23,7 @@ const meta = {
     width: 360,
     height: 252,
     currentPage: 1,
-    pageCount: null,
+    pageCount: 3,
     textSizePercent: 100,
     selectedSegmentId: null,
     highlightedSegmentId: null,
@@ -42,7 +42,12 @@ const meta = {
       control: { type: 'number', min: 1, step: 1 },
       table: { category: 'Reader context' },
     },
-    pageCount: { control: false, table: { category: 'Layout report' } },
+    pageCount: {
+      control: { type: 'number', min: 0, step: 1 },
+      description:
+        'Supplied chapter count; adjust alongside viewport and typography controls. Null represents preparing.',
+      table: { category: 'Reader context' },
+    },
     textSizePercent: {
       control: 'select',
       options: [100, 112.5, 125, 137.5],
@@ -85,5 +90,5 @@ export const ContinuingVerse: Story = {
 }
 
 export const UnbrokenText: Story = {
-  args: { segments: [unbrokenReaderSegment] },
+  args: { segments: [unbrokenReaderSegment], pageCount: 4 },
 }

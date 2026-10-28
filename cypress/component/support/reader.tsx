@@ -15,8 +15,8 @@ export function mountReaderPage({
   segments = readerPageSegments,
   width = 360,
   height = 252,
+  pageCount = null,
   waitForLayout = true,
-  onReportPageCount,
   onLayoutKeyChange,
   onPageMeasure,
   onReportPageMeasurement,
@@ -26,13 +26,13 @@ export function mountReaderPage({
   segments?: ReaderSegment[]
   width?: number
   height?: number
+  pageCount?: number | null
   waitForLayout?: boolean
   children?: ReactNode
   layoutOnly?: boolean
   onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
   onPageMeasure?: (report: ReaderLayoutMeasurement) => void
   onLayoutKeyChange?: (key: string | null) => void
-  onReportPageCount?: (count: number | null) => void
 } = {}) {
   const controls = createRef<ReaderPageControls>()
 
@@ -41,11 +41,11 @@ export function mountReaderPage({
       segments={segments}
       width={width}
       height={height}
+      pageCount={pageCount}
       ref={controls}
       layoutOnly={layoutOnly}
       onPageMeasure={onPageMeasure}
       onLayoutKeyChange={onLayoutKeyChange}
-      onReportPageCount={onReportPageCount}
       onReportPageMeasurement={onReportPageMeasurement}
     >
       {children}
@@ -71,7 +71,6 @@ export function mountReaderChapterLayout(
     waitForLayout?: boolean
     onPageMeasure?: (report: ReaderLayoutMeasurement) => void
     onLayoutKeyChange?: (key: string | null) => void
-    onReportPageCount?: (count: number | null) => void
   } = {},
 ) {
   const reader = mountReaderPage({ ...options, layoutOnly: true })
@@ -101,8 +100,9 @@ export function waitForChapterLayout() {
 
 export function waitForReaderLayout() {
   return cy
-    .get('[data-reader-page]')
-    .should('have.attr', 'data-reader-layout-ready', 'true')
+    .get('[data-reader-host]')
+    .should('have.attr', 'data-reader-layout-key')
+    .and('match', /^[a-f0-9]{64}$/)
 }
 
 export function showReaderPage(

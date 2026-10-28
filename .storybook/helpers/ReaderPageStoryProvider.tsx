@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import type { Decorator } from '@storybook/react-vite'
 import { useArgs } from 'storybook/preview-api'
 import {
@@ -22,13 +21,6 @@ export type ReaderPageStoryArgs = {
 export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
   function ProvideReaderPageStory(Story) {
     const [args, updateArgs] = useArgs<ReaderPageStoryArgs>()
-    const reportPageCount = useCallback(
-      (pageCount: number | null) => {
-        updateArgs({ pageCount })
-      },
-      [updateArgs],
-    )
-
     const value: ReaderContextValue = {
       toc: {
         selectedSectionId: null,
@@ -49,7 +41,6 @@ export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
         currentPage: args.currentPage,
         pageCount: args.pageCount,
         setCurrentPage: (currentPage) => updateArgs({ currentPage }),
-        reportPageCount,
         reportPageMeasurement: () => undefined,
       },
       reader: {

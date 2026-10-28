@@ -75,3 +75,9 @@ database.version(6).stores({
   measurements:
     '[bookId+contentVersion+chapterId+layoutKey], bookId, [bookId+contentVersion+layoutKey]',
 })
+
+// Indexed anchor lookup preserves existing content and measurements.
+database.version(7).stores({
+  segments:
+    '[bookId+version+sequence], bookId, [bookId+version], [bookId+version+id], [bookId+version+section_id], [bookId+version+source_key], [bookId+version+root_section_id+sequence]',
+})
