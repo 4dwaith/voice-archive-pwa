@@ -37,6 +37,7 @@ export function ReaderChapterLayout({
   viewportRef?: Ref<HTMLDivElement>
   onLayoutKeyChange?: (key: string | null) => void
 }) {
+  const previousLayoutInputs = useRef<string | undefined>(undefined)
   const publishedKey = useRef<string | null | undefined>(undefined)
   const shouldObserveLayoutKey = onLayoutKeyChange !== undefined
 
@@ -98,7 +99,16 @@ export function ReaderChapterLayout({
     function measureReaderPageLayout() {
       if (!shouldMeasure && !shouldObserveLayoutKey) return
 
-      publishLayoutKey(null)
+      // Content and callback updates can rerun this effect without changing
+      // the content-independent key. Only changed rendering inputs unset it.
+      const layoutInputs = JSON.stringify([
+        width,
+        height,
+        textSizePercent,
+        typographyRevision,
+      ])
+      if (previousLayoutInputs.current !== layoutInputs) publishLayoutKey(null)
+      previousLayoutInputs.current = layoutInputs
 
       const columns = columnsRef.current!
       const document = columns.ownerDocument

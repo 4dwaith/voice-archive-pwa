@@ -29,11 +29,13 @@ export function ReaderProvider({
   bookId,
   contentVersion,
 }: {
-  children: ReactNode
+  children:
+    ReactNode | ((data: ReturnType<typeof useReaderNavigation>) => ReactNode)
   bookId?: number
   contentVersion?: string
 }) {
   const dispatch = useAppDispatch()
+  const navigation = useReaderNavigation(bookId, contentVersion)
   const {
     currentPage,
     pageCount,
@@ -41,7 +43,7 @@ export function ReaderProvider({
     totalPageCount,
     indexedPageCount,
     setCurrentPage,
-  } = useReaderNavigation(bookId, contentVersion)
+  } = navigation
   const selectedSectionId = useAppSelector(getSelectedSectionId)
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
   const tocPresentation = useAppSelector(getTocPresentation)
@@ -155,5 +157,9 @@ export function ReaderProvider({
     ],
   )
 
-  return <ReaderContext value={value}>{children}</ReaderContext>
+  return (
+    <ReaderContext value={value}>
+      {typeof children === 'function' ? children(navigation) : children}
+    </ReaderContext>
+  )
 }

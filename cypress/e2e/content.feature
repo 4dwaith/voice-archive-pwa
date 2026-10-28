@@ -18,17 +18,19 @@ Feature: Structured book synchronization
     Then I return to the synchronization library
 
   @live
-  Scenario: Opening a book synchronizes its structured data
+  Scenario: Opening a book synchronizes its structured data and shows its first page
     Given a published synchronization book
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     Then its complete structured dataset is available locally
+    And I see its first reader page
 
   @live
   Scenario: A fully cached book remains available when the network fails
     Given a fully cached synchronization book
     When its manifest becomes unreachable
     Then its cached text remains available offline
+    And I see its first reader page
 
   Scenario: The opening placeholder uses the library cover while waiting for content
     Given a slow synchronization book with a cover
@@ -50,11 +52,14 @@ Feature: Structured book synchronization
     Then I see a book loading error
     And its committed local batches are retained as incomplete
 
-  Scenario: A failed download resumes from its last committed batch
-    Given a synchronization book whose download has failed
+  Scenario: A failed book load can be retried to show its first page
+    Given a synchronization book whose first download fails
+    When I open the synchronization book from the library
+    Then I see a book loading error
     When I retry the book download
     And I wait for book synchronization to finish
-    Then its complete structured dataset is available locally
+    Then I see its first reader page
+    And its complete structured dataset is available locally
     And its committed batches were not downloaded again
 
   @live
@@ -74,6 +79,7 @@ Feature: Structured book synchronization
     Given a fully cached synchronization book
     When its published content is imported again
     Then reopening downloads the new dataset without leaving the book
+    And I see its first reader page
 
   Scenario: A book without published text can still be opened
     Given a book without published text

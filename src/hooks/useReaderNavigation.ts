@@ -54,64 +54,66 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
       async () => {
         const content = await database.content.get(bookId)
         const hasContent = content?.version === contentVersion
-        const chapters = await readReaderChapterReadiness(
+        const chapterInfo = await readReaderChapterReadiness(
           bookId,
           contentVersion,
           layoutKey,
         )
-        let segment = anchor
+        let anchorSegment = anchor
           ? await database.segments
               .where('[bookId+version+id]')
               .equals([bookId, contentVersion, anchor.segmentId])
               .first()
           : undefined
-        if (!anchor && chapters) {
-          for (const id of chapters.chapterIds) {
-            if (!chapters.availableChapterIds.has(id)) break
+        if (!anchor && chapterInfo) {
+          for (const id of chapterInfo.chapterIds) {
+            if (!chapterInfo.availableChapterIds.has(id)) break
             const candidates = await readChapterSegments(
               bookId,
               contentVersion,
               id,
             )
-            segment = candidates?.find(
+            anchorSegment = candidates?.find(
               (candidate) =>
                 candidate.text_content.length > 0 &&
                 sanitizeReaderSegment(candidate).isValid,
             )
-            if (segment) break
+            if (anchorSegment) break
           }
         }
-        const chapterId =
-          segment && chapters
-            ? chapters.chapterIds.find((id) => {
-                const range = chapters.downloadedChapterRanges.get(id)
+        const currentChapterId =
+          anchorSegment && chapterInfo
+            ? chapterInfo.chapterIds.find((id) => {
+                const range = chapterInfo.downloadedChapterRanges.get(id)
                 return (
                   range &&
-                  segment!.sequence >= range.start &&
-                  segment!.sequence < range.end
+                  anchorSegment!.sequence >= range.start &&
+                  anchorSegment!.sequence < range.end
                 )
               })
             : undefined
-        const segments = chapterId
-          ? await readChapterSegments(bookId, contentVersion, chapterId)
+        const currentChapterSegments = currentChapterId
+          ? await readChapterSegments(bookId, contentVersion, currentChapterId)
           : undefined
         const measurement =
-          chapterId && layoutKey
+          currentChapterId && layoutKey
             ? await database.measurements.get([
                 bookId,
                 contentVersion,
-                chapterId,
+                currentChapterId,
                 layoutKey,
               ])
             : undefined
         return {
           queryKey,
           hasContent,
-          chapters,
-          chapterId,
-          segments: segments ?? [],
+          chapterInfo,
+          currentChapterId,
+          segments: currentChapterSegments ?? [],
           measurement,
-          firstAnchor: segment ? { segmentId: segment.id, offset: 0 } : null,
+          firstAnchor: anchorSegment
+            ? { segmentId: anchorSegment.id, offset: 0 }
+            : null,
         }
       },
     )
@@ -136,17 +138,17 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
     data?.segments ?? [],
     data?.measurement,
   )
-  const chapters = data?.chapters
-  const chapterId = data?.chapterId
+  const chapterInfo = data?.chapterInfo
+  const chapterId = data?.currentChapterId
   const prefixIndex = chapterId
-    ? (chapters?.indexedChapterIds.indexOf(chapterId) ?? -1)
+    ? (chapterInfo?.indexedChapterIds.indexOf(chapterId) ?? -1)
     : -1
   const globalPage =
-    currentPage !== null && chapters && prefixIndex >= 0
+    currentPage !== null && chapterInfo && prefixIndex >= 0
       ? currentPage +
-        chapters.indexedChapterIds
+        chapterInfo.indexedChapterIds
           .slice(0, prefixIndex)
-          .reduce((sum, id) => sum + chapters.countsByChapter.get(id)!, 0)
+          .reduce((sum, id) => sum + chapterInfo.countsByChapter.get(id)!, 0)
       : null
 
   function setCurrentPage(pageNumber: number) {
@@ -169,11 +171,15 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
   }
 
   return {
+    chapterInfo,
+    currentChapterId: chapterId,
+    currentChapterSegments: data?.segments ?? [],
+    layoutKey,
     currentPage,
     globalPage,
     pageCount: data?.measurement?.pages.length ?? null,
-    totalPageCount: chapters?.totalPageCount ?? null,
-    indexedPageCount: chapters?.indexedPageCount ?? 0,
+    totalPageCount: chapterInfo?.totalPageCount ?? null,
+    indexedPageCount: chapterInfo?.indexedPageCount ?? 0,
     setCurrentPage,
   }
 }

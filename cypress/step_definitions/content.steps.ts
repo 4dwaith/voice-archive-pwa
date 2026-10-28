@@ -398,13 +398,6 @@ function cacheBookFromLibrary() {
   })
 }
 
-Given('a synchronization book whose download has failed', () => {
-  mockBook({ failOnce: true })
-  openBookFromLibrary()
-  waitForBookSynchronization()
-  cy.findByRole('alert').should('contain.text', 'couldn’t be loaded')
-})
-
 When('I open the synchronization book from the library', openBookFromLibrary)
 When('I wait for book synchronization to finish', waitForBookSynchronization)
 
@@ -566,6 +559,7 @@ Then('its committed batches were not downloaded again', () => {
 
 Then('I see a book loading error', () => {
   cy.findByRole('alert').should('contain.text', 'couldn’t be loaded')
+  cy.findByRole('button', { name: 'Try again' }).should('be.visible')
 })
 When('I retry the book download', () => {
   cy.findByRole('button', { name: 'Try again' }).click()
@@ -625,6 +619,7 @@ Given('a book without published text', () => {
   state = 'empty'
 })
 Then('the book stays open with a no-text message', () => {
+  cy.get('[data-reader]').should('not.exist')
   cy.location('pathname').should('eq', `/books/${id}`)
   cy.findByRole('status').should('contain.text', 'no text data for this book')
 })
@@ -637,4 +632,13 @@ Then('the new dataset is downloaded without leaving the book', () => {
     expect((await data.read(id)).content?.version).to.equal(nextVersion)
   })
   cy.location('pathname').should('eq', `/books/${id}`)
+})
+
+Then('I see its first reader page', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .and('have.attr', 'data-reader-page', '1')
+    .find('[data-reader-segment-id]')
+    .first()
+    .should('contain.text', 'text')
 })
