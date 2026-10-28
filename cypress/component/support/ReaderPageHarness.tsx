@@ -127,7 +127,7 @@ export function ReaderPageHarness({
               page={inputs.currentPage}
               textSizePercent={inputs.textSizePercent}
               shouldCount
-              reportPageCount={reportPageCount}
+              onPageCount={reportPageCount}
             />
           ) : (
             <ReaderPage segments={segments} label="A synthetic chapter" />

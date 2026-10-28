@@ -12,7 +12,7 @@ export function ReaderChapterLayout({
   textSizePercent,
   shouldCount = false,
   shouldMeasure = false,
-  reportPageCount,
+  onPageCount,
   onPageMeasure,
   viewportRef,
 }: {
@@ -21,7 +21,7 @@ export function ReaderChapterLayout({
   textSizePercent: number
   shouldCount?: boolean
   shouldMeasure?: boolean
-  reportPageCount?: (count: number | null) => void
+  onPageCount?: (count: number | null) => void
   onPageMeasure?: (measurement: ReaderLayoutMeasurement) => void
   viewportRef?: Ref<HTMLDivElement>
 }) {
@@ -29,7 +29,7 @@ export function ReaderChapterLayout({
   const [{ width, height }, setSize] = useState({ width: 0, height: 0 })
   const reportMeasurement = useCallback(
     (columns: HTMLElement, count: number, gap: number) => {
-      if (shouldCount) reportPageCount?.(count)
+      if (shouldCount) onPageCount?.(count)
       if (shouldMeasure)
         onPageMeasure?.({
           width,
@@ -41,7 +41,7 @@ export function ReaderChapterLayout({
     [
       shouldCount,
       shouldMeasure,
-      reportPageCount,
+      onPageCount,
       onPageMeasure,
       width,
       height,
@@ -67,7 +67,7 @@ export function ReaderChapterLayout({
     function measureReaderPageLayout() {
       if (!shouldCount && !shouldMeasure) return
 
-      if (shouldCount) reportPageCount?.(null)
+      if (shouldCount) onPageCount?.(null)
 
       const columns = columnsRef.current!
       const document = columns.ownerDocument
@@ -118,7 +118,7 @@ export function ReaderChapterLayout({
         isCancelled = true
         window.cancelAnimationFrame(frame)
         document.fonts.removeEventListener('loadingdone', measurePageLayout)
-        if (shouldCount) reportPageCount?.(null)
+        if (shouldCount) onPageCount?.(null)
       }
     },
     [
@@ -127,14 +127,14 @@ export function ReaderChapterLayout({
       height,
       shouldCount,
       shouldMeasure,
-      reportPageCount,
+      onPageCount,
       reportMeasurement,
     ],
   )
 
   return (
     <div
-      className="box-border h-full min-h-0 w-full min-w-0 overflow-clip bg-page p-[20px] leading-[1.65] text-ink [--reader-column-gap:32px]"
+      className="box-border h-full min-h-0 w-full min-w-0 overflow-clip bg-page p-5 leading-[1.65] text-ink [--reader-column-gap:32px]"
       dir="ltr"
       style={{ fontSize: (16 * textSizePercent) / 100 }}
     >
@@ -145,7 +145,7 @@ export function ReaderChapterLayout({
       >
         <div
           ref={columnsRef}
-          className="h-full w-full columns-1 [column-fill:auto] [column-gap:var(--reader-column-gap)] [orphans:1] [widows:1] [writing-mode:horizontal-tb]"
+          className="h-full w-full columns-1 [column-fill:auto] gap-x-(--reader-column-gap) [orphans:1] [widows:1] [writing-mode:horizontal-tb]"
           data-reader-page-columns
           style={{
             transform: `translateX(calc(${1 - page} * (100% + var(--reader-column-gap))))`,

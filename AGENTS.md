@@ -48,11 +48,16 @@
   behavior that jsdom cannot establish. Do not add browser coverage automatically
   for every component or repeat unit cases in Chrome. Reuse the existing setup.
 - Feature tests: complete application flows, including happy and negative paths.
-  New/changed reader feature scenarios belong only to chunk 11.10. Integrated
-  ToC/page/search journeys belong there, not in earlier component-test harnesses.
+  Add/update reader feature scenarios with their owning application behavior,
+  starting with app cleanup in 11.6 and reader entry in 11.10. ToC/page/search
+  journeys accompany their own chunks; do not duplicate them in component harnesses
+  or postpone them all to final acceptance. Follow the current phase-11 index.
 - Stories: a few representative states with Controls, using the existing context
-  decorator pattern. No Redux stores, production provider or elaborate data
-  simulation in presentation stories. Do not add a story for every permutation.
+  decorator pattern for atoms/presentation molecules. Organism stories use a fresh
+  real Redux store, production provider and real Dexie live queries with seeded
+  scenario-owned data in the configured Storybook database. No cleanup between
+  story switches or tests of story/test helpers. Do not add a story per permutation
+  or reimplement application coordination in a simulated story provider.
 - Keep security, data integrity and real race-condition checks. Remove redundant
   coverage, not distinct failure modes. Never test test helpers for their own sake.
 - Run `npm run quality` for implementation changes, plus relevant browser checks.
@@ -72,9 +77,12 @@
 - Define Redux Toolkit selectors in the slice's `selectors` option and export
   from `slice.selectors`. Adapters use those selectors through hooks rather than
   duplicating root-state traversal.
-- Reader components are Redux-free and use ReaderContext. ReaderProvider maps
-  context actions to central Redux actions; it owns no competing reader state.
-  Canonical content stays in Dexie. DOM refs/transient geometry stay local.
+- Reader presentation components use ReaderContext without Redux/Dexie/router
+  imports. ReaderProvider/application adapters map actions to Redux and expose
+  derived live-query values; they own no competing reading-position state.
+  Canonical content and measurements stay in Dexie. DOM refs/geometry stay local.
+  Introduce the new anchor/derived-navigation contract only in its owning chunks;
+  the index does not authorize an early rewrite of existing atoms.
 - For reader chunks read `../plan/README.md`,
   `../plan/00-source-findings-and-decisions.md`,
   `../plan/11-reader-text-and-toc.md`, the target chunk and preceding records.

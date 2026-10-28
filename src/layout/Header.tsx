@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router'
+import { useAppLocation, useAppNavigate } from '../routing/navigation'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   decreaseTextSize,
@@ -12,27 +12,34 @@ export function Header() {
   const dispatch = useAppDispatch()
   const textSizeStep = useAppSelector(selectTextSizeStep)
   const textSizePercent = useAppSelector(selectTextSizePercent)
-  const location = useLocation()
-  const pageTitle =
-    location.pathname === '/recordings' ? 'Your voice' : 'Your library'
+  const location = useAppLocation()
+  const navigate = useAppNavigate()
+
+  function goHome() {
+    // BrowserRouter's index counts entries within the app, unlike history.length.
+    if (window.history.state?.idx > 0) void navigate(-1)
+    else void navigate('/', { replace: true })
+  }
 
   return (
     <header className="border-b-2 border-ink/10 bg-white">
-      <div className="mx-auto flex flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <NavLink to="/" end>
-            <p className="text-lg font-semibold text-accent">Voice Archive</p>
-          </NavLink>
-          <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-            {pageTitle}
-          </h1>
-        </div>
+      <div className="mx-auto flex items-center justify-between gap-2 px-3 py-2 sm:px-8">
+        {location.pathname === '/' ? (
+          <h1 className="text-xl font-bold">Your library</h1>
+        ) : (
+          <button
+            type="button"
+            onClick={goHome}
+            className="min-h-12 rounded-xl border-2 border-ink px-4 font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            Home
+          </button>
+        )}
 
         <div
-          className="flex w-fit items-center gap-2 rounded-2xl border-2 border-ink/15 bg-page p-2"
+          className="flex shrink-0 items-center gap-2"
           aria-label="Text size controls"
         >
-          <span className="px-2 text-lg font-semibold">Text size</span>
           <button
             type="button"
             className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"

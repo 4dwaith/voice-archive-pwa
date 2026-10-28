@@ -71,7 +71,7 @@ export function ReaderPage({
         page={currentPage}
         textSizePercent={textSizePercent}
         shouldCount
-        reportPageCount={reportPageCount}
+        onPageCount={reportPageCount}
         viewportRef={windowRef}
       />
     </article>

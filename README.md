@@ -233,16 +233,15 @@ The IDE's `--no-open` startup also warms up story modules, since it does not use
 Vite's automatic browser-open prewarming. This targets first-load timing; the
 WebStorm debugger launch itself still needs verification in the IDE.
 
-## Voice recordings
+## Application shell
 
-The fixed footer records audio with the browser MediaRecorder API. The latest
-15 clips are stored locally in IndexedDB through Dexie and can be played from
-the Recordings route. Microphone access requires HTTPS in production; localhost
-is accepted during development.
+The compact header provides Back on book pages and app-wide text-size controls.
+Back uses application history, falling back to the library for direct book entry.
+The recording footer and route have been retired. Existing recordings remain in
+IndexedDB for data compatibility; removing the feature does not clear cached books.
 
 The production build generates the web app manifest and service worker in
-`dist/`. Camera and microphone APIs require HTTPS in production (localhost is
-accepted during development).
+`dist/`.
 
 ## Sample cover images
 

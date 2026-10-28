@@ -27,10 +27,14 @@ development port free. Ports are strict: stop another E2E run before starting
 the next. Mock requests target `http://127.0.0.1:8011` and are intercepted before
 visiting the app; they never target the normal developer API on port 8000.
 
-`cypress/e2e/library.feature` describes ten scenarios: load/selection, Unicode
+`cypress/e2e/library.feature` covers load/selection, Unicode
 initials, empty/error/retry, malformed payload rejection, slow loading, broken
 covers, infinite scrolling, later failure/retry, and manual loading without
-IntersectionObserver. Successful wire fixtures and the 500 body are validated
+IntersectionObserver, and the retired recordings address. `content.feature`
+also covers book entry, header Back/browser Forward, direct-entry library fallback
+and removal of the recording bar/reserved footer space alongside synchronization.
+The app-wide font-size regression remains in `App.test.tsx`.
+Successful wire fixtures and the 500 body are validated
 against generated Zod schemas. The invalid payload deliberately fails that
 validation. Assertions use accessible roles/names and visible text.
 
@@ -52,8 +56,12 @@ shrinks, and cancellation of an obsolete font wait. Assertions compare actual
 fragment rectangles and hit testing with known page contents; remeasurement
 checks show values before and after. There are no geometry mocks or fixed sleeps.
 Support files live in `cypress/component/support/`. Helpers have no separate
-component cases. Application flows and their happy/negative paths belong to the
-feature suite when the document route is composed in 11.10.
+component cases. Application happy/negative flows belong to feature tests added
+with each owning app chunk: initial reader entry in 11.10, followed by ToC,
+footer navigation, persistence and minimal search. Final acceptance audits these
+existing flows rather than postponing them all. The current
+[phase-11 index](../../plan/11-reader-text-and-toc.md) defines ownership;
+organism stories use the real Redux/provider/Dexie path, unlike isolated atoms.
 
 Setting `VITE_COVERAGE=true` before a component run enables the existing Istanbul
 instrumenter and code-coverage plugin, using the same application exclusions and
@@ -122,9 +130,8 @@ collects browser counters with `@cypress/code-coverage`.
 Both suites include application `.ts`/`.tsx` under `src/`, excluding generated
 API files, Storybook stories, mock-data helpers, and declarations. Dependencies,
 test/runner code, and API-generation scripts are outside the application
-coverage denominator. Vitest includes unexecuted application files, so areas
-outside this phase, including recording, still appear as uncovered. Coverage
-does not justify adding microphone automation or reader scenarios.
+coverage denominator. Vitest includes unexecuted application files. Coverage
+does not justify adding unrelated scenarios.
 
 Outputs are separate until the final merge:
 
@@ -147,8 +154,7 @@ percentages. `coverage:merge` requires both existing reports from the same sourc
 revision. Do not mix reports from different commits or dependency versions.
 
 The initial verified baseline is 59.91% statements, 62.5% branches, 60.75%
-functions, and 61.06% lines. No percentage thresholds are enforced yet. For
-example, the unexercised recording branches remain visible in the HTML report.
+functions, and 61.06% lines. No percentage thresholds are enforced yet.
 Backend pytest-cov remains a completely separate Python report.
 
 ## Failure artifacts and CI

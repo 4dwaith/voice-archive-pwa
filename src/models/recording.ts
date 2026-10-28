@@ -1,5 +1,4 @@
-export const maximumRecordingHistory = 15
-
+// Retained for existing IndexedDB recordings; the recording feature is retired.
 export type StoredAudioRecording = {
   id: string
   createdAt: string
@@ -7,8 +6,4 @@ export type StoredAudioRecording = {
   mimeType: string
   size: number
   blob: Blob
-}
-
-export type AudioRecording = Omit<StoredAudioRecording, 'blob'> & {
-  audioUrl: string
 }

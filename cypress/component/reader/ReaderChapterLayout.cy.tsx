@@ -279,7 +279,7 @@ describe('ReaderChapterLayout', () => {
           textSizePercent={100}
           shouldCount
           shouldMeasure
-          reportPageCount={count}
+          onPageCount={count}
           onPageMeasure={report}
         />
       ),

@@ -1,6 +1,22 @@
 Feature: Structured book synchronization
   Readers open a book and cache version-pinned structured content locally.
 
+  Scenario: Book entry and Home use application history
+    Given a book without published text
+    When I open the synchronization book from the library
+    Then the book stays open with a no-text message
+    When I use the header Home button
+    Then I return to the synchronization library
+    When I go forward in browser history
+    Then the book stays open with a no-text message
+
+  Scenario: A directly opened book has a library fallback
+    Given a book without published text
+    When I open the synchronization book directly
+    Then the book stays open with a no-text message
+    When I use the header Home button
+    Then I return to the synchronization library
+
   @live
   Scenario: Opening a book synchronizes its structured data
     Given a published synchronization book

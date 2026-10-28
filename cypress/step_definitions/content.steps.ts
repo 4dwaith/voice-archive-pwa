@@ -408,6 +408,29 @@ Given('a synchronization book whose download has failed', () => {
 When('I open the synchronization book from the library', openBookFromLibrary)
 When('I wait for book synchronization to finish', waitForBookSynchronization)
 
+When('I open the synchronization book directly', () => {
+  cy.visit(`/books/${id}`, {
+    onBeforeLoad(win) {
+      // Direct entry has no BrowserRouter history, even with external entries.
+      win.history.replaceState(null, '')
+    },
+  })
+})
+
+When('I use the header Home button', () => {
+  cy.findByRole('button', { name: /^Home$/ }).click()
+})
+
+When('I go forward in browser history', () => {
+  cy.go('forward')
+})
+
+Then('I return to the synchronization library', () => {
+  cy.location('pathname').should('eq', '/')
+  cy.findByRole('button', { name: 'Select Sync book' }).should('be.visible')
+  cy.findByRole('button', { name: /^Home$/ }).should('not.exist')
+})
+
 Then('I see its cover and loading text', () => {
   cy.findByRole('status').should('contain.text', 'Loading')
   cy.findByRole('img', { name: 'Cover of Sync book' }).should('be.visible')
