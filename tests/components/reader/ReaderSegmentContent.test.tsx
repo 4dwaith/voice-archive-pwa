@@ -91,7 +91,8 @@ function dispatchPointerEvent(
 function dispatchTap(element: Element, time: number, clientX = 0) {
   dispatchPointerEvent(element, 'pointerdown', clientX)
   const click = new MouseEvent('click', { bubbles: true })
-  Object.defineProperty(click, 'timeStamp', { value: time })
+  // React replaces a zero timestamp with Date.now(); keep one nonzero origin.
+  Object.defineProperty(click, 'timeStamp', { value: 1000 + time })
   fireEvent(element, click)
 }
 
@@ -249,13 +250,40 @@ describe('ReaderSegmentContent', () => {
       expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
     })
 
-    it('does not select on a single tap', () => {
+    it('deselects the selected segment on a double tap', () => {
+      const context = createContextValue()
+      context.reader.selectedSegmentId = 2
+      renderSegmentContent(readerSegments[1], context)
+      const text = screen.getByText('and italic')
+
+      dispatchTap(text, 0)
+      dispatchTap(text, 100)
+
+      expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(null)
+    })
+
+    it.each([null, 2])(
+      'leaves selection %s unchanged on a single tap',
+      (selectedSegmentId) => {
+        const context = createContextValue()
+        context.reader.selectedSegmentId = selectedSegmentId
+        renderSegmentContent(readerSegments[1], context)
+
+        dispatchTap(screen.getByText('and italic'), 0)
+
+        expect(context.reader.selectSegment).not.toHaveBeenCalled()
+      },
+    )
+
+    it('accepts a second tap at the time limit', () => {
       const context = createContextValue()
       renderSegmentContent(readerSegments[1], context)
+      const text = screen.getByText('and italic')
 
-      dispatchTap(screen.getByText('and italic'), 0)
+      dispatchTap(text, 0)
+      dispatchTap(text, 350)
 
-      expect(context.reader.selectSegment).not.toHaveBeenCalled()
+      expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
     })
 
     it.each([
