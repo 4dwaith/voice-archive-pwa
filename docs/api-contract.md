@@ -7,7 +7,7 @@ once and supplies the same temporary, normalized input to both generators:
 
 - `@rtk-query/codegen-openapi` **2.2.0** generates JSON/bodyless endpoints, hooks,
   and wire types in `src/api-client/generated/endpoints.ts`.
-- Orval **8.43.0** generates reusable Zod **4.6.7** schemas, input/output types,
+- Orval **8.45.0** generates reusable Zod **4.6.7** schemas, input/output types,
   and operation/status schemas in `src/api-client/generated/schemas.ts`.
 - The generation script derives response-schema associations, error-schema
   associations, and multipart endpoint metadata into `validation.ts`.
