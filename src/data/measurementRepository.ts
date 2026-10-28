@@ -20,7 +20,9 @@ export async function saveChapterMeasurement(
       )
 
       if (
-        !chapterAvailability?.downloadedChapterRanges.has(measurement.chapterId) ||
+        !chapterAvailability?.downloadedChapterRanges.has(
+          measurement.chapterId,
+        ) ||
         !measurement.layoutKey ||
         ![
           measurement.width,

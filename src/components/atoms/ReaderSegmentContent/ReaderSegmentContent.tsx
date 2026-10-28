@@ -36,7 +36,9 @@ export function ReaderSegmentContent({
   } = useReaderContext().reader
   const result = useMemo(() => sanitizeReaderSegment(segment), [segment])
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
-  const previousTap = useRef<{ x: number; y: number; time: number } | null>(null)
+  const previousTap = useRef<{ x: number; y: number; time: number } | null>(
+    null,
+  )
   const hasDragged = useRef(false)
   const isSelected = selectedSegmentId === segment.id
   const error = result.isValid ? null : result.error

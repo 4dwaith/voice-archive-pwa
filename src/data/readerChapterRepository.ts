@@ -89,10 +89,17 @@ export async function readChapterAvailability(
 
     // All unsectioned text before the first root chapter.
     if (nextChapterStartSequence !== undefined)
-      downloadedChapterRanges.set('before', { start: 0, end: nextChapterStartSequence })
+      downloadedChapterRanges.set('before', {
+        start: 0,
+        end: nextChapterStartSequence,
+      })
   }
 
-  return { chapterIds, downloadedChapterRanges, hasCompleteContent: hasAllSegments }
+  return {
+    chapterIds,
+    downloadedChapterRanges,
+    hasCompleteContent: hasAllSegments,
+  }
 }
 
 // Only the requested complete chapter's payload is loaded. Sequence bounds also
@@ -162,7 +169,9 @@ export async function readReaderChapterReadiness(
       const pageCountsByChapter = new Map(
         committedMeasurements
           .filter((measurement) =>
-            chapterAvailability.downloadedChapterRanges.has(measurement.chapterId),
+            chapterAvailability.downloadedChapterRanges.has(
+              measurement.chapterId,
+            ),
           )
           .map((measurement) => [
             measurement.chapterId,
@@ -194,7 +203,9 @@ export async function readReaderChapterReadiness(
 
       return {
         ...chapterAvailability,
-        availableChapterIds: new Set(chapterAvailability.downloadedChapterRanges.keys()),
+        availableChapterIds: new Set(
+          chapterAvailability.downloadedChapterRanges.keys(),
+        ),
         readyChapterIds,
         countsByChapter: pageCountsByChapter,
         indexedChapterIds,

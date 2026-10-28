@@ -60,7 +60,7 @@ export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
     return (
       <ReaderContext value={value}>
         <div
-          className="[font-family:monospace] shadow-[0_0_10px_rgba(0,0,0,0.2)]"
+          className="font-[monospace] shadow-[0_0_10px_rgba(0,0,0,0.2)]"
           style={{ width: args.width, height: args.height }}
         >
           <Story />

@@ -101,7 +101,7 @@ describe('PageMeasurer', () => {
     const store = createAppStore()
     const segments = [continuingReaderSegment]
 
-    seedBookDatabase();
+    seedBookDatabase()
 
     cy.document().then((document) => {
       store.subscribe(() => {
