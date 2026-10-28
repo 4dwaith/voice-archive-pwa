@@ -32,6 +32,7 @@ describe('Reader', () => {
     }
     let initialKey: string
     let viewport: DOMRect
+    let pageCount: number
 
     cy.viewport(360, 252)
     cy.then(async () => {
@@ -79,6 +80,43 @@ describe('Reader', () => {
     })
     cy.get('[data-reader-overlay]').should(($overlay) => {
       expect($overlay[0].getBoundingClientRect().top).to.equal(0)
+    })
+
+    cy.then(() => database.measurements.toArray()).then((records) => {
+      pageCount = records[0].pages.length
+    })
+    cy.findByRole('button', { name: 'Hide reader controls' }).click()
+    cy.findByRole('button', { name: 'Home' }).should('not.exist')
+    cy.get('[data-reader-page-window]').should(($window) => {
+      const rect = $window[0].getBoundingClientRect()
+      expect([rect.width, rect.height]).to.deep.equal([
+        viewport.width,
+        viewport.height,
+      ])
+      expect(store.getState().reader.layoutKey).to.equal(initialKey)
+    })
+    cy.findByRole('button', { name: 'Show reader controls' }).click()
+    cy.findByRole('button', { name: 'Home' })
+      .focus()
+      .trigger('keydown', { key: 'Escape' })
+    cy.findByRole('button', { name: 'Show reader controls' })
+      .should('be.focused')
+      .click()
+    cy.findByRole('button', { name: 'Home' }).should('be.visible')
+    cy.get('[data-reader-page-window]').should(($window) => {
+      const rect = $window[0].getBoundingClientRect()
+      expect([rect.x, rect.y, rect.width, rect.height]).to.deep.equal([
+        viewport.x,
+        viewport.y,
+        viewport.width,
+        viewport.height,
+      ])
+      expect(store.getState().reader.layoutKey).to.equal(initialKey)
+      expect(store.getState().reader.anchor).to.deep.equal(anchor)
+    })
+    cy.then(() => database.measurements.toArray()).then((records) => {
+      expect(records).to.have.length(1)
+      expect(records[0].pages).to.have.length(pageCount)
     })
 
     // A taller overlay must not change the rendering conditions of the text.

@@ -36,6 +36,7 @@ export function ReaderSegmentContent({
   } = useReaderContext().reader
   const result = useMemo(() => sanitizeReaderSegment(segment), [segment])
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
+  const previousTap = useRef<{ x: number; y: number; time: number } | null>(null)
   const hasDragged = useRef(false)
   const isSelected = selectedSegmentId === segment.id
   const error = result.isValid ? null : result.error
@@ -46,7 +47,7 @@ export function ReaderSegmentContent({
 
   return (
     <div
-      className="reader-segment leading-[1.65] wrap-anywhere text-ink focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+      className="reader-segment touch-manipulation leading-[1.65] wrap-anywhere text-ink focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
       data-reader-segment-id={segment.id}
       data-reader-source-key={segment.source_key}
       data-reader-kind={segment.kind}
@@ -78,18 +79,33 @@ export function ReaderSegmentContent({
       onPointerCancel={() => {
         hasDragged.current = true
         pointerStart.current = null
+        previousTap.current = null
       }}
       onClick={(event) => {
         const selection = event.currentTarget.ownerDocument.getSelection()
-        if (
-          result.isValid &&
-          event.button === 0 &&
-          !hasDragged.current &&
-          (!selection || selection.isCollapsed)
-        ) {
-          selectSegment(segment.id)
-        }
+        const start = pointerStart.current
+        const previous = previousTap.current
         pointerStart.current = null
+        previousTap.current = null
+
+        if (
+          !result.isValid ||
+          event.button !== 0 ||
+          hasDragged.current ||
+          !start
+        )
+          return
+
+        if (
+          previous &&
+          event.timeStamp - previous.time <= 350 &&
+          Math.hypot(start.x - previous.x, start.y - previous.y) <= 24
+        ) {
+          // Native double-click word selection is retained alongside segment selection.
+          selectSegment(isSelected ? null : segment.id)
+        } else if (!selection || selection.isCollapsed) {
+          previousTap.current = { ...start, time: event.timeStamp }
+        }
       }}
       onKeyDown={(event) => {
         if (

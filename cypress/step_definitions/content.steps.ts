@@ -642,3 +642,11 @@ Then('I see its first reader page', () => {
     .first()
     .should('contain.text', 'text')
 })
+
+When('I hide and reveal the reader controls', () => {
+  cy.findByRole('article', { name: 'Book text' }).click('center')
+  cy.findByRole('button', { name: 'Home' }).should('not.exist')
+  cy.findByRole('button', { name: 'Show reader controls' }).click()
+  cy.findByRole('button', { name: 'Home' }).should('be.visible')
+  cy.findByRole('button', { name: 'Make text larger' }).should('be.enabled')
+})

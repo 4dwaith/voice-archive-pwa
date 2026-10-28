@@ -116,6 +116,8 @@ export function ReaderPageHarness({
         setInputs((previous) => ({ ...previous, currentPage })),
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: inputs.textSizePercent,
       selectedSegmentId: inputs.selectedSegmentId,
       highlightedSegmentId: null,

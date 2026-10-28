@@ -29,6 +29,8 @@ it('fills the footer with page cells and jumps directly to a clicked destination
       reportPageMeasurement: () => undefined,
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,

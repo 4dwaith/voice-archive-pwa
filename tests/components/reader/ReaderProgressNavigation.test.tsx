@@ -41,6 +41,8 @@ function renderNavigation(
       ...overrides,
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,

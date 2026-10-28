@@ -46,6 +46,8 @@ function createContextValue(): ReaderContextValue {
       reportPageMeasurement: vi.fn(),
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,

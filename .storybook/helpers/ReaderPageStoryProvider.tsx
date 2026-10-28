@@ -44,6 +44,8 @@ export const ProvideReaderPageStory: Decorator<ReaderPageStoryArgs> =
         reportPageMeasurement: () => undefined,
       },
       reader: {
+        areControlsVisible: true,
+        setControlsVisible: () => undefined,
         textSizePercent: args.textSizePercent,
         selectedSegmentId: args.selectedSegmentId,
         highlightedSegmentId: args.highlightedSegmentId,

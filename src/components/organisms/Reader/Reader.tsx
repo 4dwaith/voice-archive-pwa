@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react'
+import { Header } from '../../../layout/Header'
+import { ReaderControls } from '../../molecules/ReaderControls/ReaderControls'
 import { ReaderProvider } from '../../../contexts/ReaderProvider'
 import { ReaderPage } from '../../atoms/ReaderPage/ReaderPage'
 import { PageMeasurer } from '../../molecules/PageMeasurer/PageMeasurer'
@@ -30,7 +32,9 @@ export function Reader({
         layoutKey,
       }) => (
         <div className="relative h-full w-full" data-reader>
-          <ReaderPage segments={currentChapterSegments} label="Book text" />
+          <ReaderControls header={<Header />}>
+            <ReaderPage segments={currentChapterSegments} label="Book text" />
+          </ReaderControls>
           <div className="pointer-events-none absolute inset-0">
             {chapterInfo && (
               <PageMeasurer

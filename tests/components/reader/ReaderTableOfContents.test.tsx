@@ -51,6 +51,8 @@ function renderToc(
       reportPageMeasurement: () => undefined,
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,

@@ -32,6 +32,8 @@ export type ReaderContextValue = {
     reportPageMeasurement: (report: ReaderPageMeasurement) => void
   }
   reader: {
+    areControlsVisible: boolean
+    setControlsVisible: (isVisible: boolean) => void
     reportLayoutKey: (key: string | null) => void
     textSizePercent: number
     selectedSegmentId: number | null

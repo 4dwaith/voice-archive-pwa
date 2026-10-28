@@ -24,6 +24,8 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     Then its complete structured dataset is available locally
     And I see its first reader page
+    When I hide and reveal the reader controls
+    Then I see its first reader page
 
   @live
   Scenario: A fully cached book remains available when the network fails

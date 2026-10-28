@@ -15,10 +15,11 @@ import { afterEach, expect, it, vi } from 'vitest'
 import App from '../../src/App'
 import { archiveApi } from '../../src/api-client/archiveApi'
 import textSize from '../../src/store/textSizeSlice'
+import reader from '../../src/store/readerSlice'
 import { book } from '../api-client/fixtures/book'
 
 const store = configureStore({
-  reducer: { textSize, [archiveApi.reducerPath]: archiveApi.reducer },
+  reducer: { reader, textSize, [archiveApi.reducerPath]: archiveApi.reducer },
   middleware: (defaults) => defaults().concat(archiveApi.middleware),
 })
 

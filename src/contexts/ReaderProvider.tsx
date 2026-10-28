@@ -3,6 +3,8 @@ import { useReaderNavigation } from '../hooks/useReaderNavigation'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   reportLayoutKey,
+  setControlsVisible,
+  getAreControlsVisible,
   setPageScope,
   getPageScope,
   requestPageNavigation,
@@ -35,6 +37,7 @@ export function ReaderProvider({
   contentVersion?: string
 }) {
   const dispatch = useAppDispatch()
+  const areControlsVisible = useAppSelector(getAreControlsVisible)
   const navigation = useReaderNavigation(bookId, contentVersion)
   const {
     currentPage,
@@ -63,6 +66,7 @@ export function ReaderProvider({
     >
     reader: Pick<
       ReaderContextValue['reader'],
+      | 'setControlsVisible'
       | 'selectSegment'
       | 'highlightSegment'
       | 'reportSegmentError'
@@ -96,6 +100,9 @@ export function ReaderProvider({
         },
       },
       reader: {
+        setControlsVisible: (isVisible) => {
+          dispatch(setControlsVisible(isVisible))
+        },
         reportLayoutKey: (key) => {
           dispatch(reportLayoutKey(key))
         },
@@ -132,6 +139,7 @@ export function ReaderProvider({
         setCurrentPage,
       },
       reader: {
+        areControlsVisible,
         textSizePercent,
         selectedSegmentId,
         highlightedSegmentId,
@@ -150,6 +158,7 @@ export function ReaderProvider({
       indexedPageCount,
       hasPendingPageNavigation,
       textSizePercent,
+      areControlsVisible,
       selectedSegmentId,
       highlightedSegmentId,
       actions,

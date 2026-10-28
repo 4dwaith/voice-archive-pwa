@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { MemoryRouter } from 'react-router'
+import { setControlsVisible } from '../../../store/readerSlice'
 import { Provider } from 'react-redux'
 import { Reader } from './Reader'
 import { createAppStore } from '../../../store/store'
@@ -12,6 +14,7 @@ import { seedReaderBook } from '../../../../.storybook/helpers/seedReaderBook'
 
 type ReaderStoryArgs = {
   bookId: number
+  areControlsVisible: boolean
   hasChapter: boolean
   width: number
   height: number
@@ -21,6 +24,7 @@ type ReaderStoryArgs = {
 
 function ShowReader({
   bookId,
+  areControlsVisible,
   width,
   height,
   textSizeStep,
@@ -35,6 +39,10 @@ function ShowReader({
       store.dispatch(decreaseTextSize())
   }, [store, textSizeStep])
 
+  useEffect(() => {
+    store.dispatch(setControlsVisible(areControlsVisible))
+  }, [store, areControlsVisible])
+
   return (
     <Provider store={store}>
       <div
@@ -45,7 +53,9 @@ function ShowReader({
           boxShadow: '0 0 10px rgba(0,0,0,0.2)',
         }}
       >
-        <Reader bookId={bookId} contentVersion="reader-story-1" />
+        <MemoryRouter initialEntries={[`/books/${bookId}`]}>
+          <Reader bookId={bookId} contentVersion="reader-story-1" />
+        </MemoryRouter>
       </div>
     </Provider>
   )
@@ -56,12 +66,14 @@ const meta = {
   args: {
     bookId: 91001,
     hasChapter: false,
+    areControlsVisible: true,
     width: 360,
     height: 252,
     textSizeStep: 0,
     fontFamily: 'monospace',
   },
   argTypes: {
+    areControlsVisible: { control: 'boolean' },
     bookId: { control: false },
     hasChapter: { control: false },
     width: { control: { type: 'number', min: 160 } },
@@ -90,3 +102,5 @@ type Story = StoryObj<typeof meta>
 export const Before: Story = {}
 
 export const Chapter: Story = { args: { bookId: 91002, hasChapter: true } }
+
+export const Collapsed: Story = { args: { areControlsVisible: false } }

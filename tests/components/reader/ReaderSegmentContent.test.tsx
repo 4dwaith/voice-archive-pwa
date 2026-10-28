@@ -43,6 +43,8 @@ function createContextValue(): ReaderContextValue {
       reportPageMeasurement: () => undefined,
     },
     reader: {
+      areControlsVisible: true,
+      setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,
@@ -84,6 +86,13 @@ function dispatchPointerEvent(
     element,
     new MouseEvent(type, { bubbles: true, clientX, clientY: 0 }),
   )
+}
+
+function dispatchTap(element: Element, time: number, clientX = 0) {
+  dispatchPointerEvent(element, 'pointerdown', clientX)
+  const click = new MouseEvent('click', { bubbles: true })
+  Object.defineProperty(click, 'timeStamp', { value: time })
+  fireEvent(element, click)
 }
 
 describe('ReaderSegmentContent', () => {
@@ -183,7 +192,10 @@ describe('ReaderSegmentContent', () => {
       const context = createContextValue()
       const { container } = renderSegmentContent(unsafeReaderSegment, context)
 
-      fireEvent.click(container.querySelector('[data-reader-segment-id="7"]')!)
+      const segment = container.querySelector('[data-reader-segment-id="7"]')!
+
+      dispatchTap(segment, 0)
+      dispatchTap(segment, 100)
 
       expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
@@ -228,13 +240,36 @@ describe('ReaderSegmentContent', () => {
   })
 
   describe('activation', () => {
-    it('activates a segment when its nested text is clicked', () => {
+    it('activates a segment when its nested text is double tapped', async () => {
       const context = createContextValue()
       renderSegmentContent(readerSegments[1], context)
 
-      fireEvent.click(screen.getByText('and italic'))
+      await userEvent.setup().dblClick(screen.getByText('and italic'))
 
       expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
+    })
+
+    it('does not select on a single tap', () => {
+      const context = createContextValue()
+      renderSegmentContent(readerSegments[1], context)
+
+      dispatchTap(screen.getByText('and italic'), 0)
+
+      expect(context.reader.selectSegment).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      { reason: 'too slow', time: 351, distance: 0 },
+      { reason: 'too far apart', time: 100, distance: 25 },
+    ])('ignores taps that are $reason', ({ time, distance }) => {
+      const context = createContextValue()
+      renderSegmentContent(readerSegments[1], context)
+      const text = screen.getByText('and italic')
+
+      dispatchTap(text, 0)
+      dispatchTap(text, time, distance)
+
+      expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
 
     it.each(['Enter', ' '])(
@@ -290,7 +325,8 @@ describe('ReaderSegmentContent', () => {
       range.selectNodeContents(block)
       selection.addRange(range)
 
-      fireEvent.click(block)
+      dispatchTap(block, 0)
+      dispatchTap(block, 100)
 
       expect(selection.toString()).toBe(readerSegments[1].text_content)
       expect(context.reader.selectSegment).not.toHaveBeenCalled()
@@ -301,6 +337,7 @@ describe('ReaderSegmentContent', () => {
       const { container } = renderSegmentContent(readerSegments[1], context)
       const block = container.querySelector('p')!
 
+      dispatchTap(block, 0)
       dispatchPointerEvent(block, 'pointerdown', 0)
       dispatchPointerEvent(block, 'pointermove', 25)
       fireEvent.click(block)
@@ -308,7 +345,7 @@ describe('ReaderSegmentContent', () => {
       expect(context.reader.selectSegment).not.toHaveBeenCalled()
     })
 
-    it('allows a fresh click after a previous drag', () => {
+    it('allows a fresh double tap after a previous drag', () => {
       const context = createContextValue()
       const { container } = renderSegmentContent(readerSegments[1], context)
       const block = container.querySelector('p')!
@@ -316,8 +353,8 @@ describe('ReaderSegmentContent', () => {
       dispatchPointerEvent(block, 'pointermove', 25)
       fireEvent.click(block)
 
-      dispatchPointerEvent(block, 'pointerdown', 25)
-      fireEvent.click(block)
+      dispatchTap(block, 100, 25)
+      dispatchTap(block, 200, 25)
 
       expect(context.reader.selectSegment).toHaveBeenCalledExactlyOnceWith(2)
     })

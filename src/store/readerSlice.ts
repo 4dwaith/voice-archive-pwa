@@ -14,6 +14,7 @@ import type {
 } from '../models/reader'
 
 export type ReaderState = {
+  areControlsVisible: boolean
   layoutKey: string | null
   measurementSave: ReaderMeasurementSave | null
   selectedSectionId: number | null
@@ -33,6 +34,7 @@ export type ReaderState = {
 }
 
 const initialState: ReaderState = {
+  areControlsVisible: true,
   layoutKey: null,
   measurementSave: null,
   selectedSectionId: null,
@@ -69,6 +71,9 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    setControlsVisible(state, action: PayloadAction<boolean>) {
+      state.areControlsVisible = action.payload
+    },
     reportLayoutKey(state, action: PayloadAction<string | null>) {
       if (state.layoutKey !== action.payload) {
         state.measurementSave = null
@@ -120,6 +125,7 @@ const readerSlice = createSlice({
       state.tocPresentation = action.payload
     },
     openReader(state, action: PayloadAction<ReaderScope>) {
+      state.areControlsVisible = true
       state.scope = action.payload
       state.anchor = null
       state.layoutKey = null
@@ -171,6 +177,7 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getAreControlsVisible: (state) => state.areControlsVisible,
     getReaderAnchor: (state) => state.anchor,
     getReaderScope: (state) => state.scope,
     getLayoutKey: (state) => state.layoutKey,
@@ -188,6 +195,7 @@ const readerSlice = createSlice({
 })
 
 export const {
+  setControlsVisible,
   openReader,
   closeReader,
   reconcileReaderAnchor,
@@ -205,6 +213,7 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getAreControlsVisible,
   getReaderAnchor,
   getReaderScope,
   getLayoutKey,
