@@ -48,3 +48,15 @@ export type ReaderLayoutMeasurement = {
 
 export type ReaderPageMeasurement = ReaderMeasurementTarget &
   ReaderLayoutMeasurement
+
+export type StoredReaderMeasurement = ReaderPageMeasurement & {
+  bookId: number
+  contentVersion: string
+}
+
+export type ReaderMeasurementSave = Pick<
+  StoredReaderMeasurement,
+  'bookId' | 'contentVersion' | 'chapterId' | 'layoutKey'
+> & {
+  outcome: 'saved' | 'rejected' | 'failed' | null
+}

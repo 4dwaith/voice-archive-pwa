@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import type { StoredAudioRecording } from '../models/recording'
+import type { StoredReaderMeasurement } from '../models/reader'
 import type {
   CachedContent,
   CachedSection,
@@ -13,6 +14,7 @@ type VoiceArchiveDatabase = Dexie & {
   sections: Table<CachedSection, [number, string, number]>
   segments: Table<CachedSegment, [number, string, number]>
   contentPositions: EntityTable<SavedContentPosition, 'bookId'>
+  measurements: Table<StoredReaderMeasurement, [number, string, string, string]>
 }
 
 export const database = new Dexie(
@@ -67,3 +69,9 @@ database
     await transaction.table('sections').clear()
     await transaction.table('segments').clear()
   })
+
+// Derived measurements do not invalidate canonical content or legacy user data.
+database.version(6).stores({
+  measurements:
+    '[bookId+contentVersion+chapterId+layoutKey], bookId, [bookId+contentVersion+layoutKey]',
+})

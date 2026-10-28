@@ -4,6 +4,7 @@ import textSizeReducer from './textSizeSlice'
 import bookDownloadsReducer from './bookDownloadsSlice'
 import readerReducer from './readerSlice'
 import { createBookDownloadsListener } from './bookDownloadsListener'
+import { createReaderMeasurementsListener } from './readerMeasurementsListener'
 import { archiveApi } from '../api-client/archiveApi'
 
 const rootReducer = combineReducers({
@@ -18,11 +19,15 @@ export type AppDispatch = ThunkDispatch<RootState, undefined, UnknownAction>
 // Each store owns its listener instances, including isolated integration tests.
 export function createAppStore() {
   const bookDownloadsListener = createBookDownloadsListener()
+  const readerMeasurementsListener = createReaderMeasurementsListener()
   return configureStore({
     reducer: rootReducer,
     middleware: (defaults) =>
       defaults()
-        .prepend(bookDownloadsListener.middleware)
+        .prepend(
+          bookDownloadsListener.middleware,
+          readerMeasurementsListener.middleware,
+        )
         .concat(archiveApi.middleware),
   })
 }

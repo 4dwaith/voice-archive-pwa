@@ -10,6 +10,7 @@ export async function deleteLocalContent(bookId: number) {
       database.sections,
       database.segments,
       database.contentPositions,
+      database.measurements,
     ],
     async () => {
       await database.content.delete(bookId)
@@ -18,6 +19,7 @@ export async function deleteLocalContent(bookId: number) {
       await database.segments.where('bookId').equals(bookId).delete()
 
       await database.contentPositions.delete(bookId)
+      await database.measurements.where('bookId').equals(bookId).delete()
     },
   )
 }
@@ -25,10 +27,16 @@ export async function deleteLocalContent(bookId: number) {
 export async function initializeContentStaging(record: CachedContent) {
   await database.transaction(
     'rw',
-    [database.content, database.sections, database.segments],
+    [
+      database.content,
+      database.sections,
+      database.segments,
+      database.measurements,
+    ],
     async () => {
       await database.sections.where('bookId').equals(record.bookId).delete()
       await database.segments.where('bookId').equals(record.bookId).delete()
+      await database.measurements.where('bookId').equals(record.bookId).delete()
 
       await database.content.put(record)
     },

@@ -5,15 +5,15 @@ import {
 } from '@reduxjs/toolkit'
 import type {
   ReaderPageNavigation,
-  ReaderPageMeasurement,
-  ReaderMeasurementTarget,
+  StoredReaderMeasurement,
+  ReaderMeasurementSave,
   ReaderSegmentError,
   ReaderTocPresentation,
 } from '../models/reader'
 
 export type ReaderState = {
   layoutKey: string | null
-  measuredTargets: ReaderMeasurementTarget[]
+  measurementSave: ReaderMeasurementSave | null
   selectedSectionId: number | null
   sectionExpansion: Record<number, boolean>
   tocPresentation: ReaderTocPresentation
@@ -36,7 +36,7 @@ export type ReaderState = {
 
 const initialState: ReaderState = {
   layoutKey: null,
-  measuredTargets: [],
+  measurementSave: null,
   selectedSectionId: null,
   sectionExpansion: {},
   tocPresentation: 'shown',
@@ -69,18 +69,35 @@ const readerSlice = createSlice({
   initialState,
   reducers: {
     reportLayoutKey(state, action: PayloadAction<string | null>) {
+      if (state.layoutKey !== action.payload) {
+        state.measurementSave = null
+      }
       state.layoutKey = action.payload
     },
-    reportPageMeasurement(state, action: PayloadAction<ReaderPageMeasurement>) {
-      const { chapterId, layoutKey } = action.payload
-      if (
-        !state.measuredTargets.some(
-          (target) =>
-            target.chapterId === chapterId && target.layoutKey === layoutKey,
-        )
-      ) {
-        state.measuredTargets.push({ chapterId, layoutKey })
+    // The listener persists this event; reports are not committed readiness.
+    reportPageMeasurement(
+      state,
+      action: PayloadAction<StoredReaderMeasurement>,
+    ) {
+      const { bookId, contentVersion, chapterId, layoutKey } = action.payload
+      state.measurementSave = {
+        bookId,
+        contentVersion,
+        chapterId,
+        layoutKey,
+        outcome: null,
       }
+    },
+    recordMeasurementSave(state, action: PayloadAction<ReaderMeasurementSave>) {
+      const target = state.measurementSave
+      const result = action.payload
+      if (
+        target?.bookId === result.bookId &&
+        target.contentVersion === result.contentVersion &&
+        target.chapterId === result.chapterId &&
+        target.layoutKey === result.layoutKey
+      )
+        state.measurementSave = action.payload
     },
     setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
       state.pageScope = action.payload
@@ -126,6 +143,7 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getMeasurementSave: (state) => state.measurementSave,
     getSelectedSectionId: (state) => state.selectedSectionId,
     isSectionExpanded: (state, sectionId: number) =>
       getSectionExpansionPredicateForState(state)(sectionId),
@@ -146,6 +164,7 @@ const readerSlice = createSlice({
 export const {
   reportLayoutKey,
   reportPageMeasurement,
+  recordMeasurementSave,
   setPageScope,
   requestPageNavigation,
   selectSection,
@@ -158,6 +177,7 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getMeasurementSave,
   getPageScope,
   getGlobalPage,
   getTotalPageCount,

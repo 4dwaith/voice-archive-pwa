@@ -30,7 +30,15 @@ import { selectTextSizePercent } from '../store/textSizeSlice'
 import { ReaderContext, type ReaderContextValue } from './ReaderContext'
 
 // Reader content is passed to components; this adapter supplies shared state/actions.
-export function ReaderProvider({ children }: { children: ReactNode }) {
+export function ReaderProvider({
+  children,
+  bookId,
+  contentVersion,
+}: {
+  children: ReactNode
+  bookId?: number
+  contentVersion?: string
+}) {
   const dispatch = useAppDispatch()
   const selectedSectionId = useAppSelector(getSelectedSectionId)
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
@@ -89,7 +97,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
           dispatch(setCurrentPage(pageNumber))
         },
         reportPageMeasurement: (report) => {
-          dispatch(reportPageMeasurement(report))
+          if (bookId !== undefined && contentVersion)
+            dispatch(
+              reportPageMeasurement({ ...report, bookId, contentVersion }),
+            )
         },
         reportPageCount: (count) => {
           dispatch(reportPageCount(count))
@@ -110,7 +121,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         },
       },
     }),
-    [dispatch],
+    [dispatch, bookId, contentVersion],
   )
   const value = useMemo<ReaderContextValue>(
     () => ({
