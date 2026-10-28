@@ -5,8 +5,10 @@ import { readReaderPreferences } from '../data/readerPreferences'
 import { createReaderPreferencesListener } from './readerPreferencesListener'
 import bookDownloadsReducer from './bookDownloadsSlice'
 import readerReducer from './readerSlice'
+import readerSearchReducer from './readerSearchSlice'
 import { createBookDownloadsListener } from './bookDownloadsListener'
 import { createReaderTocListener } from './readerTocListener'
+import { createReaderSearchListener } from './readerSearchListener'
 import { createReaderMeasurementsListener } from './readerMeasurementsListener'
 import { archiveApi } from '../api-client/archiveApi'
 
@@ -14,6 +16,7 @@ const rootReducer = combineReducers({
   textSize: textSizeReducer,
   bookDownloads: bookDownloadsReducer,
   reader: readerReducer,
+  readerSearch: readerSearchReducer,
   [archiveApi.reducerPath]: archiveApi.reducer,
 })
 export type RootState = ReturnType<typeof rootReducer>
@@ -26,6 +29,7 @@ export function createAppStore() {
   const bookDownloadsListener = createBookDownloadsListener()
   const readerMeasurementsListener = createReaderMeasurementsListener()
   const readerTocListener = createReaderTocListener()
+  const readerSearchListener = createReaderSearchListener()
   return configureStore({
     preloadedState: { textSize: { step: preferences.textSizeStep } },
     reducer: rootReducer,
@@ -35,6 +39,7 @@ export function createAppStore() {
           readerPreferencesListener.middleware,
           bookDownloadsListener.middleware,
           readerTocListener.middleware,
+          readerSearchListener.middleware,
           readerMeasurementsListener.middleware,
         )
         .concat(archiveApi.middleware),
