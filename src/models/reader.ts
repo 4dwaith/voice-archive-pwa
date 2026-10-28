@@ -6,7 +6,7 @@ import type {
 export type ReaderSection = Pick<
   SectionReadOutput,
   'id' | 'parent_id' | 'title' | 'sequence'
->
+> & { unavailableReason?: string }
 
 export type ReaderTocPresentation = 'shown' | 'dimmed' | 'collapsed'
 

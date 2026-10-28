@@ -28,13 +28,25 @@ function ReaderSectionList({
           <li key={section.id} className="relative">
             <button
               type="button"
-              className="ms-8 block min-h-11 w-[calc(100%-2rem)] cursor-pointer p-2 text-start wrap-anywhere aria-current:bg-[#dbeafe] aria-current:font-bold! focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1d4ed8]"
+              className="ms-8 block min-h-11 w-[calc(100%-2rem)] cursor-pointer p-2 text-start wrap-anywhere disabled:cursor-not-allowed disabled:text-muted aria-current:bg-[#dbeafe] aria-current:font-bold! focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1d4ed8]"
               aria-current={
                 selectedSectionId === section.id ? 'true' : undefined
               }
+              disabled={!!section.unavailableReason}
               onClick={() => selectSection(section.id)}
             >
-              {section.title}
+              <span
+                className={
+                  section.unavailableReason ? 'line-through' : undefined
+                }
+              >
+                {section.title}
+              </span>{' '}
+              {section.unavailableReason && (
+                <span className="block text-sm">
+                  [{section.unavailableReason}]
+                </span>
+              )}
             </button>
             {hasChildren && (
               <details open={isExpanded}>

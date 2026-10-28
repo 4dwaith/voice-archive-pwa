@@ -24,8 +24,21 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     Then its complete structured dataset is available locally
     And I see its first reader page
-    When I hide and reveal the reader controls
+
+  @live
+  Scenario: Tapping book text hides controls and the reveal button restores them
+    Given a published synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
     Then I see its first reader page
+    And the reader controls are visible
+    And the ToC fills the reader below the header
+    When I tap exposed book text
+    Then the reader controls are hidden
+    And I see its first reader page
+    When I reveal the reader controls
+    Then the reader controls are visible
+    And I see its first reader page
 
   @live
   Scenario: A fully cached book remains available when the network fails
@@ -92,3 +105,10 @@ Feature: Structured book synchronization
     Given a synchronization book that changes during download
     When I open the synchronization book from the library
     Then the new dataset is downloaded without leaving the book
+
+  Scenario: A nested ToC destination opens its text
+    Given a synchronization book with a nested destination
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I select the nested ToC destination
+    Then I see the nested section text

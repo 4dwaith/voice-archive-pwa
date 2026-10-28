@@ -56,7 +56,7 @@ function renderControls(isVisible = true) {
   context.reader.areControlsVisible = isVisible
   const show = () => (
     <ReaderContext value={context}>
-      <ReaderControls header={<button>Home</button>}>
+      <ReaderControls controls={<button>Home</button>}>
         <p tabIndex={0}>Book content</p>
         <button>Content action</button>
       </ReaderControls>

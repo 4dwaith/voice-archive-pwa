@@ -210,4 +210,43 @@ describe('Reader anchor navigation', () => {
     expect(store.getState().reader.scope?.bookId).toBe(8)
     expect(store.getState().reader.anchor).toBeNull()
   })
+
+  it.each([
+    ['other-layout', 1, 'Preparing pages'],
+    ['layout', 0, 'No readable pages'],
+  ] as const)(
+    'derives nested ToC availability for %s with %i pages',
+    async (layoutKey, pageCount, reason) => {
+      await seedContent()
+      const root = (await database.sections.get([7, 'version', 10]))!
+      await database.sections.put({
+        ...root,
+        id: 5,
+        parent_id: 10,
+        sequence: 1,
+      })
+      await database.content.update(7, { 'manifest.section_count': 2 })
+      const measurement = createMeasurement()
+      await database.measurements.put({
+        ...measurement,
+        pages: measurement.pages.slice(0, pageCount),
+      })
+      const { result, store } = renderNavigation()
+
+      act(() => {
+        store.dispatch(reportLayoutKey(layoutKey))
+      })
+      await waitFor(() =>
+        expect(
+          result.current.tocSections.find((section) => section.id === 5)
+            ?.unavailableReason,
+        ).toBe(reason),
+      )
+
+      expect(
+        result.current.tocSections.find((section) => section.id === 10)
+          ?.unavailableReason,
+      ).toBe(reason)
+    },
+  )
 })

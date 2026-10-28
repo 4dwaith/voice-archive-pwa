@@ -60,3 +60,24 @@ export async function getContentSections(
         .toArray()
     : []
 }
+
+// Section IDs are positive; zero denotes the reader's leading Before text.
+export async function getSectionFirstSegment(
+  bookId: number,
+  version: string,
+  sectionId: number,
+) {
+  if (sectionId === 0)
+    return database.segments
+      .where('[bookId+version]')
+      .equals([bookId, version])
+      .first()
+
+  const section = await database.sections.get([bookId, version, sectionId])
+  return section?.first_segment_source_key
+    ? database.segments
+        .where('[bookId+version+source_key]')
+        .equals([bookId, version, section.first_segment_source_key])
+        .first()
+    : undefined
+}

@@ -78,6 +78,7 @@ function harness() {
 }
 function mockBook(
   options: {
+    nested?: boolean
     slow?: boolean
     cover?: boolean
     slowSecond?: boolean
@@ -125,7 +126,7 @@ function mockBook(
       schema_version: state === 'published' ? 1 : null,
       imported_at: state === 'published' ? '2026-10-23T00:00:00Z' : null,
       source_pdf_file_id: null,
-      section_count: state === 'published' ? 1 : 0,
+      section_count: state === 'published' ? (options.nested ? 2 : 1) : 0,
       segment_count: state === 'published' ? 2 : 0,
       files: [],
     }
@@ -141,7 +142,21 @@ function mockBook(
       request.reply({
         body: {
           content_version: currentVersion,
-          items: [section],
+          items: options.nested
+            ? [
+                section,
+                {
+                  ...section,
+                  id: 2,
+                  parent_id: 1,
+                  sequence: 1,
+                  kind: 'section',
+                  source_key: 'nested',
+                  title: 'Nested destination',
+                  first_segment_source_key: 'b',
+                },
+              ]
+            : [section],
           next_offset: null,
         },
       })
@@ -195,6 +210,15 @@ function mockBook(
               id: second ? 2 : 1,
               source_key: second ? 'b' : 'a',
               sequence: second ? 2 : 0,
+              ...(options.nested
+                ? {
+                    section_id: second ? 2 : 1,
+                    html_content: `<p>${second ? 'Nested destination text.' : 'Opening chapter text. '.repeat(500)}</p>`,
+                    text_content: second
+                      ? 'Nested destination text.'
+                      : 'Opening chapter text. '.repeat(500),
+                  }
+                : {}),
             },
           ],
           next_offset: second ? null : 1,
@@ -643,10 +667,65 @@ Then('I see its first reader page', () => {
     .should('contain.text', 'text')
 })
 
-When('I hide and reveal the reader controls', () => {
-  cy.findByRole('article', { name: 'Book text' }).click('center')
+Then('the ToC fills the reader below the header', () => {
+  cy.findByRole('navigation', { name: 'Table of contents' }).should(($toc) => {
+    const document = $toc[0].ownerDocument
+    const rect = $toc[0].getBoundingClientRect()
+    const header = document.querySelector('header')!.getBoundingClientRect()
+    const reader = document
+      .querySelector('[data-reader]')!
+      .getBoundingClientRect()
+    expect(rect.top).to.equal(header.bottom + 2)
+    expect(rect.bottom).to.equal(reader.bottom - 2)
+  })
+})
+
+When('I tap exposed book text', () => {
+  // Tap beside the ToC, inside the overlay's full-height bounds.
+  cy.findByRole('article', { name: 'Book text' }).then(($article) => {
+    const rect = $article[0].getBoundingClientRect()
+    cy.wrap($article).click(rect.width - 30, rect.height / 2)
+  })
+})
+
+Then('the reader controls are hidden', () => {
   cy.findByRole('button', { name: 'Home' }).should('not.exist')
+  cy.findByRole('navigation', { name: 'Table of contents' }).should('not.exist')
+  cy.findByRole('button', { name: 'Show reader controls' }).should('be.visible')
+})
+
+When('I reveal the reader controls', () => {
   cy.findByRole('button', { name: 'Show reader controls' }).click()
+})
+
+Then('the reader controls are visible', () => {
   cy.findByRole('button', { name: 'Home' }).should('be.visible')
+  cy.findByRole('navigation', { name: 'Table of contents' }).should(
+    'be.visible',
+  )
   cy.findByRole('button', { name: 'Make text larger' }).should('be.enabled')
+})
+
+Given('a synchronization book with a nested destination', () =>
+  mockBook({ nested: true }),
+)
+
+When('I select the nested ToC destination', () => {
+  cy.findByRole('navigation', { name: 'Table of contents' }).within(() => {
+    cy.findByRole('button', { name: 'Nested destination' })
+      .should('be.enabled')
+      .click()
+  })
+  cy.findByRole('button', { name: 'Hide reader controls' }).click()
+})
+
+Then('I see the nested section text', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .should(($article) =>
+      expect(Number($article.attr('data-reader-page'))).to.be.greaterThan(1),
+    )
+    .find('[data-reader-segment-id="2"]')
+    .should('be.visible')
+    .and('have.text', 'Nested destination text.')
 })

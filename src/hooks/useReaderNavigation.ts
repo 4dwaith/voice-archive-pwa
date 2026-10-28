@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import type { ReaderSection } from '../models/reader'
 import { database } from '../data/database'
 import {
   readChapterSegments,
@@ -95,15 +96,9 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
         const currentChapterSegments = currentChapterId
           ? await readChapterSegments(bookId, contentVersion, currentChapterId)
           : undefined
-        const measurement =
-          currentChapterId && layoutKey
-            ? await database.measurements.get([
-                bookId,
-                contentVersion,
-                currentChapterId,
-                layoutKey,
-              ])
-            : undefined
+        const measurement = currentChapterId
+          ? chapterInfo?.measurementsByChapter.get(currentChapterId)
+          : undefined
         return {
           queryKey,
           hasContent,
@@ -151,6 +146,41 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
           .reduce((sum, id) => sum + chapterInfo.countsByChapter.get(id)!, 0)
       : null
 
+  function getUnavailableReason(chapterId: string, hasTarget = true) {
+    if (!hasTarget) return 'No text target'
+    if (!chapterInfo?.readyChapterIds.has(chapterId)) return 'Preparing pages'
+    if (chapterInfo.countsByChapter.get(chapterId) === 0)
+      return 'No readable pages'
+    return undefined
+  }
+
+  const sections = chapterInfo?.sections ?? []
+  const sectionsById = new Map(sections.map((section) => [section.id, section]))
+  const tocSections: ReaderSection[] = sections.map((section) => {
+    let root = section
+    while (root.parent_id !== null) {
+      const parent = sectionsById.get(root.parent_id)
+      if (!parent) break
+      root = parent
+    }
+    return {
+      ...section,
+      unavailableReason: getUnavailableReason(
+        String(root.id),
+        section.first_segment_source_key !== null,
+      ),
+    }
+  })
+  const before = chapterInfo?.downloadedChapterRanges.get('before')
+  if (before && before.end > before.start)
+    tocSections.unshift({
+      id: 0,
+      parent_id: null,
+      title: 'Before',
+      sequence: -1,
+      unavailableReason: getUnavailableReason('before'),
+    })
+
   function setCurrentPage(pageNumber: number) {
     const start = data?.measurement?.pages.find(
       (page) => page.localPage === pageNumber,
@@ -172,6 +202,7 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
 
   return {
     chapterInfo,
+    tocSections,
     currentChapterId: chapterId,
     currentChapterSegments: data?.segments ?? [],
     layoutKey,

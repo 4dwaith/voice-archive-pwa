@@ -4,6 +4,7 @@ import textSizeReducer from './textSizeSlice'
 import bookDownloadsReducer from './bookDownloadsSlice'
 import readerReducer from './readerSlice'
 import { createBookDownloadsListener } from './bookDownloadsListener'
+import { createReaderTocListener } from './readerTocListener'
 import { createReaderMeasurementsListener } from './readerMeasurementsListener'
 import { archiveApi } from '../api-client/archiveApi'
 
@@ -20,12 +21,14 @@ export type AppDispatch = ThunkDispatch<RootState, undefined, UnknownAction>
 export function createAppStore() {
   const bookDownloadsListener = createBookDownloadsListener()
   const readerMeasurementsListener = createReaderMeasurementsListener()
+  const readerTocListener = createReaderTocListener()
   return configureStore({
     reducer: rootReducer,
     middleware: (defaults) =>
       defaults()
         .prepend(
           bookDownloadsListener.middleware,
+          readerTocListener.middleware,
           readerMeasurementsListener.middleware,
         )
         .concat(archiveApi.middleware),

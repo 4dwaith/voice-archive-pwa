@@ -96,6 +96,7 @@ export async function readChapterAvailability(
   }
 
   return {
+    sections,
     chapterIds,
     downloadedChapterRanges,
     hasCompleteContent: hasAllSegments,
@@ -203,6 +204,12 @@ export async function readReaderChapterReadiness(
 
       return {
         ...chapterAvailability,
+        measurementsByChapter: new Map(
+          committedMeasurements.map((measurement) => [
+            measurement.chapterId,
+            measurement,
+          ]),
+        ),
         availableChapterIds: new Set(
           chapterAvailability.downloadedChapterRanges.keys(),
         ),

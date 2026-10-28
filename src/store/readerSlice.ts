@@ -17,6 +17,7 @@ export type ReaderState = {
   areControlsVisible: boolean
   layoutKey: string | null
   measurementSave: ReaderMeasurementSave | null
+  tocNavigationError: string | null
   selectedSectionId: number | null
   sectionExpansion: Record<number, boolean>
   tocPresentation: ReaderTocPresentation
@@ -37,6 +38,7 @@ const initialState: ReaderState = {
   areControlsVisible: true,
   layoutKey: null,
   measurementSave: null,
+  tocNavigationError: null,
   selectedSectionId: null,
   sectionExpansion: {},
   tocPresentation: 'shown',
@@ -113,6 +115,11 @@ const readerSlice = createSlice({
     },
     selectSection(state, action: PayloadAction<number | null>) {
       state.selectedSectionId = action.payload
+      state.tocNavigationError = null
+      state.pageNavigationIntent = null
+    },
+    reportTocNavigationError(state, action: PayloadAction<string>) {
+      state.tocNavigationError = action.payload
     },
     setSectionExpanded(
       state,
@@ -126,6 +133,8 @@ const readerSlice = createSlice({
     },
     openReader(state, action: PayloadAction<ReaderScope>) {
       state.areControlsVisible = true
+      state.selectedSectionId = null
+      state.tocNavigationError = null
       state.scope = action.payload
       state.anchor = null
       state.layoutKey = null
@@ -156,6 +165,7 @@ const readerSlice = createSlice({
     ) {
       if (!hasMatchingScope(state.scope, action.payload)) return
       state.anchor = action.payload.anchor
+      state.tocNavigationError = null
       state.pageNavigationIntent = null
     },
     selectSegment(state, action: PayloadAction<number | null>) {
@@ -177,6 +187,7 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getTocNavigationError: (state) => state.tocNavigationError,
     getAreControlsVisible: (state) => state.areControlsVisible,
     getReaderAnchor: (state) => state.anchor,
     getReaderScope: (state) => state.scope,
@@ -196,6 +207,7 @@ const readerSlice = createSlice({
 
 export const {
   setControlsVisible,
+  reportTocNavigationError,
   openReader,
   closeReader,
   reconcileReaderAnchor,
@@ -214,6 +226,7 @@ export const {
 } = readerSlice.actions
 export const {
   getAreControlsVisible,
+  getTocNavigationError,
   getReaderAnchor,
   getReaderScope,
   getLayoutKey,

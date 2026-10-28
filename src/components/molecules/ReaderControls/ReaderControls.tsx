@@ -3,10 +3,10 @@ import { useReaderContext } from '../../../contexts/ReaderContext'
 
 export function ReaderControls({
   children,
-  header,
+  controls,
 }: {
   children: ReactNode
-  header: ReactNode
+  controls: ReactNode
 }) {
   const { areControlsVisible, setControlsVisible } = useReaderContext().reader
   const toggle = useRef<HTMLButtonElement>(null)
@@ -100,11 +100,11 @@ export function ReaderControls({
       <div
         ref={overlay}
         hidden={!areControlsVisible}
-        className="absolute inset-x-0 top-0 z-20"
+        className="pointer-events-none absolute inset-0 z-20 flex flex-col [&>*]:pointer-events-auto [&>header]:shrink-0"
         data-reader-controls
         data-reader-overlay
       >
-        {header}
+        {controls}
       </div>
       <button
         ref={toggle}

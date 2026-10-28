@@ -125,6 +125,20 @@ describe('ReaderTableOfContents', () => {
       expect(context.toc.selectSection).toHaveBeenCalledExactlyOnceWith(7)
     })
 
+    it('labels unavailable destinations and prevents selection', async () => {
+      const { context } = renderToc([
+        { ...readerSections[0], unavailableReason: 'No text target' },
+      ])
+      const destination = screen.getByRole('button', {
+        name: 'Part one [No text target]',
+      })
+
+      await userEvent.setup().click(destination)
+
+      expect(destination).toBeDisabled()
+      expect(context.toc.selectSection).not.toHaveBeenCalled()
+    })
+
     it('marks the selected section', () => {
       renderToc(readerSections, { selectedSectionId: 7 })
       const parent = screen

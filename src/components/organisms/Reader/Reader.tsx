@@ -2,11 +2,15 @@ import { useCallback, useState } from 'react'
 import { Header } from '../../../layout/Header'
 import { ReaderControls } from '../../molecules/ReaderControls/ReaderControls'
 import { ReaderProvider } from '../../../contexts/ReaderProvider'
+import { ReaderTableOfContents } from '../../atoms/ReaderTableOfContents/ReaderTableOfContents'
 import { ReaderPage } from '../../atoms/ReaderPage/ReaderPage'
 import { PageMeasurer } from '../../molecules/PageMeasurer/PageMeasurer'
 import { readChapterSegments } from '../../../data/readerChapterRepository'
 import { useAppSelector } from '../../../store/hooks'
-import { getMeasurementSave } from '../../../store/readerSlice'
+import {
+  getMeasurementSave,
+  getTocNavigationError,
+} from '../../../store/readerSlice'
 
 export function Reader({
   bookId,
@@ -16,6 +20,7 @@ export function Reader({
   contentVersion: string
 }) {
   const [retryKey, setRetryKey] = useState(0)
+  const tocError = useAppSelector(getTocNavigationError)
   const save = useAppSelector(getMeasurementSave)
   const loadChapterSegments = useCallback(
     (chapterId: string) =>
@@ -27,12 +32,27 @@ export function Reader({
     <ReaderProvider bookId={bookId} contentVersion={contentVersion}>
       {({
         chapterInfo,
+        tocSections,
         currentChapterId,
         currentChapterSegments,
         layoutKey,
       }) => (
         <div className="relative h-full w-full" data-reader>
-          <ReaderControls header={<Header />}>
+          <ReaderControls
+            controls={
+              <>
+                <Header />
+                <div className="flex min-h-0 w-72 max-w-full flex-1 flex-col border-2 border-ink [&>nav]:min-h-0 [&>nav]:flex-1">
+                  <ReaderTableOfContents sections={tocSections} />
+                  {tocError && (
+                    <p role="status" className="bg-page p-2">
+                      {tocError}
+                    </p>
+                  )}
+                </div>
+              </>
+            }
+          >
             <ReaderPage segments={currentChapterSegments} label="Book text" />
           </ReaderControls>
           <div className="pointer-events-none absolute inset-0">
