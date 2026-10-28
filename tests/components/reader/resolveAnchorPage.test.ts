@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { resolveAnchorPage } from '../../../src/hooks/resolveAnchorPage'
+import {
+  resolveAnchorPage,
+  resolvePageSectionSelection,
+} from '../../../src/hooks/resolveAnchorPage'
 import type {
   ReaderLayoutMeasurement,
   ReaderSegment,
@@ -82,5 +85,69 @@ describe('Anchor page resolution', () => {
     expect(
       resolveAnchorPage({ segmentId: 90, offset: 0 }, segments, report),
     ).toBeNull()
+  })
+})
+
+describe('Page section selection', () => {
+  const sections = [
+    { id: 10, parent_id: null },
+    { id: 20, parent_id: 10 },
+    { id: 30, parent_id: 20 },
+  ]
+  const segments = [
+    { id: 1, section_id: 10 },
+    { id: 2, section_id: 30 },
+    { id: 3, section_id: null },
+  ]
+
+  it.each([20, 30])(
+    'preserves selected section %i while inside it',
+    (selected) => {
+      const sectionId = resolvePageSectionSelection(
+        { segmentId: 2, offset: 0 },
+        segments,
+        sections,
+        selected,
+        10,
+      )
+
+      expect(sectionId).toBe(selected)
+    },
+  )
+
+  it('selects the current root after leaving a nested section', () => {
+    const sectionId = resolvePageSectionSelection(
+      { segmentId: 1, offset: 0 },
+      segments,
+      sections,
+      20,
+      10,
+    )
+
+    expect(sectionId).toBe(10)
+  })
+
+  it('keeps inherited ownership for unsectioned text', () => {
+    const sectionId = resolvePageSectionSelection(
+      { segmentId: 3, offset: 0 },
+      segments,
+      sections,
+      20,
+      10,
+    )
+
+    expect(sectionId).toBe(20)
+  })
+
+  it('selects Before after leaving a section for leading text', () => {
+    const sectionId = resolvePageSectionSelection(
+      { segmentId: 4, offset: 0 },
+      [{ id: 4, section_id: null }],
+      sections,
+      20,
+      0,
+    )
+
+    expect(sectionId).toBe(0)
   })
 })

@@ -81,9 +81,15 @@ export function ReaderTableOfContents({
 }: {
   sections: ReaderSection[]
 }) {
-  const { isSectionExpanded, tocPresentation, setTocPresentation } =
-    useReaderContext().toc
+  const {
+    selectedSectionId,
+    isSectionExpanded,
+    tocPresentation,
+    setTocPresentation,
+  } = useReaderContext().toc
 
+  const { areControlsVisible } = useReaderContext().reader
+  const bodyRef = useRef<HTMLDivElement>(null)
   const navRef = useRef<HTMLElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
   const bodyId = useId()
@@ -115,6 +121,26 @@ export function ReaderTableOfContents({
     closedBranch?.querySelector('summary')?.focus()
   }, [isCollapsed, isSectionExpanded])
 
+  useLayoutEffect(() => {
+    const body = bodyRef.current
+    const selected = body?.querySelector<HTMLElement>('[aria-current="true"]')
+    if (!body || !selected?.getClientRects().length) return
+
+    const viewportTop = body.getBoundingClientRect().top + body.clientTop
+    const viewportBottom = viewportTop + body.clientHeight
+    const target = selected.getBoundingClientRect()
+    if (target.top < viewportTop || target.height > body.clientHeight)
+      body.scrollTop += target.top - viewportTop
+    else if (target.bottom > viewportBottom)
+      body.scrollTop += target.bottom - viewportBottom
+  }, [
+    selectedSectionId,
+    isCollapsed,
+    areControlsVisible,
+    isSectionExpanded,
+    sections,
+  ])
+
   return (
     <nav
       ref={navRef}
@@ -136,7 +162,12 @@ export function ReaderTableOfContents({
         <span aria-hidden="true">☰</span>
         {!isCollapsed && ' Table of contents'}
       </button>
-      <div id={bodyId} hidden={isCollapsed} className="min-h-0 overflow-auto">
+      <div
+        ref={bodyRef}
+        id={bodyId}
+        hidden={isCollapsed}
+        className="min-h-0 overflow-auto"
+      >
         {sections.length ? (
           <ReaderSectionList
             childrenByParent={childrenByParent}

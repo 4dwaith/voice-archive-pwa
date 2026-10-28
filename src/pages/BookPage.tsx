@@ -60,7 +60,7 @@ export function BookPage() {
           contentVersion={content.version}
         />
       )}
-      <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-6 bg-page">
+      <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-6 bg-page">
         {loading && book?.cover_url && !coverFailed && (
           <img
             src={book.cover_url}

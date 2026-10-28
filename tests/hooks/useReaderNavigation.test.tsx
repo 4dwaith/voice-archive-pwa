@@ -119,6 +119,82 @@ describe('Reader anchor navigation', () => {
     expect(result.current.pageCount).toBeNull()
   })
 
+  it('retries a pending global destination after layout readiness changes', async () => {
+    await seedContent()
+    const { result, store } = renderNavigation()
+    await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
+    act(() => {
+      store.dispatch(reportLayoutKey('layout'))
+    })
+    await act(async () => {
+      await database.measurements.bulkPut([
+        { ...createMeasurement(), chapterId: 'before', pages: [] },
+        createMeasurement(),
+      ])
+    })
+    await waitFor(() => expect(result.current.globalPage).toBe(1))
+
+    act(() => {
+      result.current.requestNavigation({
+        scope: 'global',
+        kind: 'relative',
+        delta: 25,
+      })
+      store.dispatch(reportLayoutKey('new-layout'))
+    })
+    await waitFor(() => expect(result.current.currentPage).toBeNull())
+
+    expect(store.getState().reader.pageNavigationIntent).not.toBeNull()
+
+    await act(async () => {
+      const records = await database.measurements.toArray()
+      await database.measurements.bulkPut(
+        records.map((record) => ({ ...record, layoutKey: 'new-layout' })),
+      )
+    })
+    await waitFor(() =>
+      expect(store.getState().reader.pageNavigationIntent).toBeNull(),
+    )
+
+    expect(store.getState().reader.anchor).toEqual({ segmentId: 1, offset: 0 })
+    expect(store.getState().reader.pageNavigationError).toBeNull()
+  })
+
+  it('reports an unmappable page without moving the anchor', async () => {
+    await seedContent()
+    const { result, store } = renderNavigation()
+    await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
+    act(() => {
+      store.dispatch(reportLayoutKey('layout'))
+    })
+    await act(async () => {
+      await database.measurements.put({
+        ...createMeasurement(),
+        pages: [
+          createMeasurement().pages[0],
+          { localPage: 2, start: null, end: null },
+        ],
+      })
+    })
+    await waitFor(() => expect(result.current.pageCount).toBe(2))
+
+    act(() => {
+      result.current.requestNavigation({
+        scope: 'local',
+        kind: 'absolute',
+        pageNumber: 2,
+      })
+    })
+    await waitFor(() =>
+      expect(store.getState().reader.pageNavigationError).toContain(
+        'could not be opened',
+      ),
+    )
+
+    expect(store.getState().reader.anchor).toEqual({ segmentId: 1, offset: 0 })
+    expect(store.getState().reader.pageNavigationIntent).toBeNull()
+  })
+
   it('clears removed content and initializes a replacement without reusing its offset', async () => {
     const content = await seedContent()
     const { rerender, store } = renderNavigation()

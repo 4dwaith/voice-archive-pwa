@@ -1,6 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit'
 
-export const textSizeSteps = [100, 112.5, 125, 137.5] as const
+export const MIN_TEXT_SIZE_STEP = 0
+export const MAX_TEXT_SIZE_STEP = 32
+export const TEXT_SIZE_BASE = 100
+export const TEXT_SIZE_INCREMENT = 12.5
+
+export const getTextSizePercent = (step: number) =>
+  TEXT_SIZE_BASE + step * TEXT_SIZE_INCREMENT
 
 type TextSizeState = {
   step: number
@@ -15,15 +21,15 @@ const textSizeSlice = createSlice({
   initialState,
   reducers: {
     decreaseTextSize(state) {
-      state.step = Math.max(0, state.step - 1)
+      state.step = Math.max(MIN_TEXT_SIZE_STEP, state.step - 1)
     },
     increaseTextSize(state) {
-      state.step = Math.min(textSizeSteps.length - 1, state.step + 1)
+      state.step = Math.min(MAX_TEXT_SIZE_STEP, state.step + 1)
     },
   },
   selectors: {
     selectTextSizeStep: (state) => state.step,
-    selectTextSizePercent: (state) => textSizeSteps[state.step],
+    selectTextSizePercent: (state) => getTextSizePercent(state.step),
   },
 })
 

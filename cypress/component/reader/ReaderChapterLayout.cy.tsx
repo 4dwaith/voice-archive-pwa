@@ -115,7 +115,7 @@ describe('ReaderChapterLayout', () => {
     )
   })
 
-  it('fills its parent and clips one of three known pages, including fractional widths', () => {
+  it('fills its parent and clips one of four known pages, including fractional widths', () => {
     mountReaderChapterLayout({ width: 360.4 })
 
     cy.get('[data-reader-layout-host] > div').should(($page) => {
@@ -126,11 +126,11 @@ describe('ReaderChapterLayout', () => {
       expect(page.height).to.equal(parent.height)
       expect(
         $page[0].parentElement!.getAttribute('data-layout-page-count'),
-      ).to.equal('3')
+      ).to.equal('4')
     })
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="101"]',
-      'First page line 8',
+      'First page line 7',
     )
     cy.get('[data-reader-segment-id="102"]').should(($segment) => {
       const document = $segment[0].ownerDocument
@@ -154,16 +154,16 @@ describe('ReaderChapterLayout', () => {
       segments: [flowingReaderSegment],
     })
 
-    assertTextIsOnVisiblePage('strong > em', 'word032')
+    assertTextIsOnVisiblePage('strong > em', 'word028')
 
     layout.updateProps({ page: 2 })
 
-    assertTextIsOnVisiblePage('strong > em', 'word033')
-    assertTextIsOnVisiblePage('strong > em', 'word064')
+    assertTextIsOnVisiblePage('strong > em', 'word029')
+    assertTextIsOnVisiblePage('strong > em', 'word056')
 
     layout.updateProps({ page: 3 })
 
-    assertTextIsOnVisiblePage('strong > em', 'word065')
+    assertTextIsOnVisiblePage('strong > em', 'word057')
     assertTextIsOnVisiblePage('strong > em', 'word080')
   })
 
@@ -172,12 +172,12 @@ describe('ReaderChapterLayout', () => {
       segments: [continuingReaderSegment],
     })
 
-    assertTextIsOnVisiblePage('strong > em', 'Continuing line 8')
+    assertTextIsOnVisiblePage('strong > em', 'Continuing line 7')
 
     layout.updateProps({ page: 2 })
 
-    assertTextIsOnVisiblePage('strong > em', 'Continuing line 9')
-    assertTextIsOnVisiblePage('strong > em', 'Continuing line 16')
+    assertTextIsOnVisiblePage('strong > em', 'Continuing line 8')
+    assertTextIsOnVisiblePage('strong > em', 'Continuing line 14')
 
     layout.updateProps({ page: 3 })
 
@@ -219,7 +219,7 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '3',
+      '4',
     )
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="102"]',
@@ -232,7 +232,7 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '6',
+      '8',
     )
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="101"]',
@@ -248,9 +248,9 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '3',
+      '4',
     )
-    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '16px')
+    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '18px')
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="102"]',
       'Second page line 1',
@@ -261,9 +261,13 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '4',
+      '5',
     )
-    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '18px')
+    cy.get('[data-reader-page-columns]').should(
+      'have.css',
+      'font-size',
+      '20.25px',
+    )
 
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="101"]',
@@ -284,7 +288,7 @@ describe('ReaderChapterLayout', () => {
       'data-layout-page-count',
       '3',
     )
-    assertTextIsOnVisiblePage('strong > em', 'word033')
+    assertTextIsOnVisiblePage('strong > em', 'word029')
 
     cy.get('[data-reader-host]').invoke('css', 'width', '200px')
 
@@ -292,10 +296,10 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '5',
+      '6',
     )
 
-    assertTextIsOnVisiblePage('strong > em', 'word017')
+    assertTextIsOnVisiblePage('strong > em', 'word015')
   })
 
   it('does not publish keys or results from cancelled font work', () => {
@@ -332,7 +336,7 @@ describe('ReaderChapterLayout', () => {
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
-      '4',
+      '5',
     )
 
     cy.then(() => {
@@ -347,7 +351,7 @@ describe('ReaderChapterLayout', () => {
 
     cy.then(() => {
       expect(reportMeasurement).to.have.been.calledOnce
-      expect(reportMeasurement.firstCall.args[0].pages).to.have.length(4)
+      expect(reportMeasurement.firstCall.args[0].pages).to.have.length(5)
       expect(reportMeasurement.firstCall.args[0].layoutKey).to.equal(
         reportKey.lastCall.args[0],
       )
@@ -372,8 +376,8 @@ describe('ReaderChapterLayout', () => {
         .replace('Continuing line 1\n', 'ಕಾ é 😀 &\n')
         .replace('Continuing line 9', ''),
     }
-    // Eight lines per page; the second page begins with a blank line.
-    const offsets = [0, 136, 270, 345]
+    // Seven lines per page; a blank line remains part of the canonical text.
+    const offsets = [0, 118, 232, 345]
 
     mountReaderPage({
       width: 360.4,

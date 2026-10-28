@@ -7,7 +7,8 @@ import {
   readerStoryParagraphs,
 } from '../../src/mock-data/readerBook'
 
-export type ReaderTocScenario = 'standard' | 'overflowing' | 'unavailable'
+export type ReaderTocScenario =
+  'standard' | 'overflowing' | 'unavailable' | 'partial'
 
 // Scenario-owned records: seed idempotently, retaining committed measurements.
 export async function seedReaderBook(
@@ -67,6 +68,17 @@ export async function seedReaderBook(
     })),
   ]
 
+  const isPartial = tocScenario === 'partial'
+  if (isPartial)
+    segments.push({
+      ...segments[0],
+      id: segments[0].id + 1,
+      sequence: 1,
+      source_key: 'pending-chapter',
+      section_id: readerBookSection.id,
+      root_section_id: readerBookSection.id,
+    })
+
   await database.open()
   await database.transaction(
     'rw',
@@ -76,13 +88,32 @@ export async function seedReaderBook(
         ...readerBookContent,
         bookId,
         version: readerStoryContentVersion,
+        complete: !isPartial,
+        progress: isPartial
+          ? {
+              sectionNextOffset: null,
+              segmentNextOffset: 2,
+              lastSegmentSequence: 1,
+            }
+          : undefined,
         manifest: {
           ...readerBookContent.manifest,
           content_version: readerStoryContentVersion,
-          section_count: hasChapter ? subsections.length + 1 : 0,
-          segment_count: segments.length,
+          section_count: isPartial
+            ? 1
+            : hasChapter
+              ? subsections.length + 1
+              : 0,
+          segment_count: segments.length + (isPartial ? 1 : 0),
         },
       })
+      if (isPartial)
+        await database.sections.put({
+          ...readerBookSection,
+          bookId,
+          version: readerStoryContentVersion,
+          first_segment_source_key: 'pending-chapter',
+        })
       if (hasChapter)
         await database.sections.bulkPut([
           {

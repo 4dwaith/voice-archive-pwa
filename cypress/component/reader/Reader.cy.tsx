@@ -23,12 +23,12 @@ afterEach(() => {
 describe('Reader', () => {
   it('shares the fixed viewport and preserves its anchor across text reflow', () => {
     const store = createAppStore()
-    // Line 15 starts inside page 2, so reflow must preserve an interior
+    // Line 14 starts inside page 2, so reflow must preserve an interior
     // reading position rather than replace it with a page-start anchor.
     const anchor = {
       segmentId: continuingReaderSegment.id,
       offset:
-        continuingReaderSegment.text_content.indexOf('Continuing line 15'),
+        continuingReaderSegment.text_content.indexOf('Continuing line 14'),
     }
     let initialKey: string
     let viewport: DOMRect
@@ -85,7 +85,9 @@ describe('Reader', () => {
     cy.then(() => database.measurements.toArray()).then((records) => {
       pageCount = records[0].pages.length
     })
-    cy.findByRole('button', { name: 'Hide reader controls' }).click()
+    cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
+      key: 'Escape',
+    })
     cy.findByRole('button', { name: 'Home' }).should('not.exist')
     cy.get('[data-reader-page-window]').should(($window) => {
       const rect = $window[0].getBoundingClientRect()
@@ -95,13 +97,15 @@ describe('Reader', () => {
       ])
       expect(store.getState().reader.layoutKey).to.equal(initialKey)
     })
-    cy.findByRole('button', { name: 'Show reader controls' }).click()
+    cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
+      key: 'Enter',
+    })
     cy.findByRole('button', { name: 'Home' })
       .focus()
       .trigger('keydown', { key: 'Escape' })
-    cy.findByRole('button', { name: 'Show reader controls' })
+    cy.findByRole('region', { name: /^Reader$/ })
       .should('be.focused')
-      .click()
+      .trigger('keydown', { key: 'Enter' })
     cy.findByRole('button', { name: 'Home' }).should('be.visible')
     cy.get('[data-reader-page-window]').should(($window) => {
       const rect = $window[0].getBoundingClientRect()

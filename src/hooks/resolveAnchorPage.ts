@@ -1,3 +1,4 @@
+import type { CachedSegment, CachedSection } from '../models/content'
 import type {
   ReaderAnchor,
   ReaderLayoutMeasurement,
@@ -56,4 +57,40 @@ export function resolveAnchorPage(
       return page.localPage
   }
   return null
+}
+
+export function resolvePageStart(
+  pageNumber: number,
+  segments: ReaderSegment[],
+  measurement: ReaderLayoutMeasurement | undefined,
+) {
+  const start = measurement?.pages.find(
+    (page) => page.localPage === pageNumber,
+  )?.start
+  return start && resolveAnchorPage(start, segments, measurement) === pageNumber
+    ? { segmentId: start.segmentId, offset: start.offset }
+    : null
+}
+
+export function resolvePageSectionSelection(
+  anchor: ReaderAnchor,
+  segments: Pick<CachedSegment, 'id' | 'section_id'>[],
+  sections: Pick<CachedSection, 'id' | 'parent_id'>[],
+  selectedSectionId: number | null,
+  rootSectionId: number,
+) {
+  const index = segments.findIndex((segment) => segment.id === anchor.segmentId)
+
+  // Start from the anchor segment and walk backwards through the segments to find the first section ID.
+  let sectionId =
+    segments
+      .slice(0, index + 1)
+      .findLast((segment) => segment.section_id !== null)?.section_id ?? null
+
+  while (sectionId !== null) {
+    if (sectionId === selectedSectionId) return selectedSectionId
+    sectionId =
+      sections.find((section) => section.id === sectionId)?.parent_id ?? null
+  }
+  return rootSectionId
 }

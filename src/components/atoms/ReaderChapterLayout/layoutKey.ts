@@ -1,5 +1,5 @@
 // Bump when fixed padding, column gap, imported formatting or font policy changes.
-export const READER_LAYOUT_VERSION = '1'
+export const READER_LAYOUT_VERSION = '2'
 
 export type ReaderLayoutDescriptor = {
   rendererVersion: string

@@ -23,7 +23,7 @@ const meta = {
     width: 360,
     height: 252,
     currentPage: 1,
-    pageCount: 3,
+    pageCount: 4,
     textSizePercent: 100,
     selectedSegmentId: null,
     highlightedSegmentId: null,
@@ -82,11 +82,11 @@ export const SelectedSegment: Story = {
 }
 
 export const LongParagraph: Story = {
-  args: { currentPage: 2, segments: [flowingReaderSegment] },
+  args: { currentPage: 2, segments: [flowingReaderSegment], pageCount: 3 },
 }
 
 export const ContinuingVerse: Story = {
-  args: { currentPage: 2, segments: [continuingReaderSegment] },
+  args: { currentPage: 2, segments: [continuingReaderSegment], pageCount: 3 },
 }
 
 export const UnbrokenText: Story = {

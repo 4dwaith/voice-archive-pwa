@@ -26,13 +26,17 @@ Feature: Structured book synchronization
     And I see its first reader page
 
   @live
-  Scenario: Tapping book text hides controls and the reveal button restores them
+  Scenario: Tapping book text hides controls and keyboard interaction reveals them
     Given a published synchronization book
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     Then I see its first reader page
     And the reader controls are visible
     And the ToC fills the reader below the header
+    When I collapse the table of contents
+    Then the ToC shrinks to its toggle without moving the text or footer
+    When I expand the table of contents
+    Then the ToC fills the reader below the header
     When I tap exposed book text
     Then the reader controls are hidden
     And I see its first reader page
@@ -115,3 +119,24 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     And I select the nested ToC destination
     Then I see the nested section text
+
+  Scenario: Footer navigation moves locally and jumps across chapters within the index
+    Given a synchronization book with two chapters
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I move forward one chapter page
+    Then the second chapter page is displayed
+    When I jump to the last indexed book page
+    Then the second chapter opens at the indexed book boundary
+
+  Scenario: Touch swipes and keyboard page keys navigate while reading
+    Given a synchronization book with a nested destination
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I swipe left across the book text
+    Then the text shows page 2
+    And the reader controls are hidden
+    When I press the previous-page key
+    Then the text shows page 1
+    And the reader controls are hidden

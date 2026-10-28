@@ -1,5 +1,5 @@
 .reader-segment p {
-  margin: 0;
+  margin: 0 0 0.75em;
   text-indent: 1.5em;
 }
 .reader-segment h1,
@@ -9,6 +9,7 @@
 .reader-segment h5,
 .reader-segment h6 {
   margin: 0.75em 0 0.5em;
+  text-align: center;
   font-weight: 700;
   line-height: 1.3;
 }
@@ -49,10 +50,10 @@
   text-indent: 0;
 }
 .reader-segment .reader-import-gap-before {
-  margin-top: 1em;
+  margin-top: 1.25em;
 }
 .reader-segment .reader-import-gap-after {
-  margin-bottom: 1em;
+  margin-bottom: 1.25em;
 }
 
 .reader-segment[data-reader-kind='verse'] p {

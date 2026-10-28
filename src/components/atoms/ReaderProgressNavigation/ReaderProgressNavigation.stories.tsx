@@ -17,7 +17,7 @@ type StoryArgs = Pick<
   | 'indexedPageCount'
   | 'isPageNavigationPending'
   | 'requestPageNavigation'
->
+> & { message?: string }
 
 const ProvideProgressStory: Decorator<StoryArgs> =
   function ProvideProgressStory(Story) {
@@ -93,6 +93,7 @@ const meta = {
   tags: ['autodocs'],
 
   args: {
+    message: '',
     pageScope: 'local',
     currentPage: 7,
     pageCount: 24,
@@ -104,6 +105,7 @@ const meta = {
   },
 
   argTypes: {
+    message: { control: 'text' },
     pageScope: { control: 'inline-radio', options: ['local', 'global'] },
     currentPage: { control: { type: 'number', min: 1, step: 1 } },
     pageCount: { control: { type: 'number', min: 0, step: 1 } },
@@ -114,7 +116,9 @@ const meta = {
     requestPageNavigation: { control: false },
   },
 
-  render: () => <ReaderProgressNavigation />,
+  render: ({ message }) => (
+    <ReaderProgressNavigation message={message || undefined} />
+  ),
 } satisfies Meta<StoryArgs>
 
 export default meta

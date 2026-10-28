@@ -1,8 +1,10 @@
 import {
   createSelector,
+  nanoid,
   createSlice,
   type PayloadAction,
 } from '@reduxjs/toolkit'
+import { resolvePageNumber } from '../components/atoms/ReaderProgressNavigation/resolvePageNumber'
 import type {
   ReaderAnchor,
   ReaderScope,
@@ -27,7 +29,12 @@ export type ReaderState = {
   scope: ReaderScope | null
   anchor: ReaderAnchor | null
 
-  pageNavigationIntent: ReaderPageNavigation | null
+  pageNavigationIntent: {
+    requestId: string
+    scope: ReaderPageNavigation['scope']
+    pageNumber: number
+  } | null
+  pageNavigationError: string | null
 
   selectedSegmentId: number | null
   highlightedSegmentId: number | null
@@ -49,6 +56,7 @@ const initialState: ReaderState = {
   anchor: null,
 
   pageNavigationIntent: null,
+  pageNavigationError: null,
 
   selectedSegmentId: null,
   highlightedSegmentId: null,
@@ -108,15 +116,86 @@ const readerSlice = createSlice({
         state.measurementSave = action.payload
     },
     setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
+      if (state.pageScope !== action.payload) state.pageNavigationIntent = null
       state.pageScope = action.payload
     },
-    requestPageNavigation(state, action: PayloadAction<ReaderPageNavigation>) {
-      state.pageNavigationIntent = action.payload
+    requestPageNavigation: {
+      prepare(
+        request: ReaderPageNavigation & {
+          currentPage: number | null
+          pageCount: number | null
+        },
+      ) {
+        return { payload: { ...request, requestId: nanoid() } }
+      },
+      reducer(
+        state,
+        {
+          payload,
+        }: PayloadAction<
+          ReaderPageNavigation & {
+            currentPage: number | null
+            pageCount: number | null
+            requestId: string
+          }
+        >,
+      ) {
+        if (!state.scope) return
+        const previous = state.pageNavigationIntent
+        const base =
+          previous?.scope === payload.scope
+            ? previous.pageNumber
+            : payload.currentPage
+        const pageNumber = resolvePageNumber(
+          payload.kind === 'absolute'
+            ? payload.pageNumber
+            : base === null
+              ? NaN
+              : base + payload.delta,
+          payload.pageCount,
+        )
+        if (pageNumber === null) return
+        state.pageNavigationIntent = {
+          requestId: payload.requestId,
+          scope: payload.scope,
+          pageNumber,
+        }
+        state.pageNavigationError = null
+      },
+    },
+    completePageNavigation(
+      state,
+      action: PayloadAction<
+        ReaderScope & {
+          layoutKey: string
+          requestId: string
+          anchor: ReaderAnchor | null
+          sectionId: number | null
+        }
+      >,
+    ) {
+      const result = action.payload
+      if (
+        !hasMatchingScope(state.scope, result) ||
+        state.layoutKey !== result.layoutKey ||
+        state.pageNavigationIntent?.requestId !== result.requestId
+      )
+        return
+      if (result.anchor) {
+        state.anchor = result.anchor
+        state.selectedSectionId = result.sectionId
+        state.tocNavigationError = null
+      }
+      state.pageNavigationError = result.anchor
+        ? null
+        : 'The page could not be opened. Try again when pages are ready.'
+      state.pageNavigationIntent = null
     },
     selectSection(state, action: PayloadAction<number | null>) {
       state.selectedSectionId = action.payload
       state.tocNavigationError = null
       state.pageNavigationIntent = null
+      state.pageNavigationError = null
     },
     reportTocNavigationError(state, action: PayloadAction<string>) {
       state.tocNavigationError = action.payload
@@ -140,6 +219,7 @@ const readerSlice = createSlice({
       state.layoutKey = null
       state.measurementSave = null
       state.pageNavigationIntent = null
+      state.pageNavigationError = null
     },
     closeReader(state, action: PayloadAction<ReaderScope>) {
       if (!hasMatchingScope(state.scope, action.payload)) return
@@ -148,6 +228,7 @@ const readerSlice = createSlice({
       state.layoutKey = null
       state.measurementSave = null
       state.pageNavigationIntent = null
+      state.pageNavigationError = null
     },
     reconcileReaderAnchor(
       state,
@@ -161,12 +242,17 @@ const readerSlice = createSlice({
     },
     setReaderAnchor(
       state,
-      action: PayloadAction<ReaderScope & { anchor: ReaderAnchor }>,
+      action: PayloadAction<
+        ReaderScope & { anchor: ReaderAnchor; sectionId?: number }
+      >,
     ) {
       if (!hasMatchingScope(state.scope, action.payload)) return
       state.anchor = action.payload.anchor
+      if (action.payload.sectionId !== undefined)
+        state.selectedSectionId = action.payload.sectionId
       state.tocNavigationError = null
       state.pageNavigationIntent = null
+      state.pageNavigationError = null
     },
     selectSegment(state, action: PayloadAction<number | null>) {
       state.selectedSegmentId = action.payload
@@ -187,6 +273,8 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getPageNavigationIntent: (state) => state.pageNavigationIntent,
+    getPageNavigationError: (state) => state.pageNavigationError,
     getTocNavigationError: (state) => state.tocNavigationError,
     getAreControlsVisible: (state) => state.areControlsVisible,
     getReaderAnchor: (state) => state.anchor,
@@ -217,6 +305,7 @@ export const {
   recordMeasurementSave,
   setPageScope,
   requestPageNavigation,
+  completePageNavigation,
   selectSection,
   setSectionExpanded,
   setTocPresentation,
@@ -225,6 +314,8 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getPageNavigationIntent,
+  getPageNavigationError,
   getAreControlsVisible,
   getTocNavigationError,
   getReaderAnchor,

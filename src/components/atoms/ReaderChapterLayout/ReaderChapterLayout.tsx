@@ -175,7 +175,7 @@ export function ReaderChapterLayout({
     <div
       className="box-border h-full min-h-0 w-full min-w-0 overflow-clip bg-page p-5 leading-[1.65] text-ink [--reader-column-gap:32px]"
       dir="ltr"
-      style={{ fontSize: (16 * textSizePercent) / 100 }}
+      style={{ fontSize: (24 * textSizePercent) / 100 }}
     >
       <div
         ref={viewportRef}

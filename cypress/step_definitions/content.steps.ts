@@ -78,6 +78,7 @@ function harness() {
 }
 function mockBook(
   options: {
+    chapters?: boolean
     nested?: boolean
     slow?: boolean
     cover?: boolean
@@ -126,7 +127,14 @@ function mockBook(
       schema_version: state === 'published' ? 1 : null,
       imported_at: state === 'published' ? '2026-10-23T00:00:00Z' : null,
       source_pdf_file_id: null,
-      section_count: state === 'published' ? (options.nested ? 2 : 1) : 0,
+      section_count:
+        state === 'published'
+          ? options.chapters
+            ? 20
+            : options.nested
+              ? 2
+              : 1
+          : 0,
       segment_count: state === 'published' ? 2 : 0,
       files: [],
     }
@@ -142,21 +150,34 @@ function mockBook(
       request.reply({
         body: {
           content_version: currentVersion,
-          items: options.nested
-            ? [
-                section,
-                {
-                  ...section,
-                  id: 2,
-                  parent_id: 1,
-                  sequence: 1,
-                  kind: 'section',
-                  source_key: 'nested',
-                  title: 'Nested destination',
-                  first_segment_source_key: 'b',
-                },
-              ]
-            : [section],
+          items:
+            options.nested || options.chapters
+              ? [
+                  section,
+                  ...(options.chapters
+                    ? Array.from({ length: 18 }, (_, index) => ({
+                        ...section,
+                        id: index + 3,
+                        source_key: `empty-${index}`,
+                        sequence: index + 1,
+                        title: `Empty chapter ${index + 1}`,
+                        first_segment_source_key: null,
+                      }))
+                    : []),
+                  {
+                    ...section,
+                    id: 2,
+                    parent_id: options.chapters ? null : 1,
+                    sequence: options.chapters ? 19 : 1,
+                    kind: 'section',
+                    source_key: 'nested',
+                    title: options.chapters
+                      ? 'Second chapter'
+                      : 'Nested destination',
+                    first_segment_source_key: 'b',
+                  },
+                ]
+              : [section],
           next_offset: null,
         },
       })
@@ -210,7 +231,7 @@ function mockBook(
               id: second ? 2 : 1,
               source_key: second ? 'b' : 'a',
               sequence: second ? 2 : 0,
-              ...(options.nested
+              ...(options.nested || options.chapters
                 ? {
                     section_id: second ? 2 : 1,
                     html_content: `<p>${second ? 'Nested destination text.' : 'Opening chapter text. '.repeat(500)}</p>`,
@@ -672,11 +693,11 @@ Then('the ToC fills the reader below the header', () => {
     const document = $toc[0].ownerDocument
     const rect = $toc[0].getBoundingClientRect()
     const header = document.querySelector('header')!.getBoundingClientRect()
-    const reader = document
-      .querySelector('[data-reader]')!
-      .getBoundingClientRect()
+    const footer = document
+      .querySelector('[aria-label="Page navigation"]')!
+      .parentElement!.getBoundingClientRect()
     expect(rect.top).to.equal(header.bottom + 2)
-    expect(rect.bottom).to.equal(reader.bottom - 2)
+    expect(rect.bottom).to.equal(footer.top - 2)
   })
 })
 
@@ -691,7 +712,7 @@ When('I tap exposed book text', () => {
 Then('the reader controls are hidden', () => {
   cy.findByRole('button', { name: 'Home' }).should('not.exist')
   cy.findByRole('navigation', { name: 'Table of contents' }).should('not.exist')
-  cy.findByRole('button', { name: 'Show reader controls' }).should('be.visible')
+  cy.findByRole('button', { name: /reader controls/ }).should('not.exist')
 })
 
 When('I select a text segment', () => {
@@ -709,7 +730,9 @@ Then('the text segment is selected', () => {
 })
 
 When('I reveal the reader controls', () => {
-  cy.findByRole('button', { name: 'Show reader controls' }).click()
+  cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
+    key: 'Enter',
+  })
 })
 
 Then('the reader controls are visible', () => {
@@ -730,7 +753,9 @@ When('I select the nested ToC destination', () => {
       .should('be.enabled')
       .click()
   })
-  cy.findByRole('button', { name: 'Hide reader controls' }).click()
+  cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
+    key: 'Escape',
+  })
 })
 
 Then('I see the nested section text', () => {
@@ -742,4 +767,163 @@ Then('I see the nested section text', () => {
     .find('[data-reader-segment-id="2"]')
     .should('be.visible')
     .and('have.text', 'Nested destination text.')
+})
+
+Given('a synchronization book with two chapters', () =>
+  mockBook({ chapters: true }),
+)
+
+When('I move forward one chapter page', () => {
+  cy.findByRole('navigation', { name: 'Table of contents' })
+    .findByRole('button', { name: /^Chapter$/ })
+    .should('be.enabled')
+    .click()
+  cy.findByRole('button', { name: /^Forward 1 page$/ })
+    .should('be.enabled')
+    .click()
+})
+
+Then('the second chapter page is displayed', () => {
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'data-reader-page',
+    '2',
+  )
+  cy.findByRole('slider', { name: 'Chapter page' }).should(
+    'have.attr',
+    'aria-valuenow',
+    '2',
+  )
+})
+
+When('I jump to the last indexed book page', () => {
+  cy.findByRole('button', { name: 'Second chapter' }).should(($target) => {
+    const body = $target[0].closest('nav')!.lastElementChild!
+    expect($target[0].getBoundingClientRect().top).to.be.greaterThan(
+      body.getBoundingClientRect().bottom,
+    )
+  })
+  cy.findByRole('button', { name: /^Book$/ }).click()
+  cy.findByRole('slider', { name: 'Book page' })
+    .should(($slider) => {
+      expect($slider.attr('aria-valuetext')).not.to.contain('total unknown')
+      expect(Number($slider.attr('aria-valuemax'))).to.be.greaterThan(2)
+    })
+    .focus()
+    .type('{end}')
+})
+
+Then('the second chapter opens at the indexed book boundary', () => {
+  cy.findByRole('button', { name: 'Second chapter' })
+    .should('have.attr', 'aria-current', 'true')
+    .should(($target) => {
+      const body = $target[0].closest('nav')!.lastElementChild!
+      const viewport = body.getBoundingClientRect()
+      const target = $target[0].getBoundingClientRect()
+      expect(target.top).to.be.at.least(viewport.top)
+      expect(target.bottom).to.be.at.most(viewport.bottom)
+    })
+  cy.focused().should('have.attr', 'aria-label', 'Book page')
+  cy.findByRole('navigation', { name: 'Table of contents' })
+    .findByRole('button', { name: /^Chapter$/ })
+    .should('not.have.attr', 'aria-current')
+  cy.findByRole('slider', { name: 'Book page' }).should(($slider) => {
+    expect($slider.attr('aria-valuenow')).to.equal(
+      $slider.attr('aria-valuemax'),
+    )
+  })
+  cy.findByRole('button', { name: /^Forward 1 page$/ }).should('be.disabled')
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'data-reader-page', '1')
+    .find('[data-reader-segment-id="2"]')
+    .should('have.text', 'Nested destination text.')
+})
+
+When('I collapse the table of contents', () => {
+  cy.get('[data-reader-page-window]').then(($window) => {
+    const rect = $window[0].getBoundingClientRect()
+    cy.wrap([rect.x, rect.y, rect.width, rect.height]).as(
+      'textBeforeTocCollapse',
+    )
+  })
+  cy.findByRole('button', { name: 'Collapse table of contents' }).click()
+})
+
+Then('the ToC shrinks to its toggle without moving the text or footer', () => {
+  cy.findByRole('button', { name: 'Show table of contents' }).should(
+    ($toggle) => {
+      const toggle = $toggle[0]
+      const nav = toggle.closest('nav')!
+      expect(nav.getBoundingClientRect().height).to.equal(
+        toggle.getBoundingClientRect().height,
+      )
+      expect(nav.parentElement!.getBoundingClientRect().height).to.equal(
+        nav.getBoundingClientRect().height + 4,
+      )
+      const document = toggle.ownerDocument
+      expect(
+        document
+          .querySelector('[aria-label="Page navigation"]')!
+          .getBoundingClientRect().bottom,
+      ).to.equal(
+        document.querySelector('[data-reader]')!.getBoundingClientRect().bottom,
+      )
+    },
+  )
+  cy.get<number[]>('@textBeforeTocCollapse').then((before) => {
+    cy.get('[data-reader-page-window]').should(($window) => {
+      const rect = $window[0].getBoundingClientRect()
+      expect([rect.x, rect.y, rect.width, rect.height]).to.deep.equal(before)
+    })
+  })
+})
+
+When('I expand the table of contents', () => {
+  cy.findByRole('button', { name: 'Show table of contents' }).click()
+})
+
+When('I focus the text and hide the controls', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .focus()
+    .type('{esc}')
+})
+
+When('I swipe left across the book text', () => {
+  cy.findByRole('article', { name: 'Book text' }).then(async ($article) => {
+    const rect = $article[0].getBoundingClientRect()
+    const y = rect.top + rect.height / 2
+    const startX = rect.right - 80
+    const endX = rect.left + 80
+    // Chrome generates real touch/pointer events, including cancellation and clicks.
+    await Cypress.automation('remote:debugger:protocol', {
+      command: 'Input.dispatchTouchEvent',
+      params: { type: 'touchStart', touchPoints: [{ x: startX, y, id: 1 }] },
+    })
+    for (let step = 1; step <= 4; step++) {
+      await Cypress.automation('remote:debugger:protocol', {
+        command: 'Input.dispatchTouchEvent',
+        params: {
+          type: 'touchMove',
+          touchPoints: [{ x: startX + ((endX - startX) * step) / 4, y, id: 1 }],
+        },
+      })
+    }
+    await Cypress.automation('remote:debugger:protocol', {
+      command: 'Input.dispatchTouchEvent',
+      params: { type: 'touchEnd', touchPoints: [] },
+    })
+  })
+})
+
+Then('the text shows page {int}', (page: number) => {
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'data-reader-page',
+    String(page),
+  )
+})
+
+When('I press the previous-page key', () => {
+  cy.get('body').type('{pageup}')
 })

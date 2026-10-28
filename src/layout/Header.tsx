@@ -3,9 +3,10 @@ import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   decreaseTextSize,
   increaseTextSize,
+  MAX_TEXT_SIZE_STEP,
+  MIN_TEXT_SIZE_STEP,
   selectTextSizePercent,
   selectTextSizeStep,
-  textSizeSteps,
 } from '../store/textSizeSlice'
 
 export function Header() {
@@ -44,7 +45,7 @@ export function Header() {
             type="button"
             className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => dispatch(decreaseTextSize())}
-            disabled={textSizeStep === 0}
+            disabled={textSizeStep === MIN_TEXT_SIZE_STEP}
             aria-label="Make text smaller"
           >
             A−
@@ -53,7 +54,7 @@ export function Header() {
             type="button"
             className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => dispatch(increaseTextSize())}
-            disabled={textSizeStep === textSizeSteps.length - 1}
+            disabled={textSizeStep === MAX_TEXT_SIZE_STEP}
             aria-label="Make text larger"
           >
             A+

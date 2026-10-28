@@ -106,7 +106,7 @@ const meta = {
     tocScenario: { control: false },
     width: { control: { type: 'number', min: 160 } },
     height: { control: { type: 'number', min: 160 } },
-    textSizeStep: { control: 'select', options: [0, 1, 2, 3] },
+    textSizeStep: { control: 'select', options: [0, 1, 2, 3, 24] },
     fontFamily: {
       control: 'select',
       options: ['monospace', 'sans-serif', 'serif'],
@@ -147,4 +147,8 @@ export const OverflowingToc: Story = {
 
 export const UnavailableTocTarget: Story = {
   args: { bookId: 91005, hasChapter: true, tocScenario: 'unavailable' },
+}
+
+export const PartialBookIndex: Story = {
+  args: { bookId: 91006, tocScenario: 'partial' },
 }

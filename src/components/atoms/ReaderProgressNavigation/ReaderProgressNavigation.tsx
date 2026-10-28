@@ -1,4 +1,11 @@
-import { useId, useRef } from 'react'
+import {
+  Fragment,
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 import {
   resolvePageNumber,
@@ -15,8 +22,7 @@ function NavigationArrows({
   return (
     <svg
       aria-hidden="true"
-      width="36"
-      height="24"
+      className="h-[max(24px,1em)] w-[max(36px,1.5em)] shrink-0 text-lg"
       viewBox="0 0 36 24"
       fill="currentColor"
     >
@@ -33,7 +39,7 @@ function NavigationArrows({
   )
 }
 
-export function ReaderProgressNavigation() {
+export function ReaderProgressNavigation({ message }: { message?: string }) {
   const {
     pageScope,
     setPageScope,
@@ -62,7 +68,7 @@ export function ReaderProgressNavigation() {
   const canNavigate = hasPosition && !isPageNavigationPending
   const label = isBook ? 'Book' : 'Chapter'
   const buttonClass =
-    'min-h-14 cursor-pointer border-2 border-black bg-white text-black focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-default disabled:border-dashed disabled:text-neutral-600'
+    'min-h-[48px] cursor-pointer border-2 border-black bg-white text-black focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-default disabled:border-dashed disabled:text-neutral-600'
   const positionText =
     total === 0 ? 'No pages' : `Page ${page ?? '?'} of ${total ?? '?'}`
 
@@ -81,29 +87,89 @@ export function ReaderProgressNavigation() {
     )
   }
 
+  function recordTrackPointerStart(event: PointerEvent<HTMLDivElement>) {
+    pointerStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+      hasDragged: false,
+    }
+  }
+
+  function markTrackPointerDrag(event: PointerEvent<HTMLDivElement>) {
+    const start = pointerStart.current
+    // Allow small pointer jitter, but do not turn a drag into a page jump.
+    if (
+      start &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
+    )
+      start.hasDragged = true
+  }
+
+  function cancelTrackPointer() {
+    if (pointerStart.current) pointerStart.current.hasDragged = true
+  }
+
+  function navigateToTrackPosition(event: MouseEvent<HTMLDivElement>) {
+    const start = pointerStart.current
+    pointerStart.current = null
+    if (!canNavigate || start?.hasDragged) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const width = event.currentTarget.clientWidth
+    if (width === 0) return
+    // Measure within the track's inner width, excluding its left border.
+    const target = resolvePageNumberFromFraction(
+      (event.clientX - rect.left - event.currentTarget.clientLeft) / width,
+      available!,
+    )
+    if (target !== null) requestNavigation(target, 'absolute')
+  }
+
+  function navigateWithTrackKey(event: KeyboardEvent<HTMLDivElement>) {
+    // Track keys step through pages; Home and End select absolute destinations.
+    const delta = {
+      ArrowLeft: -1,
+      ArrowDown: -1,
+      ArrowRight: 1,
+      ArrowUp: 1,
+      PageUp: -5,
+      PageDown: 5,
+    }[event.key]
+    if (delta === undefined && event.key !== 'Home' && event.key !== 'End')
+      return
+    event.preventDefault()
+    requestNavigation(
+      delta !== undefined
+        ? (page ?? 1) + delta
+        : event.key === 'Home'
+          ? 1
+          : (available ?? 1),
+      delta !== undefined ? 'relative' : 'absolute',
+    )
+  }
+
   return (
     <nav
       aria-label="Page navigation"
-      className="@container mx-auto w-full max-w-150 space-y-4 border-t-2 border-black bg-white p-3 text-black"
+      className="@container mx-auto w-full space-y-6 border-t-2 border-black bg-white p-[10px] text-black"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <div role="group" aria-label="Page view" className="flex">
           {(['local', 'global'] as const).map((scope) => (
             <button
               key={scope}
               type="button"
               aria-pressed={pageScope === scope}
-              className={`${buttonClass} min-w-24 px-3 aria-pressed:bg-black aria-pressed:text-white`}
+              className={`${buttonClass} min-w-[88px] px-[12px] py-[4px] aria-pressed:bg-black aria-pressed:text-white`}
               onClick={() => setPageScope(scope)}
             >
-              <span className="text-lg font-bold">
+              <span className="text-lg leading-none font-bold">
                 {scope === 'local' ? 'Chapter' : 'Book'}
               </span>
             </button>
           ))}
         </div>
         <p
-          className="text-2xl font-bold tabular-nums"
+          className="text-2xl leading-none font-bold tabular-nums"
           aria-label={`${label}: ${positionText}`}
         >
           {positionText}
@@ -123,7 +189,7 @@ export function ReaderProgressNavigation() {
         aria-disabled={!canNavigate}
         aria-describedby={helpId}
         tabIndex={canNavigate ? 0 : -1}
-        className={`relative h-14 w-full cursor-pointer overflow-hidden border-2 border-black focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black ${total === null ? 'border-r-dashed' : ''}`}
+        className={`relative h-[44px] w-full cursor-pointer overflow-hidden border-2 border-black focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-black ${total === null ? 'border-r-dashed' : ''}`}
         style={{
           backgroundImage: hasPages
             ? 'linear-gradient(to right, transparent calc(100% - min(2px, 20%)), black calc(100% - min(2px, 20%)))'
@@ -132,63 +198,11 @@ export function ReaderProgressNavigation() {
             ? `calc(100% / ${available}) 100%`
             : undefined,
         }}
-        onPointerDown={(event) => {
-          pointerStart.current = {
-            x: event.clientX,
-            y: event.clientY,
-            hasDragged: false,
-          }
-        }}
-        onPointerMove={(event) => {
-          const start = pointerStart.current
-          if (
-            start &&
-            Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
-          )
-            start.hasDragged = true
-        }}
-        onPointerCancel={() => {
-          if (pointerStart.current) pointerStart.current.hasDragged = true
-        }}
-        onClick={(event) => {
-          const start = pointerStart.current
-          pointerStart.current = null
-          if (!canNavigate || start?.hasDragged) return
-          const rect = event.currentTarget.getBoundingClientRect()
-          const width = event.currentTarget.clientWidth
-          if (width === 0) return
-          const target = resolvePageNumberFromFraction(
-            (event.clientX - rect.left - event.currentTarget.clientLeft) /
-              width,
-            available!,
-          )
-          if (target !== null) requestNavigation(target, 'absolute')
-        }}
-        onKeyDown={(event) => {
-          const delta = {
-            ArrowLeft: -1,
-            ArrowDown: -1,
-            ArrowRight: 1,
-            ArrowUp: 1,
-            PageUp: -5,
-            PageDown: 5,
-          }[event.key]
-          if (
-            delta === undefined &&
-            event.key !== 'Home' &&
-            event.key !== 'End'
-          )
-            return
-          event.preventDefault()
-          requestNavigation(
-            delta !== undefined
-              ? (page ?? 1) + delta
-              : event.key === 'Home'
-                ? 1
-                : (available ?? 1),
-            delta !== undefined ? 'relative' : 'absolute',
-          )
-        }}
+        onPointerDown={recordTrackPointerStart}
+        onPointerMove={markTrackPointerDrag}
+        onPointerCancel={cancelTrackPointer}
+        onClick={navigateToTrackPosition}
+        onKeyDown={navigateWithTrackKey}
       >
         {hasPosition && (
           <span
@@ -201,54 +215,63 @@ export function ReaderProgressNavigation() {
           />
         )}
       </div>
-      <div className="flex flex-wrap justify-between gap-3">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         {[-1, 1].map((direction) => (
-          <div
-            key={direction}
-            role="group"
-            aria-label={direction < 0 ? 'Previous pages' : 'Next pages'}
-            className={`flex gap-1 ${direction > 0 ? 'ms-auto' : ''}`}
-          >
-            {(direction < 0 ? [25, 5, 1] : [1, 5, 25]).map((step) => {
-              const noOfArrows = step === 1 ? 1 : step === 5 ? 2 : 3
+          <Fragment key={direction}>
+            {direction > 0 && (
+              <div className="min-w-0 self-center text-center wrap-anywhere">
+                <p id={helpId} className="text-base">
+                  {isBook && total === null
+                    ? `${indexedPageCount} pages indexed. Book total unknown.`
+                    : total === null
+                      ? 'Chapter pages have not been counted yet.'
+                      : total === 0
+                        ? `No ${isBook ? 'book' : 'chapter'} pages available.`
+                        : page === null
+                          ? 'Book position unknown. Use Chapter view to navigate.'
+                          : 'Tap a page segment to jump.'}
+                </p>
+                <p role="status">
+                  {message ?? (isPageNavigationPending ? 'Changing page…' : '')}
+                </p>
+              </div>
+            )}
+            <div
+              role="group"
+              aria-label={direction < 0 ? 'Previous pages' : 'Next pages'}
+              className="flex flex-col gap-4 @min-[40em]:flex-row"
+            >
+              {(direction < 0 ? [25, 5, 1] : [1, 5, 25]).map((step) => {
+                const noOfArrows = step === 1 ? 1 : step === 5 ? 2 : 3
 
-              return (
-                <button
-                  key={step}
-                  type="button"
-                  className={`${buttonClass} flex min-h-18 w-11 flex-col items-center justify-center @min-[480px]:w-16`}
-                  aria-label={`${direction < 0 ? 'Back' : 'Forward'} ${step} ${step === 1 ? 'page' : 'pages'}`}
-                  disabled={
-                    !canNavigate ||
-                    (direction < 0 ? page! <= 1 : page! >= available!)
-                  }
-                  onClick={() =>
-                    requestNavigation(page! + direction * step, 'relative')
-                  }
-                >
-                  <NavigationArrows
-                    direction={direction}
-                    noOfArrows={noOfArrows}
-                  />
-                  <span className="text-lg font-bold">{step}</span>
-                </button>
-              )
-            })}
-          </div>
+                return (
+                  <button
+                    key={step}
+                    type="button"
+                    className={`${buttonClass} flex min-w-11 items-center justify-center gap-1 px-4.5 py-2`}
+                    aria-label={`${direction < 0 ? 'Back' : 'Forward'} ${step} ${step === 1 ? 'page' : 'pages'}`}
+                    disabled={
+                      !canNavigate ||
+                      (direction < 0 ? page! <= 1 : page! >= available!)
+                    }
+                    onClick={() =>
+                      requestNavigation(page! + direction * step, 'relative')
+                    }
+                  >
+                    <NavigationArrows
+                      direction={direction}
+                      noOfArrows={noOfArrows}
+                    />
+                    <span className="text-lg leading-none font-bold">
+                      {step}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Fragment>
         ))}
       </div>
-      <p id={helpId} className="text-base">
-        {isBook && total === null
-          ? `${indexedPageCount} pages indexed. Book total unknown.`
-          : total === null
-            ? 'Chapter pages have not been counted yet.'
-            : total === 0
-              ? `No ${isBook ? 'book' : 'chapter'} pages available.`
-              : page === null
-                ? 'Book position unknown. Use Chapter view to navigate.'
-                : 'Tap a page segment to jump.'}
-      </p>
-      <p role="status">{isPageNavigationPending ? 'Changing page…' : ''}</p>
     </nav>
   )
 }

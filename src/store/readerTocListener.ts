@@ -3,6 +3,7 @@ import { getSectionFirstSegment } from '../data/contentRepository'
 import { readReaderChapterReadiness } from '../data/readerChapterRepository'
 import {
   selectSection,
+  requestPageNavigation,
   openReader,
   closeReader,
   reportLayoutKey,
@@ -18,6 +19,7 @@ export function createReaderTocListener() {
   listener.startListening({
     matcher: isAnyOf(
       selectSection,
+      requestPageNavigation,
       openReader,
       closeReader,
       reportLayoutKey,

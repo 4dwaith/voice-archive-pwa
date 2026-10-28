@@ -7,7 +7,6 @@ import {
   getAreControlsVisible,
   setPageScope,
   getPageScope,
-  requestPageNavigation,
   isPageNavigationPending,
   selectSection,
   setSectionExpanded,
@@ -46,6 +45,7 @@ export function ReaderProvider({
     totalPageCount,
     indexedPageCount,
     setCurrentPage,
+    requestNavigation,
   } = navigation
   const selectedSectionId = useAppSelector(getSelectedSectionId)
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
@@ -62,7 +62,7 @@ export function ReaderProvider({
     >
     navigation: Pick<
       ReaderContextValue['navigation'],
-      'requestPageNavigation' | 'reportPageMeasurement' | 'setPageScope'
+      'reportPageMeasurement' | 'setPageScope'
     >
     reader: Pick<
       ReaderContextValue['reader'],
@@ -88,9 +88,6 @@ export function ReaderProvider({
       navigation: {
         setPageScope: (scope) => {
           dispatch(setPageScope(scope))
-        },
-        requestPageNavigation: (intent) => {
-          dispatch(requestPageNavigation(intent))
         },
         reportPageMeasurement: (report) => {
           if (bookId !== undefined && contentVersion)
@@ -137,6 +134,7 @@ export function ReaderProvider({
         isPageNavigationPending: hasPendingPageNavigation,
         ...actions.navigation,
         setCurrentPage,
+        requestPageNavigation: requestNavigation,
       },
       reader: {
         areControlsVisible,
@@ -163,6 +161,7 @@ export function ReaderProvider({
       highlightedSegmentId,
       actions,
       setCurrentPage,
+      requestNavigation,
     ],
   )
 

@@ -3,6 +3,7 @@ import { Header } from '../../../layout/Header'
 import { ReaderControls } from '../../molecules/ReaderControls/ReaderControls'
 import { ReaderProvider } from '../../../contexts/ReaderProvider'
 import { ReaderTableOfContents } from '../../atoms/ReaderTableOfContents/ReaderTableOfContents'
+import { ReaderProgressNavigation } from '../../atoms/ReaderProgressNavigation/ReaderProgressNavigation'
 import { ReaderPage } from '../../atoms/ReaderPage/ReaderPage'
 import { PageMeasurer } from '../../molecules/PageMeasurer/PageMeasurer'
 import { readChapterSegments } from '../../../data/readerChapterRepository'
@@ -10,6 +11,7 @@ import { useAppSelector } from '../../../store/hooks'
 import {
   getMeasurementSave,
   getTocNavigationError,
+  getPageNavigationError,
 } from '../../../store/readerSlice'
 
 export function Reader({
@@ -20,6 +22,7 @@ export function Reader({
   contentVersion: string
 }) {
   const [retryKey, setRetryKey] = useState(0)
+  const pageError = useAppSelector(getPageNavigationError)
   const tocError = useAppSelector(getTocNavigationError)
   const save = useAppSelector(getMeasurementSave)
   const loadChapterSegments = useCallback(
@@ -42,13 +45,16 @@ export function Reader({
             controls={
               <>
                 <Header />
-                <div className="flex min-h-0 w-72 max-w-full flex-1 flex-col border-2 border-ink [&>nav]:min-h-0 [&>nav]:flex-1">
+                <div className="flex min-h-0 w-72 max-w-full flex-1 flex-col border-2 border-ink has-[[data-presentation=collapsed]]:flex-none [&>nav]:min-h-0 [&>nav]:flex-1">
                   <ReaderTableOfContents sections={tocSections} />
                   {tocError && (
                     <p role="status" className="bg-page p-2">
                       {tocError}
                     </p>
                   )}
+                </div>
+                <div className="mt-auto shrink-0">
+                  <ReaderProgressNavigation message={pageError ?? undefined} />
                 </div>
               </>
             }
@@ -84,7 +90,7 @@ export function Reader({
             (save.outcome === 'failed' || save.outcome === 'rejected') && (
               <div
                 role="alert"
-                className="absolute inset-x-0 bottom-0 bg-page p-4"
+                className="absolute inset-x-0 bottom-0 z-30 bg-page p-4"
               >
                 <p>Page preparation could not be saved.</p>
                 <button
