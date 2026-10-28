@@ -10,12 +10,12 @@ import { ReaderChapterLayout } from '../../atoms/ReaderChapterLayout/ReaderChapt
 export function PageMeasurer({
   chapterIds,
   chapterSegments,
-  layoutId,
+  layoutKey,
 }: {
   chapterIds: string[]
   // Each supplied array is a complete chapter, in canonical segment order.
   chapterSegments: Record<string, ReaderSegment[] | undefined>
-  layoutId: string
+  layoutKey: string | null
 }) {
   const { reportPageMeasurement } = useReaderContext().navigation
   const { textSizePercent } = useReaderContext().reader
@@ -28,7 +28,7 @@ export function PageMeasurer({
       !completedMeasurements.some(
         (measurement) =>
           measurement.chapterId === id &&
-          measurement.layoutId === layoutId &&
+          measurement.layoutKey === layoutKey &&
           measurement.textSizePercent === textSizePercent &&
           measurement.segments === chapterSegments[id],
       ),
@@ -40,8 +40,13 @@ export function PageMeasurer({
 
   const reportMeasurement = useCallback(
     (result: ReaderLayoutMeasurement) => {
-      if (measuringChapterId === undefined || segments === undefined) return
-      const measurement = { ...result, chapterId: measuringChapterId, layoutId }
+      if (
+        measuringChapterId === undefined ||
+        segments === undefined ||
+        result.layoutKey !== layoutKey
+      )
+        return
+      const measurement = { ...result, chapterId: measuringChapterId }
       reportPageMeasurement(measurement)
       setCompletedMeasurements((previous) => [
         ...previous.filter(
@@ -50,11 +55,11 @@ export function PageMeasurer({
         { ...measurement, segments },
       ])
     },
-    [measuringChapterId, layoutId, segments, reportPageMeasurement],
+    [measuringChapterId, layoutKey, segments, reportPageMeasurement],
   )
 
   // Missing data is not an empty chapter. Wait for an unmeasured chapter with segments.
-  if (segments === undefined) return null
+  if (segments === undefined || layoutKey === null) return null
 
   return (
     <div
@@ -64,7 +69,7 @@ export function PageMeasurer({
       data-reader-measurer
     >
       <ReaderChapterLayout
-        key={JSON.stringify([measuringChapterId, layoutId])}
+        key={JSON.stringify([measuringChapterId, layoutKey])}
         segments={segments}
         page={1}
         textSizePercent={textSizePercent}

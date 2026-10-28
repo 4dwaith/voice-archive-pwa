@@ -16,6 +16,14 @@ const config: StorybookConfig = {
   framework: '@storybook/react-vite',
   staticDirs: ['../public'],
   viteFinal: async (viteConfig) => {
+    // Both dev and build use the same persistent, isolated Storybook database.
+    viteConfig.define = {
+      ...viteConfig.define,
+      'import.meta.env.VITE_DATABASE_NAME': JSON.stringify(
+        process.env.VITE_DATABASE_NAME || 'voice-archive-storybook',
+      ),
+    }
+
     // Keep the renderer and story hooks on the same React instance, and
     // prebundle their entry points together before the first story is opened.
     viteConfig.resolve = {

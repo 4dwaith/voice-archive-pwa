@@ -1,7 +1,41 @@
+import { useState } from 'react'
+import type { ReaderSegment } from '../../../src/models/reader'
 import { continuingReaderSegment } from '../../../src/mock-data/readerPages'
 import { ReaderChapterLayout } from '../../../src/components/atoms/ReaderChapterLayout/ReaderChapterLayout'
 import { PageMeasurer } from '../../../src/components/molecules/PageMeasurer/PageMeasurer'
 import { mountReaderPage } from '../support/reader'
+
+function MeasureChapter({
+  segments,
+  onVisibleReport,
+}: {
+  segments: ReaderSegment[]
+  onVisibleReport?: React.ComponentProps<
+    typeof ReaderChapterLayout
+  >['onPageMeasure']
+}) {
+  const [layoutKey, setLayoutKey] = useState<string | null>(null)
+
+  return (
+    <div className="relative h-full w-full">
+      <ReaderChapterLayout
+        segments={segments}
+        page={2}
+        textSizePercent={100}
+        shouldMeasure
+        onPageMeasure={onVisibleReport}
+        onLayoutKeyChange={setLayoutKey}
+      />
+      <div className="absolute inset-0">
+        <PageMeasurer
+          chapterIds={['verse']}
+          chapterSegments={{ verse: segments }}
+          layoutKey={layoutKey}
+        />
+      </div>
+    </div>
+  )
+}
 
 describe('PageMeasurer', () => {
   it('matches the visible layout while hidden and releases its content', () => {
@@ -23,22 +57,7 @@ describe('PageMeasurer', () => {
       waitForLayout: false,
       onReportPageMeasurement: hiddenReport,
       children: (
-        <div className="relative h-full w-full">
-          <ReaderChapterLayout
-            segments={segments}
-            page={2}
-            textSizePercent={100}
-            shouldMeasure
-            onPageMeasure={visibleReport}
-          />
-          <div className="absolute inset-0">
-            <PageMeasurer
-              chapterIds={['verse']}
-              chapterSegments={{ verse: segments }}
-              layoutId="fixed"
-            />
-          </div>
-        </div>
+        <MeasureChapter segments={segments} onVisibleReport={visibleReport} />
       ),
     })
 
@@ -48,7 +67,6 @@ describe('PageMeasurer', () => {
       expect(hiddenReport.firstCall.args[0]).to.deep.equal({
         ...visibleReport.firstCall.args[0],
         chapterId: 'verse',
-        layoutId: 'fixed',
       })
     })
     cy.get('[data-reader-measurer]').should('not.exist')
@@ -61,13 +79,7 @@ describe('PageMeasurer', () => {
     mountReaderPage({
       waitForLayout: false,
       onReportPageMeasurement: report,
-      children: (
-        <PageMeasurer
-          chapterIds={['empty']}
-          chapterSegments={{ empty: [] }}
-          layoutId="fixed"
-        />
-      ),
+      children: <MeasureChapter segments={[]} />,
     })
 
     cy.wrap(report).should('have.been.calledOnce')

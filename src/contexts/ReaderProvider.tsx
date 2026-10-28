@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
+  reportLayoutKey,
   setPageScope,
   getPageScope,
   requestPageNavigation,
@@ -59,7 +60,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
     >
     reader: Pick<
       ReaderContextValue['reader'],
-      'selectSegment' | 'highlightSegment' | 'reportSegmentError'
+      | 'selectSegment'
+      | 'highlightSegment'
+      | 'reportSegmentError'
+      | 'reportLayoutKey'
     >
   }>(
     () => ({
@@ -92,6 +96,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         },
       },
       reader: {
+        reportLayoutKey: (key) => {
+          dispatch(reportLayoutKey(key))
+        },
         selectSegment: (segmentId) => {
           dispatch(selectSegment(segmentId))
         },

@@ -13,6 +13,7 @@ import {
 } from '../../../src/contexts/ReaderContext'
 import type {
   ReaderPageMeasurement,
+  ReaderLayoutMeasurement,
   ReaderSegment,
 } from '../../../src/models/reader'
 
@@ -32,6 +33,8 @@ export function ReaderPageHarness({
   height,
   ref,
   onReportPageCount,
+  onLayoutKeyChange,
+  onPageMeasure,
   onReportPageMeasurement,
   children,
   layoutOnly = false,
@@ -43,6 +46,8 @@ export function ReaderPageHarness({
   children?: ReactNode
   layoutOnly?: boolean
   onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
+  onPageMeasure?: (report: ReaderLayoutMeasurement) => void
+  onLayoutKeyChange?: (key: string | null) => void
   onReportPageCount?: (count: number | null) => void
 }) {
   const [inputs, setInputs] = useState<ReaderPageInputs>({
@@ -104,6 +109,7 @@ export function ReaderPageHarness({
       highlightedSegmentId: null,
       selectSegment: () => undefined,
       highlightSegment: () => undefined,
+      reportLayoutKey: onLayoutKeyChange ?? (() => undefined),
       reportSegmentError: () => undefined,
     },
   }
@@ -126,6 +132,9 @@ export function ReaderPageHarness({
               segments={segments}
               page={inputs.currentPage}
               textSizePercent={inputs.textSizePercent}
+              onLayoutKeyChange={onLayoutKeyChange}
+              shouldMeasure={onPageMeasure !== undefined}
+              onPageMeasure={onPageMeasure}
               shouldCount
               onPageCount={reportPageCount}
             />

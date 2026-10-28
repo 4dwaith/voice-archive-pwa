@@ -6,11 +6,11 @@ import type { ReaderPageMeasurement } from '../../src/models/reader'
 
 function createMeasurement(
   chapterId = 'chapter',
-  layoutId = 'layout',
+  layoutKey = 'layout',
 ): ReaderPageMeasurement {
   return {
     chapterId,
-    layoutId,
+    layoutKey,
     width: 320,
     height: 212,
     textSizePercent: 100,
@@ -33,25 +33,25 @@ describe('reader measurement targets', () => {
     const state = readerReducer(initial, reportPageMeasurement(measurement))
 
     expect(state.measuredTargets).toEqual([
-      { chapterId: 'chapter', layoutId: 'layout' },
+      { chapterId: 'chapter', layoutKey: 'layout' },
     ])
   })
 
   it.each([
     ['another-chapter', 'layout'],
     ['chapter', 'another-layout'],
-  ])('retains the distinct target %s / %s', (chapterId, layoutId) => {
+  ])('retains the distinct target %s / %s', (chapterId, layoutKey) => {
     const initial = readerReducer(
       undefined,
       reportPageMeasurement(createMeasurement()),
     )
-    const measurement = createMeasurement(chapterId, layoutId)
+    const measurement = createMeasurement(chapterId, layoutKey)
 
     const state = readerReducer(initial, reportPageMeasurement(measurement))
 
     expect(state.measuredTargets).toEqual([
-      { chapterId: 'chapter', layoutId: 'layout' },
-      { chapterId, layoutId },
+      { chapterId: 'chapter', layoutKey: 'layout' },
+      { chapterId, layoutKey },
     ])
   })
 })

@@ -27,6 +27,11 @@ export default defineConfig({
       framework: 'react',
       bundler: 'vite',
       viteConfig: {
+        define: {
+          'import.meta.env.VITE_DATABASE_NAME': JSON.stringify(
+            'voice-archive-component-test',
+          ),
+        },
         plugins: [
           react(),
           tailwindcss(),

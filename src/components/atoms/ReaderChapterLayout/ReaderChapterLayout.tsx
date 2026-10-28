@@ -1,10 +1,24 @@
-import { useCallback, useLayoutEffect, useRef, useState, type Ref } from 'react'
+import {
+  useCallback,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from 'react'
 import type {
   ReaderLayoutMeasurement,
   ReaderSegment,
 } from '../../../models/reader'
 import { ReaderSegmentContent } from '../ReaderSegmentContent/ReaderSegmentContent'
 import { measurePageBoundaries } from './measurePageBoundaries'
+import { useObserveTypographyChanges } from '../../../hooks/useObserveTypographyChanges'
+import {
+  createLayoutKey,
+  readFontEnvironment,
+  readTypography,
+  READER_LAYOUT_VERSION,
+} from './layoutKey'
 
 export function ReaderChapterLayout({
   segments,
@@ -15,6 +29,7 @@ export function ReaderChapterLayout({
   onPageCount,
   onPageMeasure,
   viewportRef,
+  onLayoutKeyChange,
 }: {
   segments: ReaderSegment[]
   page: number
@@ -24,14 +39,45 @@ export function ReaderChapterLayout({
   onPageCount?: (count: number | null) => void
   onPageMeasure?: (measurement: ReaderLayoutMeasurement) => void
   viewportRef?: Ref<HTMLDivElement>
+  onLayoutKeyChange?: (key: string | null) => void
 }) {
+  const publishedKey = useRef<string | null | undefined>(undefined)
+  const shouldObserveLayoutKey = onLayoutKeyChange !== undefined
+
+  // Ensures that when this function is called in an effect,
+  // it refers to the latest values from the render function
+  const publishLayoutKey = useEffectEvent((key: string | null) => {
+    if (publishedKey.current === key) return
+    publishedKey.current = key
+    onLayoutKeyChange?.(key)
+  })
+
+  const latestRequest = useRef(0)
+
+  const invalidateFontLayout = () => {
+    ++latestRequest.current
+    if (publishedKey.current !== null) {
+      publishedKey.current = null
+      onLayoutKeyChange?.(null)
+    }
+    if (shouldCount) onPageCount?.(null)
+  }
+
   const columnsRef = useRef<HTMLDivElement>(null)
+
+  const typographyRevision = useObserveTypographyChanges(
+    columnsRef,
+    shouldCount || shouldMeasure || shouldObserveLayoutKey,
+    invalidateFontLayout,
+  )
+
   const [{ width, height }, setSize] = useState({ width: 0, height: 0 })
   const reportMeasurement = useCallback(
-    (columns: HTMLElement, count: number, gap: number) => {
+    (columns: HTMLElement, count: number, gap: number, layoutKey: string) => {
       if (shouldCount) onPageCount?.(count)
       if (shouldMeasure)
         onPageMeasure?.({
+          layoutKey,
           width,
           height,
           textSizePercent,
@@ -65,7 +111,9 @@ export function ReaderChapterLayout({
 
   useLayoutEffect(
     function measureReaderPageLayout() {
-      if (!shouldCount && !shouldMeasure) return
+      if (!shouldCount && !shouldMeasure && !shouldObserveLayoutKey) return
+
+      publishLayoutKey(null)
 
       if (shouldCount) onPageCount?.(null)
 
@@ -74,50 +122,48 @@ export function ReaderChapterLayout({
       const window = document.defaultView!
       let isCancelled = false
       let frame = 0
-      // Font loading can overlap; only the latest readiness pass may publish.
-      let latestRequest = 0
 
       const measurePageLayout = async () => {
         if (width <= 0 || height <= 0) return
-        if (segments.length === 0) {
-          reportMeasurement(columns, 0, 0)
-          return
-        }
 
-        const request = ++latestRequest
-        const font = window.getComputedStyle(columns)
+        const request = ++latestRequest.current
+        const fontEnvironment = await readFontEnvironment(columns)
 
-        // A failed webfont uses CSS fallback; wait for used fonts before measuring.
-        await document.fonts
-          .load(`${font.fontSize} ${font.fontFamily}`)
-          .catch(() => [])
-        await document.fonts.ready
+        const layoutKey = await createLayoutKey({
+          rendererVersion: READER_LAYOUT_VERSION,
+          width,
+          height,
+          textSizePercent,
+          typography: readTypography(window.getComputedStyle(columns)),
+          fontEnvironment,
+        })
 
-        if (isCancelled || request !== latestRequest) return
+        if (isCancelled || request !== latestRequest.current) return
 
         window.cancelAnimationFrame(frame)
         frame = window.requestAnimationFrame(() => {
-          if (isCancelled || request !== latestRequest) return
+          if (isCancelled || request !== latestRequest.current) return
+          if (document.fonts.status === 'loading' || layoutKey === null) return
+
+          publishLayoutKey(layoutKey)
           const gap = parseFloat(window.getComputedStyle(columns).columnGap)
           // CSS widths can be fractional; scrollWidth is integer-rounded.
-          const count = Math.max(
-            1,
-            Math.round((columns.scrollWidth + gap) / (width + gap)),
-          )
-          reportMeasurement(columns, count, gap)
+          const count =
+            segments.length === 0
+              ? 0
+              : Math.max(
+                  1,
+                  Math.round((columns.scrollWidth + gap) / (width + gap)),
+                )
+          reportMeasurement(columns, count, gap, layoutKey)
         })
       }
 
-      // Measure the page layout immediately - it will wait for the current fonts to finish loading.
       void measurePageLayout()
-
-      // If more fonts are loaded in the future, measure the page layout again.
-      document.fonts.addEventListener('loadingdone', measurePageLayout)
 
       return () => {
         isCancelled = true
         window.cancelAnimationFrame(frame)
-        document.fonts.removeEventListener('loadingdone', measurePageLayout)
         if (shouldCount) onPageCount?.(null)
       }
     },
@@ -129,6 +175,9 @@ export function ReaderChapterLayout({
       shouldMeasure,
       onPageCount,
       reportMeasurement,
+      textSizePercent,
+      shouldObserveLayoutKey,
+      typographyRevision,
     ],
   )
 

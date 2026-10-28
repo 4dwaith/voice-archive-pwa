@@ -71,6 +71,7 @@ const ProvideProgressStory: Decorator<StoryArgs> =
         highlightedSegmentId: null,
         selectSegment: () => undefined,
         highlightSegment: () => undefined,
+        reportLayoutKey: () => undefined,
         reportSegmentError: () => undefined,
       },
     }

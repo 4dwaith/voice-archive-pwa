@@ -51,16 +51,18 @@ function createContextValue(): ReaderContextValue {
       highlightedSegmentId: null,
       selectSegment: vi.fn(),
       highlightSegment: vi.fn(),
+      reportLayoutKey: () => undefined,
       reportSegmentError: vi.fn(),
     },
   }
 }
 
-function finishMeasurement(textSizePercent = 100) {
+function finishMeasurement(layoutKey = 'layout', textSizePercent = 100) {
   const props = vi.mocked(ReaderChapterLayout).mock.calls.at(-1)![0]
 
   act(() =>
     props.onPageMeasure!({
+      layoutKey,
       width: 320,
       height: 212,
       textSizePercent,
@@ -87,7 +89,7 @@ describe('PageMeasurer', () => {
     const { context } = renderMeasurer({
       chapterIds: ['second', 'first'],
       chapterSegments,
-      layoutId: 'layout',
+      layoutKey: 'layout',
     })
 
     expect(vi.mocked(ReaderChapterLayout).mock.lastCall![0]).toMatchObject({
@@ -101,7 +103,7 @@ describe('PageMeasurer', () => {
     expect(context.navigation.reportPageMeasurement).toHaveBeenLastCalledWith(
       expect.objectContaining({
         chapterId: 'second',
-        layoutId: 'layout',
+        layoutKey: 'layout',
         pages: [],
       }),
     )
@@ -118,11 +120,24 @@ describe('PageMeasurer', () => {
     expect(screen.queryByTestId('chapter-layout')).not.toBeInTheDocument()
   })
 
+  it('ignores a report for a different layout key', () => {
+    const { context } = renderMeasurer({
+      chapterIds: ['first'],
+      chapterSegments: { first: readerPageSegments },
+      layoutKey: 'current',
+    })
+
+    finishMeasurement('obsolete')
+
+    expect(context.navigation.reportPageMeasurement).not.toHaveBeenCalled()
+    expect(screen.getByTestId('chapter-layout')).toBeInTheDocument()
+  })
+
   it('hides measurement content from interaction and accessibility', () => {
     renderMeasurer({
       chapterIds: ['first'],
       chapterSegments: { first: readerPageSegments },
-      layoutId: 'layout',
+      layoutKey: 'layout',
     })
 
     expect(screen.getByTestId('chapter-layout').parentElement).toHaveAttribute(
@@ -139,7 +154,7 @@ describe('PageMeasurer', () => {
     const { rerender } = renderMeasurer({
       chapterIds,
       chapterSegments: { available: readerPageSegments },
-      layoutId: 'layout',
+      layoutKey: 'layout',
     })
 
     expect(ReaderChapterLayout).not.toHaveBeenCalled()
@@ -148,7 +163,7 @@ describe('PageMeasurer', () => {
       <PageMeasurer
         chapterIds={chapterIds}
         chapterSegments={{ missing: [], available: readerPageSegments }}
-        layoutId="layout"
+        layoutKey="layout"
       />,
     )
 
@@ -162,21 +177,21 @@ describe('PageMeasurer', () => {
     const { rerender, context } = renderMeasurer({
       chapterIds: ['first'],
       chapterSegments,
-      layoutId: 'old',
+      layoutKey: 'old',
     })
-    finishMeasurement()
+    finishMeasurement('old')
 
     rerender(
       <PageMeasurer
         chapterIds={['first']}
         chapterSegments={chapterSegments}
-        layoutId="new"
+        layoutKey="new"
       />,
     )
-    finishMeasurement()
+    finishMeasurement('new')
 
     expect(context.navigation.reportPageMeasurement).toHaveBeenLastCalledWith(
-      expect.objectContaining({ chapterId: 'first', layoutId: 'new' }),
+      expect.objectContaining({ chapterId: 'first', layoutKey: 'new' }),
     )
   })
 
@@ -184,7 +199,7 @@ describe('PageMeasurer', () => {
     const { rerender } = renderMeasurer({
       chapterIds: ['first'],
       chapterSegments: { first: readerPageSegments },
-      layoutId: 'layout',
+      layoutKey: 'layout',
     })
     finishMeasurement()
     const changedSegments = [...readerPageSegments]
@@ -193,7 +208,7 @@ describe('PageMeasurer', () => {
       <PageMeasurer
         chapterIds={['first']}
         chapterSegments={{ first: changedSegments }}
-        layoutId="layout"
+        layoutKey="layout"
       />,
     )
 

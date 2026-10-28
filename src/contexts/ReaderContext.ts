@@ -33,6 +33,7 @@ export type ReaderContextValue = {
     reportPageCount: (pageCount: number | null) => void
   }
   reader: {
+    reportLayoutKey: (key: string | null) => void
     textSizePercent: number
     selectedSegmentId: number | null
     highlightedSegmentId: number | null

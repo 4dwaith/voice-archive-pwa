@@ -18,6 +18,12 @@ npm install
 npm run dev
 ```
 
+Dexie defaults to `voice-archive`; set `VITE_DATABASE_NAME` before starting or
+building Vite to use another database with the same schema. Storybook dev/build
+explicitly default to persistent `voice-archive-storybook` (the same environment
+variable can override it). Vitest and Cypress use isolated test database names.
+Story switches do not clear Storybook data.
+
 ## Validation
 
 ```bash

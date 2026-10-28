@@ -1143,8 +1143,8 @@ it.each([2, 3, 4])(
     // Recreate a database as an older application version would have written it.
     // v2 has recordings only; v3/v4 also have incompatible structured projections.
     database.close()
-    await Dexie.delete('voice-archive')
-    const old = new Dexie('voice-archive')
+    await Dexie.delete(database.name)
+    const old = new Dexie(database.name)
     old.version(oldVersion).stores({
       recordings: 'id, createdAt',
       ...(oldVersion > 2

@@ -25,7 +25,7 @@ export type ReaderSegmentError =
   | 'text-mismatch'
   | 'sanitizer-unavailable'
 
-export type ReaderMeasurementTarget = { chapterId: string; layoutId: string }
+export type ReaderMeasurementTarget = { chapterId: string; layoutKey: string }
 
 type ReaderTextPosition = {
   segmentId: number
@@ -34,6 +34,7 @@ type ReaderTextPosition = {
 }
 
 export type ReaderLayoutMeasurement = {
+  layoutKey: string
   width: number
   height: number
   textSizePercent: number

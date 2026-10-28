@@ -2,6 +2,7 @@ import { createRef, type ReactNode } from 'react'
 import { readerPageSegments } from '../../../src/mock-data/readerPages'
 import type {
   ReaderPageMeasurement,
+  ReaderLayoutMeasurement,
   ReaderSegment,
 } from '../../../src/models/reader'
 import {
@@ -16,6 +17,8 @@ export function mountReaderPage({
   height = 252,
   waitForLayout = true,
   onReportPageCount,
+  onLayoutKeyChange,
+  onPageMeasure,
   onReportPageMeasurement,
   children,
   layoutOnly = false,
@@ -27,6 +30,8 @@ export function mountReaderPage({
   children?: ReactNode
   layoutOnly?: boolean
   onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
+  onPageMeasure?: (report: ReaderLayoutMeasurement) => void
+  onLayoutKeyChange?: (key: string | null) => void
   onReportPageCount?: (count: number | null) => void
 } = {}) {
   const controls = createRef<ReaderPageControls>()
@@ -38,6 +43,8 @@ export function mountReaderPage({
       height={height}
       ref={controls}
       layoutOnly={layoutOnly}
+      onPageMeasure={onPageMeasure}
+      onLayoutKeyChange={onLayoutKeyChange}
       onReportPageCount={onReportPageCount}
       onReportPageMeasurement={onReportPageMeasurement}
     >
@@ -62,6 +69,8 @@ export function mountReaderChapterLayout(
     width?: number
     height?: number
     waitForLayout?: boolean
+    onPageMeasure?: (report: ReaderLayoutMeasurement) => void
+    onLayoutKeyChange?: (key: string | null) => void
     onReportPageCount?: (count: number | null) => void
   } = {},
 ) {

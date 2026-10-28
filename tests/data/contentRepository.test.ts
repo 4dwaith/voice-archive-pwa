@@ -87,6 +87,10 @@ async function seedCachedContent(segmentCount = 7) {
   await database.segments.bulkAdd(segments)
 }
 
+it('uses the configured test database', () => {
+  expect(database.name).toBe('voice-archive-test')
+})
+
 beforeEach(async () => {
   await database.delete()
   await database.open()

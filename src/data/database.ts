@@ -15,7 +15,9 @@ type VoiceArchiveDatabase = Dexie & {
   contentPositions: EntityTable<SavedContentPosition, 'bookId'>
 }
 
-export const database = new Dexie('voice-archive') as VoiceArchiveDatabase
+export const database = new Dexie(
+  import.meta.env.VITE_DATABASE_NAME || 'voice-archive',
+) as VoiceArchiveDatabase
 
 // Version 1 matches databases created before Dexie was introduced.
 database.version(1).stores({

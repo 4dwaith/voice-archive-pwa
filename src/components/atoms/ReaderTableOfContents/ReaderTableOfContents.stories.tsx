@@ -59,6 +59,7 @@ const ProvideTocStory: Decorator<StoryArgs> = function ProvideTocStory(Story) {
       highlightedSegmentId: null,
       selectSegment: () => undefined,
       highlightSegment: () => undefined,
+      reportLayoutKey: () => undefined,
       reportSegmentError: () => undefined,
     },
   }

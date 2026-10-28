@@ -35,6 +35,7 @@ it('fills the footer with page cells and jumps directly to a clicked destination
       highlightedSegmentId: null,
       selectSegment: () => undefined,
       highlightSegment: () => undefined,
+      reportLayoutKey: () => undefined,
       reportSegmentError: () => undefined,
     },
   }

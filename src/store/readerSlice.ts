@@ -12,6 +12,7 @@ import type {
 } from '../models/reader'
 
 export type ReaderState = {
+  layoutKey: string | null
   measuredTargets: ReaderMeasurementTarget[]
   selectedSectionId: number | null
   sectionExpansion: Record<number, boolean>
@@ -34,6 +35,7 @@ export type ReaderState = {
 }
 
 const initialState: ReaderState = {
+  layoutKey: null,
   measuredTargets: [],
   selectedSectionId: null,
   sectionExpansion: {},
@@ -66,15 +68,18 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    reportLayoutKey(state, action: PayloadAction<string | null>) {
+      state.layoutKey = action.payload
+    },
     reportPageMeasurement(state, action: PayloadAction<ReaderPageMeasurement>) {
-      const { chapterId, layoutId } = action.payload
+      const { chapterId, layoutKey } = action.payload
       if (
         !state.measuredTargets.some(
           (target) =>
-            target.chapterId === chapterId && target.layoutId === layoutId,
+            target.chapterId === chapterId && target.layoutKey === layoutKey,
         )
       ) {
-        state.measuredTargets.push({ chapterId, layoutId })
+        state.measuredTargets.push({ chapterId, layoutKey })
       }
     },
     setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
@@ -139,6 +144,7 @@ const readerSlice = createSlice({
 })
 
 export const {
+  reportLayoutKey,
   reportPageMeasurement,
   setPageScope,
   requestPageNavigation,

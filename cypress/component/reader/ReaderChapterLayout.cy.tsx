@@ -16,6 +16,105 @@ afterEach(() => {
 })
 
 describe('ReaderChapterLayout', () => {
+  it('reports an empty layout key without enabling count or measurement', () => {
+    const reportKey = cy.stub()
+
+    mountReaderPage({
+      waitForLayout: false,
+      children: (
+        <ReaderChapterLayout
+          segments={[]}
+          page={1}
+          textSizePercent={100}
+          onLayoutKeyChange={reportKey}
+        />
+      ),
+    })
+
+    cy.wrap(reportKey).should('have.been.calledWithMatch', /^[a-f0-9]{64}$/)
+    cy.then(() => expect(reportKey.firstCall.args[0]).to.equal(null))
+    cy.get('[data-reader-host]').invoke('css', 'width', '0px')
+
+    cy.wrap(reportKey).should(() =>
+      expect(reportKey.lastCall.args[0]).to.equal(null),
+    )
+  })
+
+  it('settles a failed webfont to a reusable fallback key', () => {
+    const reportKey = cy.stub()
+
+    cy.document().then((document) => {
+      const face = new FontFace(
+        'ReaderUnavailable',
+        'url(data:font/woff2;base64,AA==)',
+      )
+      document.fonts.add(face)
+    })
+    mountReaderChapterLayout({
+      onLayoutKeyChange: reportKey,
+      waitForLayout: false,
+    })
+    cy.get('[data-reader-host]').invoke(
+      'css',
+      'font-family',
+      'ReaderUnavailable, monospace',
+    )
+
+    cy.document().should((document) => {
+      const face = Array.from(document.fonts).find(
+        (face) => face.family === 'ReaderUnavailable',
+      )!
+
+      expect(face.status).to.equal('error')
+    })
+    waitForChapterLayout()
+    cy.wrap(reportKey).should(() =>
+      expect(reportKey.lastCall.args[0]).to.match(/^[a-f0-9]{64}$/),
+    )
+    cy.document().then((document) => {
+      const face = Array.from(document.fonts).find(
+        (face) => face.family === 'ReaderUnavailable',
+      )!
+
+      document.fonts.delete(face)
+    })
+  })
+
+  it('keeps its key for page changes and replaces it for fractional size and font changes', () => {
+    const reportKey = cy.stub()
+    const layout = mountReaderChapterLayout({ onLayoutKeyChange: reportKey })
+    let originalKey: string
+
+    cy.then(() => {
+      originalKey = reportKey.lastCall.args[0]
+    })
+    layout.updateProps({ page: 2 })
+
+    cy.then(() =>
+      expect(reportKey.getCalls().map((call) => call.args[0])).to.deep.equal([
+        null,
+        originalKey,
+      ]),
+    )
+    cy.get('[data-reader-host]').invoke('css', 'width', '360.1px')
+
+    cy.wrap(reportKey).should(() =>
+      expect(reportKey.lastCall.args[0])
+        .to.be.a('string')
+        .and.not.equal(originalKey),
+    )
+    cy.then(() => {
+      originalKey = reportKey.lastCall.args[0]
+    })
+    cy.get('[data-reader-host]').invoke('css', 'font-family', 'serif')
+
+    cy.wrap(reportKey).should(() =>
+      expect(reportKey.lastCall.args[0])
+        .to.be.a('string')
+        .and.not.equal(originalKey),
+    )
+  })
+
   it('fills its parent and clips one of three known pages, including fractional widths', () => {
     mountReaderChapterLayout({ width: 360.4 })
 
@@ -199,9 +298,11 @@ describe('ReaderChapterLayout', () => {
     assertTextIsOnVisiblePage('strong > em', 'word017')
   })
 
-  it('does not publish a count from a cancelled measurement', () => {
+  it('does not publish keys or results from cancelled font work', () => {
     let finishOldLoad: () => void
     const reportPageCount = cy.stub()
+    const reportMeasurement = cy.stub()
+    const reportKey = cy.stub()
 
     cy.document().then((document) => {
       const load = document.fonts.load.bind(document.fonts)
@@ -217,6 +318,8 @@ describe('ReaderChapterLayout', () => {
     const layout = mountReaderChapterLayout({
       waitForLayout: false,
       onReportPageCount: reportPageCount,
+      onPageMeasure: reportMeasurement,
+      onLayoutKeyChange: reportKey,
     })
     cy.wrap(null).should(() => {
       expect(finishOldLoad).to.be.a('function')
@@ -251,12 +354,23 @@ describe('ReaderChapterLayout', () => {
         .filter((count) => count !== null)
 
       expect(completedCounts).to.deep.equal([4])
+      expect(reportMeasurement).to.have.been.calledOnce
+      expect(reportMeasurement.firstCall.args[0].layoutKey).to.equal(
+        reportKey.lastCall.args[0],
+      )
+      expect(
+        reportKey
+          .getCalls()
+          .map((call) => call.args[0])
+          .filter((key) => key !== null),
+      ).to.have.length(1)
     })
   })
 
   it('reports exact canonical boundaries for the rendered chapter', () => {
     const report = cy.stub()
     const count = cy.stub()
+    const reportKey = cy.stub()
     const segment = {
       ...continuingReaderSegment,
       html_content: continuingReaderSegment.html_content
@@ -279,6 +393,7 @@ describe('ReaderChapterLayout', () => {
           textSizePercent={100}
           shouldCount
           shouldMeasure
+          onLayoutKeyChange={reportKey}
           onPageCount={count}
           onPageMeasure={report}
         />
@@ -289,6 +404,7 @@ describe('ReaderChapterLayout', () => {
     cy.then(() => {
       const result = report.firstCall.args[0]
 
+      expect(result.layoutKey).to.equal(reportKey.lastCall.args[0])
       expect(result).to.include({ height: 212, textSizePercent: 100 })
       expect(result.width).to.be.closeTo(320.4, 0.02)
       expect(result.unmappableSegmentIds).to.deep.equal([])
