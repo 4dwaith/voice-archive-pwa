@@ -108,14 +108,8 @@ it('gets section preorder directly from the database index', async () => {
   expect(buildSectionHierarchyIndexes(sections).roots.get(30)?.id).toBe(200)
 })
 
-it('removes only the selected book content and position', async () => {
+it('removes only the selected book content', async () => {
   await seedCachedContent()
-  await database.contentPositions.put({
-    bookId,
-    version,
-    sourceKey: 'segment-1',
-    offset: 0,
-  })
   await database.content.put({
     ...(await database.content.get(bookId))!,
     bookId: 99,
@@ -125,6 +119,5 @@ it('removes only the selected book content and position', async () => {
 
   expect(await database.sections.count()).toBe(0)
   expect(await database.segments.count()).toBe(0)
-  expect(await database.contentPositions.get(bookId)).toBeUndefined()
   expect(await database.content.get(99)).toBeDefined()
 })

@@ -1,4 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { readReaderPreferences } from '../data/readerPreferences'
+import { getGraphemeBoundaries } from '../components/atoms/ReaderChapterLayout/getGraphemeBoundaries'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { ReaderPageNavigation, ReaderSection } from '../models/reader'
 import { database } from '../data/database'
@@ -9,6 +11,7 @@ import {
 import { sanitizeReaderSegment } from '../components/atoms/ReaderSegmentContent/sanitizeReaderSegment'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
+  hasReaderNavigated,
   openReader,
   closeReader,
   reconcileReaderAnchor,
@@ -28,10 +31,22 @@ import {
   resolvePageSectionSelection,
 } from './resolveAnchorPage'
 
-export function useReaderNavigation(bookId?: number, contentVersion?: string) {
+export function useReaderNavigation(
+  bookId?: number,
+  contentVersion?: string,
+  restorePosition = true,
+) {
   const dispatch = useAppDispatch()
   const scope = useAppSelector(getReaderScope)
   const anchor = useAppSelector(getReaderAnchor)
+  const hasNavigated = useAppSelector(hasReaderNavigated)
+  const savedPosition = useMemo(() => {
+    const position =
+      restorePosition && bookId !== undefined
+        ? readReaderPreferences().positions[bookId]
+        : undefined
+    return position?.version === contentVersion ? position : undefined
+  }, [bookId, contentVersion, restorePosition])
   const selectedSectionId = useAppSelector(getSelectedSectionId)
   const intent = useAppSelector(getPageNavigationIntent)
   const layoutKey = useAppSelector(getLayoutKey)
@@ -44,6 +59,7 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
     bookId,
     contentVersion,
     layoutKey,
+    hasNavigated,
     isActive ? anchor : null,
   ])
 
@@ -89,9 +105,45 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
               .first()
           : undefined
 
+        let openingOffset = 0
+        if (!anchor && !hasNavigated && savedPosition && hasContent) {
+          const savedSegment = await database.segments
+            .where('[bookId+version+source_key]')
+            .equals([bookId, contentVersion, savedPosition.sourceKey])
+            .first()
+
+          // A missing target is not invalid until the segment stream has ended.
+          if (
+            !savedSegment &&
+            !content.complete &&
+            content.progress?.segmentNextOffset !== null
+          )
+            return {
+              queryKey,
+              hasContent,
+              chapterInfo,
+              segments: [],
+              firstAnchor: null,
+            }
+
+          if (
+            savedSegment &&
+            sanitizeReaderSegment(savedSegment).isValid &&
+            savedSegment.text_content.length > 0 &&
+            savedPosition.offset <
+              Array.from(savedSegment.text_content).length &&
+            getGraphemeBoundaries(savedSegment.text_content).some(
+              (boundary) => boundary.codePoint === savedPosition.offset,
+            )
+          ) {
+            anchorSegment = savedSegment
+            openingOffset = savedPosition.offset
+          }
+        }
+
         // On entry, choose readable text from the available opening chapters.
         // Stop at a download gap rather than skipping ahead to later content.
-        if (!anchor && chapterInfo) {
+        if (!anchor && !anchorSegment && chapterInfo) {
           for (const id of chapterInfo.chapterIds) {
             if (!chapterInfo.availableChapterIds.has(id)) break
             const candidates = await readChapterSegments(
@@ -138,7 +190,7 @@ export function useReaderNavigation(bookId?: number, contentVersion?: string) {
           segments: currentChapterSegments ?? [],
           measurement,
           firstAnchor: anchorSegment
-            ? { segmentId: anchorSegment.id, offset: 0 }
+            ? { segmentId: anchorSegment.id, offset: openingOffset }
             : null,
         }
       },

@@ -1,4 +1,5 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
+import { READER_PREFERENCES_KEY } from '../../src/data/readerPreferences'
 import mediaFixture from '../fixtures/content-media.json'
 import type { contentTestHarness } from '../../src/testing/contentTestHarness'
 import type {
@@ -926,4 +927,72 @@ Then('the text shows page {int}', (page: number) => {
 
 When('I press the previous-page key', () => {
   cy.get('body').type('{pageup}')
+})
+
+When('I enlarge the text and move to an interior position', () => {
+  cy.findByRole('button', { name: 'Make text larger' }).click()
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'aria-busy',
+    'false',
+  )
+  cy.findByRole('button', { name: /^Forward 1 page$/ })
+    .should('be.enabled')
+    .click()
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'data-reader-page',
+    '2',
+  )
+  cy.window()
+    .should((win) => {
+      const saved = JSON.parse(
+        win.localStorage.getItem(READER_PREFERENCES_KEY)!,
+      )
+      expect(saved.textSizeStep).to.equal(1)
+      expect(saved.positions[id].sourceKey).to.equal('a')
+      expect(saved.positions[id].offset).to.be.greaterThan(0)
+    })
+    .then((win) => {
+      cy.wrap(
+        JSON.parse(win.localStorage.getItem(READER_PREFERENCES_KEY)!).positions[
+          id
+        ],
+      ).as('savedPosition')
+    })
+})
+
+When('I reload the reader', () => {
+  cy.reload()
+})
+
+Then('the saved interior position and text size are restored', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .and('have.attr', 'data-reader-page', '2')
+  cy.contains('Text size 112.5 percent').should('exist')
+  cy.get('@savedPosition').then((position) => {
+    cy.window().should((win) => {
+      expect(
+        JSON.parse(win.localStorage.getItem(READER_PREFERENCES_KEY)!).positions[
+          id
+        ],
+      ).to.deep.equal(position)
+    })
+  })
+})
+
+When('I save a position for an obsolete version and reload', () => {
+  cy.window().then((win) => {
+    win.localStorage.setItem(
+      READER_PREFERENCES_KEY,
+      JSON.stringify({
+        textSizeStep: 0,
+        positions: {
+          [id]: { version: 'obsolete', sourceKey: 'b', offset: 2 },
+        },
+      }),
+    )
+  })
+  cy.reload()
 })

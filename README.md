@@ -24,6 +24,21 @@ explicitly default to persistent `voice-archive-storybook` (the same environment
 variable can override it). Vitest and Cypress use isolated test database names.
 Story switches do not clear Storybook data.
 
+Reader preferences use the localStorage key `voice-archive-reader`. Set
+`VITE_READER_PREFERENCES_KEY` before starting or building Vite to choose another
+key. Storybook dev/build default to `voice-archive-reader-storybook`, with the
+same variable available as an override. Vitest, Cypress component tests and
+Cypress application tests use `voice-archive-reader-test`,
+`voice-archive-reader-component-test` and `voice-archive-reader-e2e-test`
+respectively. All stores run the same persistence middleware; tests clear their
+own preferences between cases. Story switches retain Storybook preferences,
+while reader stories explicitly start at their seeded scenario position.
+
+Dexie schema version 8 drops the obsolete `contentPositions` table when the
+application next opens the database. Historical schema versions remain defined;
+other cached data is retained. Legacy positions are discarded, without copying
+them into localStorage or changing existing localStorage preferences.
+
 ## Validation
 
 ```bash

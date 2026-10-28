@@ -27,6 +27,7 @@ export type ReaderState = {
   pageScope: ReaderPageNavigation['scope']
 
   scope: ReaderScope | null
+  hasNavigated: boolean
   anchor: ReaderAnchor | null
 
   pageNavigationIntent: {
@@ -53,6 +54,7 @@ const initialState: ReaderState = {
   pageScope: 'local',
 
   scope: null,
+  hasNavigated: false,
   anchor: null,
 
   pageNavigationIntent: null,
@@ -155,6 +157,7 @@ const readerSlice = createSlice({
           payload.pageCount,
         )
         if (pageNumber === null) return
+        state.hasNavigated = true
         state.pageNavigationIntent = {
           requestId: payload.requestId,
           scope: payload.scope,
@@ -192,6 +195,7 @@ const readerSlice = createSlice({
       state.pageNavigationIntent = null
     },
     selectSection(state, action: PayloadAction<number | null>) {
+      state.hasNavigated = true
       state.selectedSectionId = action.payload
       state.tocNavigationError = null
       state.pageNavigationIntent = null
@@ -214,6 +218,7 @@ const readerSlice = createSlice({
       state.areControlsVisible = true
       state.selectedSectionId = null
       state.tocNavigationError = null
+      state.hasNavigated = false
       state.scope = action.payload
       state.anchor = null
       state.layoutKey = null
@@ -238,7 +243,7 @@ const readerSlice = createSlice({
     ) {
       if (!hasMatchingScope(state.scope, action.payload)) return
       if (!action.payload.hasContent) state.anchor = null
-      else state.anchor ??= action.payload.firstAnchor
+      else if (!state.hasNavigated) state.anchor ??= action.payload.firstAnchor
     },
     setReaderAnchor(
       state,
@@ -247,6 +252,7 @@ const readerSlice = createSlice({
       >,
     ) {
       if (!hasMatchingScope(state.scope, action.payload)) return
+      state.hasNavigated = true
       state.anchor = action.payload.anchor
       if (action.payload.sectionId !== undefined)
         state.selectedSectionId = action.payload.sectionId
@@ -277,6 +283,7 @@ const readerSlice = createSlice({
     getPageNavigationError: (state) => state.pageNavigationError,
     getTocNavigationError: (state) => state.tocNavigationError,
     getAreControlsVisible: (state) => state.areControlsVisible,
+    hasReaderNavigated: (state) => state.hasNavigated,
     getReaderAnchor: (state) => state.anchor,
     getReaderScope: (state) => state.scope,
     getLayoutKey: (state) => state.layoutKey,
@@ -314,6 +321,7 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  hasReaderNavigated,
   getPageNavigationIntent,
   getPageNavigationError,
   getAreControlsVisible,

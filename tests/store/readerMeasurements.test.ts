@@ -250,48 +250,61 @@ describe('chapter measurement commits', () => {
     expect(await database.content.get(7)).toBeUndefined()
   })
 
-  it('preserves version-five content and legacy data on migration', async () => {
-    const content = await seedContent()
-    const schemas = Object.fromEntries(
-      database.tables
-        .filter((table) => table.name !== 'measurements')
-        .map((table) => [
-          table.name,
-          [
-            table.schema.primKey.src,
-            ...table.schema.indexes
-              .filter((index) => index.name !== '[bookId+version+id]')
-              .map((index) => index.src),
-          ].join(', '),
-        ]),
-    )
-    await database.delete()
-    const old = new Dexie(database.name)
-    old.version(5).stores(schemas)
-    await old.table('content').put(content)
-    await old.table('sections').put({ bookId: 7, version: 'version', id: 10 })
-    await old
-      .table('segments')
-      .put({ bookId: 7, version: 'version', sequence: 0, id: 1 })
-    await old
-      .table('recordings')
-      .put({ id: 'voice', blob: new Blob(['voice']) })
-    await old.table('contentPositions').put({ bookId: 7, offset: 3 })
-    old.close()
+  it.each([
+    [5, []],
+    [7, [createMeasurement()]],
+  ] as const)(
+    'upgrades version %i while dropping only legacy positions',
+    async (oldVersion, measurements) => {
+      const content = await seedContent()
+      const schemas = Object.fromEntries(
+        database.tables
+          .filter((table) => oldVersion >= 6 || table.name !== 'measurements')
+          .map((table) => [
+            table.name,
+            [
+              table.schema.primKey.src,
+              ...table.schema.indexes
+                .filter(
+                  (index) =>
+                    oldVersion >= 7 || index.name !== '[bookId+version+id]',
+                )
+                .map((index) => index.src),
+            ].join(', '),
+          ]),
+      )
+      await database.delete()
+      const old = new Dexie(database.name)
+      old.version(oldVersion).stores({ ...schemas, contentPositions: 'bookId' })
+      await old.table('content').put(content)
+      await old.table('sections').put({ bookId: 7, version: 'version', id: 10 })
+      await old
+        .table('segments')
+        .put({ bookId: 7, version: 'version', sequence: 0, id: 1 })
+      await old
+        .table('recordings')
+        .put({ id: 'voice', blob: new Blob(['voice']) })
+      await old.table('contentPositions').put({ bookId: 7, offset: 3 })
+      if (measurements.length > 0)
+        await old.table('measurements').bulkPut([...measurements])
+      old.close()
 
-    await database.open()
+      await database.open()
 
-    expect(await database.content.get(7)).toEqual(content)
-    expect(await database.sections.count()).toBe(1)
-    expect(await database.segments.count()).toBe(1)
-    expect(await database.recordings.count()).toBe(1)
-    expect((await database.contentPositions.get(7))?.offset).toBe(3)
-    expect(await database.measurements.count()).toBe(0)
-    expect(
-      await database.segments
-        .where('[bookId+version+id]')
-        .equals([7, 'version', 1])
-        .count(),
-    ).toBe(1)
-  })
+      expect(await database.content.get(7)).toEqual(content)
+      expect(await database.sections.count()).toBe(1)
+      expect(await database.segments.count()).toBe(1)
+      expect(await database.recordings.count()).toBe(1)
+      expect(
+        database.backendDB().objectStoreNames.contains('contentPositions'),
+      ).toBe(false)
+      expect(await database.measurements.toArray()).toEqual(measurements)
+      expect(
+        await database.segments
+          .where('[bookId+version+id]')
+          .equals([7, 'version', 1])
+          .count(),
+      ).toBe(1)
+    },
+  )
 })

@@ -1,0 +1,57 @@
+import { createListenerMiddleware } from '@reduxjs/toolkit'
+import { database } from '../data/database'
+import {
+  writeReaderPreferences,
+  type ReaderPreferences,
+} from '../data/readerPreferences'
+import type { ReaderAnchor } from '../models/reader'
+import { getReaderAnchor, getReaderScope } from './readerSlice'
+import { selectTextSizeStep } from './textSizeSlice'
+import type { AppDispatch, RootState } from './store'
+
+export function createReaderPreferencesListener(
+  preferences: ReaderPreferences,
+) {
+  const listener = createListenerMiddleware<RootState, AppDispatch>()
+  const pendingSaves = new Map<number, ReaderAnchor>()
+
+  listener.startListening({
+    predicate: (_action, current, previous) =>
+      selectTextSizeStep(current) !== selectTextSizeStep(previous) ||
+      getReaderAnchor(current) !== getReaderAnchor(previous),
+    effect: async (_action, api) => {
+      const state = api.getState()
+      const previous = api.getOriginalState()
+      const step = selectTextSizeStep(state)
+      if (step !== selectTextSizeStep(previous)) {
+        preferences.textSizeStep = step
+        writeReaderPreferences(preferences)
+      }
+
+      const anchor = getReaderAnchor(state)
+      const scope = getReaderScope(state)
+      if (!anchor || !scope || anchor === getReaderAnchor(previous)) return
+
+      // Resolve numeric IDs in the captured dataset; only the latest book save wins.
+      pendingSaves.set(scope.bookId, anchor)
+      try {
+        const segment = await database.segments
+          .where('[bookId+version+id]')
+          .equals([scope.bookId, scope.contentVersion, anchor.segmentId])
+          .first()
+        if (!segment || pendingSaves.get(scope.bookId) !== anchor) return
+
+        preferences.positions[scope.bookId] = {
+          version: scope.contentVersion,
+          sourceKey: segment.source_key,
+          offset: anchor.offset,
+        }
+        writeReaderPreferences(preferences)
+      } catch {
+        // A cache read failure must not interrupt reading.
+      }
+    },
+  })
+
+  return listener
+}

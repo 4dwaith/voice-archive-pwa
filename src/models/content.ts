@@ -29,9 +29,3 @@ export type CachedSegment = SegmentReadOutput & {
   bookId: number
   version: string
 }
-export type SavedContentPosition = {
-  bookId: number
-  version: string
-  sourceKey: string
-  offset: number
-}

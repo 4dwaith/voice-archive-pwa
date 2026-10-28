@@ -140,3 +140,16 @@ Feature: Structured book synchronization
     When I press the previous-page key
     Then the text shows page 1
     And the reader controls are hidden
+
+  Scenario: Reload restores text size and an interior segment position
+    Given a synchronization book with two chapters
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I enlarge the text and move to an interior position
+    And I reload the reader
+    Then the saved interior position and text size are restored
+
+  Scenario: A saved position from another version falls back on reload
+    Given a fully cached synchronization book
+    When I save a position for an obsolete version and reload
+    Then I see its first reader page

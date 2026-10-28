@@ -5,7 +5,6 @@ import type {
   CachedContent,
   CachedSection,
   CachedSegment,
-  SavedContentPosition,
 } from '../models/content'
 
 type VoiceArchiveDatabase = Dexie & {
@@ -13,7 +12,6 @@ type VoiceArchiveDatabase = Dexie & {
   content: EntityTable<CachedContent, 'bookId'>
   sections: Table<CachedSection, [number, string, number]>
   segments: Table<CachedSegment, [number, string, number]>
-  contentPositions: EntityTable<SavedContentPosition, 'bookId'>
   measurements: Table<StoredReaderMeasurement, [number, string, string, string]>
 }
 
@@ -80,4 +78,9 @@ database.version(6).stores({
 database.version(7).stores({
   segments:
     '[bookId+version+sequence], bookId, [bookId+version], [bookId+version+id], [bookId+version+section_id], [bookId+version+source_key], [bookId+version+root_section_id+sequence]',
+})
+
+// Reading positions now live in localStorage; drop only the obsolete object store.
+database.version(8).stores({
+  contentPositions: null,
 })

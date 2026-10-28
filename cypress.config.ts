@@ -28,6 +28,9 @@ export default defineConfig({
       bundler: 'vite',
       viteConfig: {
         define: {
+          'import.meta.env.VITE_READER_PREFERENCES_KEY': JSON.stringify(
+            'voice-archive-reader-component-test',
+          ),
           'import.meta.env.VITE_DATABASE_NAME': JSON.stringify(
             'voice-archive-component-test',
           ),
@@ -67,6 +70,12 @@ export default defineConfig({
       on(
         'file:preprocessor',
         createBundler({
+          define: {
+            'import.meta.env.VITE_READER_PREFERENCES_KEY': JSON.stringify(
+              process.env.VITE_READER_PREFERENCES_KEY ||
+                'voice-archive-reader-e2e-test',
+            ),
+          },
           plugins: [createEsbuildPlugin(config)],
         }),
       )

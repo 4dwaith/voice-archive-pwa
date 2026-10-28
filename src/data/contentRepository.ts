@@ -9,7 +9,6 @@ export async function deleteLocalContent(bookId: number) {
       database.content,
       database.sections,
       database.segments,
-      database.contentPositions,
       database.measurements,
     ],
     async () => {
@@ -18,7 +17,6 @@ export async function deleteLocalContent(bookId: number) {
       await database.sections.where('bookId').equals(bookId).delete()
       await database.segments.where('bookId').equals(bookId).delete()
 
-      await database.contentPositions.delete(bookId)
       await database.measurements.where('bookId').equals(bookId).delete()
     },
   )

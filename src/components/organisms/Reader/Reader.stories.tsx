@@ -79,7 +79,11 @@ function ShowReader({
         }}
       >
         <MemoryRouter initialEntries={[`/books/${bookId}`]}>
-          <Reader bookId={bookId} contentVersion={readerStoryContentVersion} />
+          <Reader
+            bookId={bookId}
+            contentVersion={readerStoryContentVersion}
+            restorePosition={false}
+          />
         </MemoryRouter>
       </div>
     </Provider>

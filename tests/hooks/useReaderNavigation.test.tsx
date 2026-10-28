@@ -2,6 +2,7 @@
 import 'fake-indexeddb/auto'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { READER_PREFERENCES_KEY } from '../../src/data/readerPreferences'
 import { database } from '../../src/data/database'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 import type { ReactNode } from 'react'
@@ -38,6 +39,81 @@ describe('Reader anchor navigation', () => {
     })
     return { ...hook, store }
   }
+
+  function saveOpeningPosition(sourceKey = 'text', offset = 2) {
+    localStorage.setItem(
+      READER_PREFERENCES_KEY,
+      JSON.stringify({
+        textSizeStep: 0,
+        positions: { 7: { version: 'version', sourceKey, offset } },
+      }),
+    )
+  }
+
+  it('waits for a saved target instead of opening interim text', async () => {
+    const content = await seedContent()
+    const target = (await database.segments.toArray())[0]
+    await database.segments.delete([7, 'version', target.sequence])
+    await database.content.put({ ...content, complete: false })
+    saveOpeningPosition()
+    const { result, store } = renderNavigation()
+
+    await waitFor(() => expect(result.current.chapterInfo).toBeDefined())
+    expect(store.getState().reader.anchor).toBeNull()
+
+    await act(async () => {
+      await database.segments.put({ ...target, id: 99 })
+    })
+    await waitFor(() =>
+      expect(store.getState().reader.anchor).toEqual({
+        segmentId: 99,
+        offset: 2,
+      }),
+    )
+  })
+
+  it('keeps newer direct navigation when saved content arrives later', async () => {
+    saveOpeningPosition()
+    const { result, store } = renderNavigation()
+    await waitFor(() => expect(store.getState().reader.scope?.bookId).toBe(7))
+
+    act(() => {
+      store.dispatch(
+        setReaderAnchor({
+          bookId: 7,
+          contentVersion: 'version',
+          anchor: { segmentId: 2, offset: 1 },
+        }),
+      )
+    })
+    await act(seedContent)
+    await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
+
+    expect(store.getState().reader.anchor).toEqual({
+      segmentId: 2,
+      offset: 1,
+    })
+  })
+
+  it.each([
+    ['missing', 0],
+    ['text', 99],
+    ['unmappable', 1],
+  ])(
+    'falls back from invalid saved target %s at %i',
+    async (sourceKey, offset) => {
+      await seedContent()
+      saveOpeningPosition(sourceKey, offset)
+      const { store } = renderNavigation()
+
+      await waitFor(() =>
+        expect(store.getState().reader.anchor).toEqual({
+          segmentId: 1,
+          offset: 0,
+        }),
+      )
+    },
+  )
 
   it('initializes when content arrives and derives pages from committed records', async () => {
     const { result, store } = renderNavigation()

@@ -16,9 +16,13 @@ const config: StorybookConfig = {
   framework: '@storybook/react-vite',
   staticDirs: ['../public'],
   viteFinal: async (viteConfig) => {
-    // Both dev and build use the same persistent, isolated Storybook database.
+    // Both dev and build use the same isolated, persistent Storybook storage.
     viteConfig.define = {
       ...viteConfig.define,
+      'import.meta.env.VITE_READER_PREFERENCES_KEY': JSON.stringify(
+        process.env.VITE_READER_PREFERENCES_KEY ||
+          'voice-archive-reader-storybook',
+      ),
       'import.meta.env.VITE_DATABASE_NAME': JSON.stringify(
         process.env.VITE_DATABASE_NAME || 'voice-archive-storybook',
       ),

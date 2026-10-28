@@ -101,6 +101,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 try {
   temporaryDirectory = await mkdtemp(resolve(tmpdir(), 'voice-archive-e2e-'))
   process.env.VITE_DATABASE_NAME = 'voice-archive-e2e-test'
+  process.env.VITE_READER_PREFERENCES_KEY = 'voice-archive-reader-e2e-test'
   process.env.VITE_API_BASE_URL = apiUrl
   process.env.VITE_COVERAGE = coverage ? 'true' : 'false'
   process.env.VITE_E2E_TESTING_HARNESS = 'true'

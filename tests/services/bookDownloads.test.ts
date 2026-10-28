@@ -434,24 +434,17 @@ it('preserves the complete cache but reports an error for a malformed manifest',
   expect((await database.content.get(7))?.complete).toBe(true)
 })
 
-it('clears an old version and saved position and downloads the replacement in the same request', async () => {
-  // Establish old content and a logical position tied to that publication.
+it('clears an old version and downloads the replacement in the same request', async () => {
+  // Establish old content tied to that publication.
   await loadBook()
-  await database.contentPositions.put({
-    bookId: 7,
-    version,
-    sourceKey: 'a',
-    offset: 1,
-  })
 
   // Only the server version changes; the next open must replace the local projection.
   serverManifest = { ...serverManifest, content_version: nextVersion }
 
   await loadBook()
 
-  // The new cache must contain no old-version rows or old logical position.
+  // The new cache must contain no old-version rows.
   expect((await database.content.get(7))?.version).toBe(nextVersion)
-  expect(await database.contentPositions.get(7)).toBeUndefined()
   expect(await database.segments.count()).toBe(2)
   expect(
     (await database.segments.toArray()).every(
@@ -559,27 +552,20 @@ it('bounds retries if the publication keeps changing', async () => {
 it.each(['empty', 'pdf_only'] as const)(
   'keeps a %s book open as no-text and removes old content',
   async (state) => {
-    // Start with old cached text and a saved position, then withdraw publication.
+    // Start with old cached text, then withdraw publication.
     await loadBook()
-    await database.contentPositions.put({
-      bookId: 7,
-      version,
-      sourceKey: 'a',
-      offset: 1,
-    })
 
     serverManifest = { ...empty, state }
 
     store.dispatch(requestBookLoad(7))
     const downloadState = await waitForDownload('empty')
 
-    // Redux describes no text; every old structured record/position is gone.
+    // Redux describes no text; every old structured record is gone.
     expect(downloadState.manifest?.state).toBe(state)
     expect(downloadState.segmentStoredCount).toBe(0)
     expect(await database.content.count()).toBe(0)
     expect(await database.sections.count()).toBe(0)
     expect(await database.segments.count()).toBe(0)
-    expect(await database.contentPositions.count()).toBe(0)
   },
 )
 
@@ -835,12 +821,6 @@ it('resumes section preorder and resolves roots across the stored page boundary'
 
 it('discards partial checkpoints when the next manifest announces a new version', async () => {
   await interruptAfterFirstSegmentBatch()
-  await database.contentPositions.put({
-    bookId: 7,
-    version,
-    sourceKey: 'a',
-    offset: 1,
-  })
 
   serverManifest = { ...published, content_version: nextVersion }
   respondToRequest = respondWithBookFixture
@@ -854,7 +834,6 @@ it('discards partial checkpoints when the next manifest announces a new version'
     getRequestedOffsets(httpRequests.slice(requestCount), 'segments'),
   ).toEqual([0, 1])
   expect((await database.content.get(7))?.version).toBe(nextVersion)
-  expect(await database.contentPositions.get(7)).toBeUndefined()
   expect(
     (await database.segments.toArray()).every(
       (row) => row.version === nextVersion,
@@ -1138,7 +1117,7 @@ it('completes synchronization without rereading stored segment text', async () =
 })
 
 it.each([2, 3, 4])(
-  'upgrades schema v%s preserving recordings and saved positions',
+  'upgrades schema v%s preserving recordings',
   async (oldVersion) => {
     // Recreate a database as an older application version would have written it.
     // v2 has recordings only; v3/v4 also have incompatible structured projections.
@@ -1167,7 +1146,7 @@ it.each([2, 3, 4])(
       blob: new Blob(['voice']),
     })
 
-    // These old content rows should be cleared; the logical position should survive.
+    // Old projections are cleared; legacy positions are removed by schema v8.
     if (oldVersion > 2) {
       await old
         .table('content')
@@ -1185,8 +1164,6 @@ it.each([2, 3, 4])(
     expect(await database.recordings.count()).toBe(1)
     expect(await database.content.count()).toBe(0)
     expect(await database.segments.count()).toBe(0)
-    if (oldVersion > 2)
-      expect((await database.contentPositions.get(7))?.offset).toBe(3)
 
     // Refetching the projection after upgrade must also leave recordings intact.
     await loadBook()

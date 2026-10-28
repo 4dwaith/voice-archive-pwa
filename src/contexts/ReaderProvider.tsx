@@ -29,15 +29,21 @@ export function ReaderProvider({
   children,
   bookId,
   contentVersion,
+  restorePosition = true,
 }: {
   children:
     ReactNode | ((data: ReturnType<typeof useReaderNavigation>) => ReactNode)
   bookId?: number
+  restorePosition?: boolean
   contentVersion?: string
 }) {
   const dispatch = useAppDispatch()
   const areControlsVisible = useAppSelector(getAreControlsVisible)
-  const navigation = useReaderNavigation(bookId, contentVersion)
+  const navigation = useReaderNavigation(
+    bookId,
+    contentVersion,
+    restorePosition,
+  )
   const {
     currentPage,
     pageCount,

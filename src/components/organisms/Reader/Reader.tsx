@@ -17,8 +17,10 @@ import {
 export function Reader({
   bookId,
   contentVersion,
+  restorePosition = true,
 }: {
   bookId: number
+  restorePosition?: boolean
   contentVersion: string
 }) {
   const [retryKey, setRetryKey] = useState(0)
@@ -32,7 +34,11 @@ export function Reader({
   )
 
   return (
-    <ReaderProvider bookId={bookId} contentVersion={contentVersion}>
+    <ReaderProvider
+      bookId={bookId}
+      contentVersion={contentVersion}
+      restorePosition={restorePosition}
+    >
       {({
         chapterInfo,
         tocSections,
