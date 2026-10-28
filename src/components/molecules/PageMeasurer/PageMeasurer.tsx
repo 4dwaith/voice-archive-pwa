@@ -1,65 +1,132 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 import type {
   ReaderLayoutMeasurement,
-  ReaderPageMeasurement,
   ReaderSegment,
 } from '../../../models/reader'
 import { ReaderChapterLayout } from '../../atoms/ReaderChapterLayout/ReaderChapterLayout'
 
 export function PageMeasurer({
   chapterIds,
-  chapterSegments,
+  loadChapterSegments,
+  layoutKey,
+  bookId,
+  contentVersion,
+  readyChapterIds,
+  availableChapterIds,
+  retryKey = 0,
+}: {
+  bookId: number
+  contentVersion: string
+  chapterIds: string[]
+  loadChapterSegments: (
+    chapterId: string,
+  ) => Promise<ReaderSegment[] | undefined>
+  layoutKey: string | null
+  readyChapterIds: ReadonlySet<string>
+  availableChapterIds: ReadonlySet<string>
+  // The caller exposes save failures and changes this only for deliberate retry.
+  retryKey?: number
+}) {
+  const measuringChapterId = chapterIds.find((id) => !readyChapterIds.has(id))
+
+  if (
+    measuringChapterId === undefined ||
+    !availableChapterIds.has(measuringChapterId) ||
+    layoutKey === null
+  )
+    return null
+
+  return (
+    <LoadChapterToMeasure
+      key={JSON.stringify([
+        bookId,
+        contentVersion,
+        measuringChapterId,
+        layoutKey,
+        retryKey,
+      ])}
+      chapterId={measuringChapterId}
+      loadChapterSegments={loadChapterSegments}
+      layoutKey={layoutKey}
+    />
+  )
+}
+
+// The parent's key makes this component a lifecycle boundary for one load.
+// Changing the target or retry unmounts it, releasing the previous segments and
+// error state; effect cleanup prevents late responses from publishing into it.
+function LoadChapterToMeasure({
+  chapterId,
+  layoutKey,
+  loadChapterSegments,
+}: {
+  chapterId: string
+  layoutKey: string
+  loadChapterSegments: (
+    chapterId: string,
+  ) => Promise<ReaderSegment[] | undefined>
+}) {
+  const [segments, setSegments] = useState<ReaderSegment[]>()
+  const [loadFailure, setLoadFailure] = useState<{ error: unknown }>()
+
+  useEffect(
+    function loadChapterForMeasurement() {
+      let isCancelled = false
+
+      async function loadRequestedChapter() {
+        try {
+          const loadedSegments = await loadChapterSegments(chapterId)
+
+          if (!isCancelled) setSegments(loadedSegments)
+        } catch (error) {
+          if (!isCancelled) setLoadFailure({ error })
+        }
+      }
+
+      void loadRequestedChapter()
+
+      return () => {
+        isCancelled = true
+      }
+    },
+    [chapterId, loadChapterSegments],
+  )
+
+  if (loadFailure !== undefined) throw loadFailure.error
+  if (segments === undefined) return null
+
+  return (
+    <MeasureChapter
+      chapterId={chapterId}
+      segments={segments}
+      layoutKey={layoutKey}
+    />
+  )
+}
+
+function MeasureChapter({
+  chapterId,
+  segments,
   layoutKey,
 }: {
-  chapterIds: string[]
-  // Each supplied array is a complete chapter, in canonical segment order.
-  chapterSegments: Record<string, ReaderSegment[] | undefined>
-  layoutKey: string | null
+  chapterId: string
+  segments: ReaderSegment[]
+  layoutKey: string
 }) {
   const { reportPageMeasurement } = useReaderContext().navigation
   const { textSizePercent } = useReaderContext().reader
-  const [completedMeasurements, setCompletedMeasurements] = useState<
-    (ReaderPageMeasurement & { segments: ReaderSegment[] })[]
-  >([])
+  const hasSubmitted = useRef(false)
 
-  const measuringChapterId = chapterIds.find(
-    (id) =>
-      !completedMeasurements.some(
-        (measurement) =>
-          measurement.chapterId === id &&
-          measurement.layoutKey === layoutKey &&
-          measurement.textSizePercent === textSizePercent &&
-          measurement.segments === chapterSegments[id],
-      ),
-  )
-  const segments =
-    measuringChapterId === undefined
-      ? undefined
-      : chapterSegments[measuringChapterId]
+  const reportChapterMeasurement = useCallback(
+    (measurement: ReaderLayoutMeasurement) => {
+      if (hasSubmitted.current || measurement.layoutKey !== layoutKey) return
 
-  const reportMeasurement = useCallback(
-    (result: ReaderLayoutMeasurement) => {
-      if (
-        measuringChapterId === undefined ||
-        segments === undefined ||
-        result.layoutKey !== layoutKey
-      )
-        return
-      const measurement = { ...result, chapterId: measuringChapterId }
-      reportPageMeasurement(measurement)
-      setCompletedMeasurements((previous) => [
-        ...previous.filter(
-          (completed) => completed.chapterId !== measuringChapterId,
-        ),
-        { ...measurement, segments },
-      ])
+      hasSubmitted.current = true
+      reportPageMeasurement({ ...measurement, chapterId })
     },
-    [measuringChapterId, layoutKey, segments, reportPageMeasurement],
+    [chapterId, layoutKey, reportPageMeasurement],
   )
-
-  // Missing data is not an empty chapter. Wait for an unmeasured chapter with segments.
-  if (segments === undefined || layoutKey === null) return null
 
   return (
     <div
@@ -69,12 +136,11 @@ export function PageMeasurer({
       data-reader-measurer
     >
       <ReaderChapterLayout
-        key={JSON.stringify([measuringChapterId, layoutKey])}
         segments={segments}
         page={1}
         textSizePercent={textSizePercent}
         shouldMeasure
-        onPageMeasure={reportMeasurement}
+        onPageMeasure={reportChapterMeasurement}
       />
     </div>
   )
