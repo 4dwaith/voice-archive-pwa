@@ -36,6 +36,9 @@ Feature: Structured book synchronization
     When I tap exposed book text
     Then the reader controls are hidden
     And I see its first reader page
+    When I select a text segment
+    Then the text segment is selected
+    And the reader controls are hidden
     When I reveal the reader controls
     Then the reader controls are visible
     And I see its first reader page

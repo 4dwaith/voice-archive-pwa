@@ -8,6 +8,8 @@ import {
 } from './sanitizeReaderSegment'
 import './ReaderSegmentContent.css'
 
+export const SEGMENT_DOUBLE_TAP_INTERVAL_MS = 350
+
 function renderContentNodes(nodes: ReaderContentNode[]): ReactNode {
   return nodes.map((node, index) =>
     typeof node === 'string'
@@ -100,7 +102,7 @@ export function ReaderSegmentContent({
 
         if (
           previous &&
-          event.timeStamp - previous.time <= 350 &&
+          event.timeStamp - previous.time <= SEGMENT_DOUBLE_TAP_INTERVAL_MS &&
           Math.hypot(start.x - previous.x, start.y - previous.y) <= 24
         ) {
           // Native double-click word selection is retained alongside segment selection.

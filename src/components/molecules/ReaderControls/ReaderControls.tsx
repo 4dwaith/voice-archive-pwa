@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { SEGMENT_DOUBLE_TAP_INTERVAL_MS } from '../../atoms/ReaderSegmentContent/ReaderSegmentContent'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 
 export function ReaderControls({
@@ -8,7 +9,16 @@ export function ReaderControls({
   children: ReactNode
   controls: ReactNode
 }) {
-  const { areControlsVisible, setControlsVisible } = useReaderContext().reader
+  const { areControlsVisible, setControlsVisible, selectedSegmentId } =
+    useReaderContext().reader
+  const pendingToggle = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (pendingToggle.current !== null) clearTimeout(pendingToggle.current)
+    },
+    [areControlsVisible, selectedSegmentId],
+  )
   const toggle = useRef<HTMLButtonElement>(null)
   const overlay = useRef<HTMLDivElement>(null)
   const isPointerFocus = useRef(false)
@@ -91,8 +101,21 @@ export function ReaderControls({
               'button, a, input, select, textarea, [role="button"]',
             ) &&
             (!selection || selection.isCollapsed)
-          )
-            setControlsVisible(!areControlsVisible)
+          ) {
+            if (pendingToggle.current !== null)
+              clearTimeout(pendingToggle.current)
+            if (
+              (event.target as Element).closest(
+                '[data-reader-segment-id][data-reader-mappable="true"]',
+              )
+            ) {
+              pendingToggle.current = setTimeout(() => {
+                setControlsVisible(!areControlsVisible)
+              }, SEGMENT_DOUBLE_TAP_INTERVAL_MS)
+            } else {
+              setControlsVisible(!areControlsVisible)
+            }
+          }
         }}
       >
         {children}

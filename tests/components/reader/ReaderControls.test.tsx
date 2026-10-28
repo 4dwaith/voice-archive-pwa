@@ -11,6 +11,7 @@ import { ReaderControls } from '../../../src/components/molecules/ReaderControls
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   window.getSelection()?.removeAllRanges()
 })
 
@@ -86,6 +87,44 @@ describe('ReaderControls', () => {
       expect(context.reader.setControlsVisible).toHaveBeenCalledExactlyOnceWith(
         !isVisible,
       )
+    },
+  )
+
+  it('waits for a possible double tap before toggling on a segment', () => {
+    vi.useFakeTimers()
+    const { context } = renderControls()
+    const text = screen.getByText('Book content')
+    text.setAttribute('data-reader-segment-id', '1')
+    text.setAttribute('data-reader-mappable', 'true')
+
+    dispatchPointer(text, 'pointerdown')
+    fireEvent.click(text)
+
+    expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(350))
+
+    expect(context.reader.setControlsVisible).toHaveBeenCalledExactlyOnceWith(
+      false,
+    )
+  })
+
+  it.each([true, false])(
+    'keeps controls at %s when a segment is selected',
+    (isVisible) => {
+      vi.useFakeTimers()
+      const { context, update } = renderControls(isVisible)
+      const text = screen.getByText('Book content')
+      text.setAttribute('data-reader-segment-id', '1')
+      text.setAttribute('data-reader-mappable', 'true')
+
+      dispatchPointer(text, 'pointerdown')
+      fireEvent.click(text)
+      context.reader.selectedSegmentId = 1
+      update()
+      act(() => vi.advanceTimersByTime(350))
+
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
     },
   )
 

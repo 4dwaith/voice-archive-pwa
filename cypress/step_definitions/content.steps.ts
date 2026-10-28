@@ -694,6 +694,20 @@ Then('the reader controls are hidden', () => {
   cy.findByRole('button', { name: 'Show reader controls' }).should('be.visible')
 })
 
+When('I select a text segment', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .find('[data-reader-segment-id] p')
+    .first()
+    .dblclick('left')
+})
+
+Then('the text segment is selected', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .find('[data-reader-segment-id]')
+    .first()
+    .should('have.attr', 'data-reader-selected', 'true')
+})
+
 When('I reveal the reader controls', () => {
   cy.findByRole('button', { name: 'Show reader controls' }).click()
 })
