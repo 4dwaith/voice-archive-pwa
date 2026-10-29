@@ -69,6 +69,7 @@ const readerSearchSlice = createSlice({
       state.status = 'loading'
       state.error = null
       state.isOpen = true
+      // Note that the results' query and search are unchanged - while the current search is loading, the previous search results are still displayed.
     },
     recordSearchSuccess(
       state,
@@ -114,7 +115,6 @@ const readerSearchSlice = createSlice({
   selectors: {
     isSearchPending: (state, request: ReaderSearchRequest) =>
       state.status === 'loading' && hasMatchingSearch(state, request),
-    getSearchSubmittedQuery: (state) => state.submittedQuery,
     getSearchResultsQuery: (state) => state.resultsQuery,
     getSearchStatus: (state) => state.status,
     getSearchResults: (state) => state.results,
@@ -132,7 +132,6 @@ export const {
 } = readerSearchSlice.actions
 export const {
   isSearchPending,
-  getSearchSubmittedQuery,
   getSearchResultsQuery,
   getSearchStatus,
   getSearchResults,

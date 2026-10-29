@@ -10,6 +10,7 @@ import type {
 
 const version = 'a3027b66-924c-4c9a-aad5-660ba7a733bc'
 const nextVersion = '1ac04088-bfcb-44e0-bcdf-ff025c93dcac'
+const searchPrefix = `search target. ${'Opening chapter text. '.repeat(500)}`
 const apiUrl = () => Cypress.expose('apiUrl') as string
 let id = 7
 let currentVersion = version
@@ -80,6 +81,7 @@ function harness() {
 function mockBook(
   options: {
     chapters?: boolean
+    search?: boolean
     nested?: boolean
     slow?: boolean
     cover?: boolean
@@ -235,10 +237,12 @@ function mockBook(
               ...(options.nested || options.chapters
                 ? {
                     section_id: second ? 2 : 1,
-                    html_content: `<p>${second ? 'Nested destination text.' : 'Opening chapter text. '.repeat(500)}</p>`,
+                    html_content: `<p>${second ? 'Nested destination text.' : options.search ? `${searchPrefix}search target.` : 'Opening chapter text. '.repeat(500)}</p>`,
                     text_content: second
                       ? 'Nested destination text.'
-                      : 'Opening chapter text. '.repeat(500),
+                      : options.search
+                        ? `${searchPrefix}search target.`
+                        : 'Opening chapter text. '.repeat(500),
                   }
                 : {}),
             },
@@ -468,6 +472,7 @@ Then('I return to the synchronization library', () => {
   cy.location('pathname').should('eq', '/')
   cy.findByRole('button', { name: 'Select Sync book' }).should('be.visible')
   cy.findByRole('button', { name: /^Home$/ }).should('not.exist')
+  cy.findByRole('searchbox', { name: 'Search book text' }).should('not.exist')
 })
 
 Then('I see its cover and loading text', () => {
@@ -995,4 +1000,129 @@ When('I save a position for an obsolete version and reload', () => {
     )
   })
   cy.reload()
+})
+
+Given('a searchable synchronization book', () => {
+  cy.viewport(700, 720)
+  mockBook({ nested: true, search: true })
+})
+
+Then('book search is unavailable', () => {
+  cy.findByRole('searchbox', { name: 'Search book text' }).should('not.exist')
+})
+
+Then('book search is available', () => {
+  cy.findByRole('searchbox', { name: 'Search book text' }).should('be.visible')
+})
+
+When('I submit a book search with Enter', () => {
+  cy.findByRole('form', { name: 'Book search' }).should(($form) => {
+    const form = $form[0].getBoundingClientRect()
+    const header = $form[0].closest('header')!.getBoundingClientRect()
+    expect(form.x + form.width / 2).to.be.closeTo(
+      header.x + header.width / 2,
+      1,
+    )
+  })
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'aria-busy',
+    'false',
+  )
+  cy.findByRole('searchbox', { name: 'Search book text' }).type(
+    'search target{enter}',
+  )
+})
+
+Then('the search modal protects the reader and shows both occurrences', () => {
+  cy.findByRole('dialog', { name: 'Search results' }).should(($dialog) => {
+    const rect = $dialog[0].getBoundingClientRect()
+    expect(
+      $dialog[0].ownerDocument
+        .elementFromPoint(rect.x + rect.width / 2, rect.y + 20)
+        ?.closest('[role="dialog"]'),
+    ).to.equal($dialog[0])
+  })
+  cy.focused().should('have.text', 'Search results')
+  cy.get('input[aria-label="Search book text"]').focus()
+  cy.focused().should(($focused) =>
+    expect($focused.closest('[role="dialog"]')).to.have.length(1),
+  )
+  cy.focused().type('{pagedown}{rightarrow}')
+  cy.get('article[aria-label="Book text"]').should(
+    'have.attr',
+    'data-reader-page',
+    '1',
+  )
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .find('strong')
+    .should('have.length', 2)
+    .each(($match) => expect($match.text()).to.equal('search target'))
+})
+
+When('I dismiss search with Escape', () => {
+  cy.findByRole('dialog').type('{esc}')
+  cy.findByRole('dialog').should('not.exist')
+})
+
+Then('focus returns to the search results button', () => {
+  cy.focused().should('have.attr', 'aria-label', 'Reopen search results')
+  cy.findByRole('button', { name: 'Home' }).should('be.visible')
+})
+
+When('I reopen search results', () => {
+  cy.findByRole('button', { name: 'Reopen search results' }).click()
+})
+
+When('I open the later matching occurrence', () => {
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .findAllByRole('button')
+    .last()
+    .click()
+})
+
+Then('the exact later match is displayed', () => {
+  cy.findByRole('dialog').should('not.exist')
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .should(($article) =>
+      expect(Number($article.attr('data-reader-page'))).to.be.greaterThan(1),
+    )
+  cy.window().should((win) => {
+    expect(
+      JSON.parse(win.localStorage.getItem(READER_PREFERENCES_KEY)!).positions[
+        id
+      ],
+    ).to.deep.equal({ version, sourceKey: 'a', offset: searchPrefix.length })
+  })
+})
+
+Then('both matching occurrences remain available', () => {
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .findAllByRole('button')
+    .should('have.length', 2)
+})
+
+When('I clear search and submit it again by button', () => {
+  cy.findByRole('button', { name: 'Clear search' }).click()
+  cy.findByRole('dialog').should('not.exist')
+  cy.focused()
+    .should('have.attr', 'aria-label', 'Search book text')
+    .and('have.value', '')
+  cy.findByRole('button', { name: 'Reopen search results' }).should(
+    'be.disabled',
+  )
+  cy.findByRole('searchbox', { name: 'Search book text' }).type('search target')
+  cy.findByRole('button', { name: /^Search$/ }).click()
+})
+
+Then('the book search results are cleared', () => {
+  cy.findByRole('searchbox', { name: 'Search book text' }).should(
+    'have.value',
+    '',
+  )
+  cy.findByRole('button', { name: 'Reopen search results' }).should(
+    'be.disabled',
+  )
+  cy.findByRole('dialog').should('not.exist')
 })

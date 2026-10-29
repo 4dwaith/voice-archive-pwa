@@ -156,3 +156,7 @@ export const UnavailableTocTarget: Story = {
 export const PartialBookIndex: Story = {
   args: { bookId: 91006, tocScenario: 'partial' },
 }
+
+export const SearchableChapter: Story = {
+  args: { bookId: 91007, hasChapter: true, tocScenario: 'search' },
+}

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { TextSearchResult } from '../data/searchBookText'
 import type {
   ReaderPageNavigation,
   ReaderPageMeasurement,
@@ -6,6 +7,17 @@ import type {
   ReaderTocPresentation,
 } from '../models/reader'
 
+export type ReaderSearchValue = {
+  results: TextSearchResult[]
+  resultsQuery: string
+  status: 'idle' | 'loading' | 'succeeded' | 'failed'
+  error: string | null
+  isOpen: boolean
+  submitQuery: (query: string) => void
+  setOpen: (isOpen: boolean) => void
+  clear: () => void
+  openResult: (result: TextSearchResult) => void
+}
 export type ReaderContextValue = {
   toc: {
     selectedSectionId: number | null
@@ -32,6 +44,7 @@ export type ReaderContextValue = {
     reportPageMeasurement: (report: ReaderPageMeasurement) => void
   }
   reader: {
+    search?: ReaderSearchValue
     areControlsVisible: boolean
     setControlsVisible: (isVisible: boolean) => void
     reportLayoutKey: (key: string | null) => void

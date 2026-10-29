@@ -65,8 +65,10 @@ Feature: Structured book synchronization
     Given a synchronization book with a slow second batch
     When I open the synchronization book from the library
     Then its first batch is readable without marking the book complete
+    And book search is unavailable
     When I wait for book synchronization to finish
     Then its complete structured dataset is available locally
+    And book search is available
 
   Scenario: A failed download preserves its committed local batches
     Given a synchronization book whose first download fails
@@ -153,3 +155,24 @@ Feature: Structured book synchronization
     Given a fully cached synchronization book
     When I save a position for an obsolete version and reload
     Then I see its first reader page
+
+  Scenario: Book search opens an exact later match and retains results until book closure
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    Then the search modal protects the reader and shows both occurrences
+    When I dismiss search with Escape
+    Then focus returns to the search results button
+    When I reopen search results
+    And I open the later matching occurrence
+    Then the exact later match is displayed
+    When I reopen search results
+    Then both matching occurrences remain available
+    When I clear search and submit it again by button
+    Then both matching occurrences remain available
+    When I dismiss search with Escape
+    And I use the header Home button
+    Then I return to the synchronization library
+    When I go forward in browser history
+    Then the book search results are cleared

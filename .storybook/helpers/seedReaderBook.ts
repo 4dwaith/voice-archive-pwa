@@ -8,7 +8,7 @@ import {
 } from '../../src/mock-data/readerBook'
 
 export type ReaderTocScenario =
-  'standard' | 'overflowing' | 'unavailable' | 'partial'
+  'standard' | 'overflowing' | 'unavailable' | 'partial' | 'search'
 
 // Scenario-owned records: seed idempotently, retaining committed measurements.
 export async function seedReaderBook(
@@ -69,6 +69,14 @@ export async function seedReaderBook(
   ]
 
   const isPartial = tocScenario === 'partial'
+  if (tocScenario === 'search') {
+    const text = `${segments[0].text_content}\nFind this river. Find this river again.`
+    segments[0] = {
+      ...segments[0],
+      text_content: text,
+      html_content: `${segments[0].html_content}\n<p>Find this river. Find this river again.</p>`,
+    }
+  }
   if (isPartial)
     segments.push({
       ...segments[0],

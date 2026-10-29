@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Header } from '../../../layout/Header'
+import { ReaderSearch } from '../../molecules/ReaderSearch/ReaderSearch'
 import { ReaderControls } from '../../molecules/ReaderControls/ReaderControls'
 import { ReaderProvider } from '../../../contexts/ReaderProvider'
 import { ReaderTableOfContents } from '../../atoms/ReaderTableOfContents/ReaderTableOfContents'
@@ -50,7 +51,9 @@ export function Reader({
           <ReaderControls
             controls={
               <>
-                <Header />
+                <Header>
+                  <ReaderSearch />
+                </Header>
                 <div className="flex min-h-0 w-72 max-w-full flex-1 flex-col border-2 border-ink has-[[data-presentation=collapsed]]:flex-none [&>nav]:min-h-0 [&>nav]:flex-1">
                   <ReaderTableOfContents sections={tocSections} />
                   {tocError && (

@@ -88,6 +88,8 @@ export function ReaderControls({
   }
 
   function handleReaderKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    // React portals bubble through this component, but modal keys belong to the modal.
+    if (!event.currentTarget.contains(event.target as Node)) return
     isPointerFocus.current = false
 
     const delta = ['PageDown', 'ArrowRight', 'ArrowDown'].includes(event.key)

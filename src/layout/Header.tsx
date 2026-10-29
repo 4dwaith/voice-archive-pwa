@@ -1,4 +1,5 @@
 import { useAppLocation, useAppNavigate } from '../routing/navigation'
+import type { ReactNode } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   decreaseTextSize,
@@ -9,7 +10,7 @@ import {
   selectTextSizeStep,
 } from '../store/textSizeSlice'
 
-export function Header() {
+export function Header({ children }: { children?: ReactNode }) {
   const dispatch = useAppDispatch()
   const textSizeStep = useAppSelector(selectTextSizeStep)
   const textSizePercent = useAppSelector(selectTextSizePercent)
@@ -24,21 +25,26 @@ export function Header() {
 
   return (
     <header className="border-b-2 border-ink/10 bg-white">
-      <div className="mx-auto flex items-center justify-between gap-2 px-3 py-2 sm:px-8">
+      <div className="mx-auto grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] sm:px-8">
         {location.pathname === '/' ? (
           <h1 className="text-xl font-bold">Your library</h1>
         ) : (
           <button
             type="button"
             onClick={goHome}
-            className="min-h-12 rounded-xl border-2 border-ink px-4 font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="min-h-12 justify-self-start rounded-xl border-2 border-ink px-4 font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Home
           </button>
         )}
 
+        {location.pathname.startsWith('/books/') && (
+          <div className="col-span-2 row-start-2 empty:hidden sm:col-span-1 sm:col-start-2 sm:row-start-1">
+            {children}
+          </div>
+        )}
         <div
-          className="flex shrink-0 items-center gap-2"
+          className="flex shrink-0 items-center justify-self-end gap-2 sm:col-start-3"
           aria-label="Text size controls"
         >
           <button
