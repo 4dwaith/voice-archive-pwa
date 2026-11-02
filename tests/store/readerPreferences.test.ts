@@ -12,6 +12,9 @@ import {
   openReader,
   closeReader,
   setReaderAnchor,
+  setReaderViewMode,
+  selectSegment,
+  highlightSegment,
 } from '../../src/store/readerSlice'
 import { database } from '../../src/data/database'
 import { seedContent } from '../helpers/readerMeasurements'
@@ -27,6 +30,50 @@ afterEach(async () => {
 })
 
 describe('Reader preferences', () => {
+  it('restores and persists the reading view without dropping other preferences', () => {
+    localStorage.setItem(
+      READER_PREFERENCES_KEY,
+      '{"textSizeStep":3,"viewMode":"both"}',
+    )
+    const store = createAppStore()
+
+    expect(store.getState().reader.viewMode).toBe('both')
+
+    store.dispatch(setReaderViewMode('pdf'))
+    store.dispatch(increaseTextSize())
+
+    expect(readReaderPreferences()).toMatchObject({
+      viewMode: 'pdf',
+      textSizeStep: 4,
+    })
+  })
+
+  it('falls back to text for an invalid saved view', () => {
+    localStorage.setItem(READER_PREFERENCES_KEY, '{"viewMode":"invalid"}')
+
+    expect(createAppStore().getState().reader.viewMode).toBe('text')
+  })
+
+  it.each(['open', 'close'] as const)(
+    'clears selected and highlighted text on reader %s',
+    (event) => {
+      const store = createAppStore()
+      const scope = { bookId: 7, contentVersion: 'version' }
+      store.dispatch(openReader(scope))
+      store.dispatch(selectSegment(1))
+      store.dispatch(highlightSegment(2))
+
+      store.dispatch(
+        event === 'open'
+          ? openReader({ ...scope, contentVersion: 'new' })
+          : closeReader(scope),
+      )
+
+      expect(store.getState().reader.selectedSegmentId).toBeNull()
+      expect(store.getState().reader.highlightedSegmentId).toBeNull()
+    },
+  )
+
   it.each([
     'broken json',
     '{"textSizeStep":-1}',

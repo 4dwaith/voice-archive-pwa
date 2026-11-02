@@ -7,6 +7,7 @@ import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esb
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import istanbul from 'vite-plugin-istanbul'
+import { createPdfAssetsPlugin } from './scripts/pdfAssets.ts'
 
 const require = createRequire(import.meta.url)
 
@@ -27,6 +28,15 @@ export default defineConfig({
       framework: 'react',
       bundler: 'vite',
       viteConfig: {
+        resolve: { dedupe: ['react', 'react-dom'] },
+        optimizeDeps: {
+          include: [
+            'react',
+            'react-dom/client',
+            'react/jsx-runtime',
+            'react-pdf',
+          ],
+        },
         define: {
           'import.meta.env.VITE_READER_PREFERENCES_KEY': JSON.stringify(
             'voice-archive-reader-component-test',
@@ -36,6 +46,7 @@ export default defineConfig({
           ),
         },
         plugins: [
+          createPdfAssetsPlugin(),
           react(),
           tailwindcss(),
           ...(process.env.VITE_COVERAGE === 'true'

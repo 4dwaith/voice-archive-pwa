@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { Region } from '../api-client/generated/endpoints'
 import type { TextSearchResult } from '../data/searchBookText'
 import type {
   ReaderPageNavigationRequest,
@@ -44,6 +45,13 @@ export type ReaderContextValue = {
     reportPageMeasurement: (report: ReaderChapterMeasurement) => void
   }
   reader: {
+    pdf?: {
+      scopeKey: string
+      url: string | null
+      regions: Region[]
+      viewMode: 'text' | 'pdf' | 'both'
+      setViewMode: (mode: 'text' | 'pdf' | 'both') => void
+    }
     search?: ReaderSearchValue
     areControlsVisible: boolean
     setControlsVisible: (isVisible: boolean) => void

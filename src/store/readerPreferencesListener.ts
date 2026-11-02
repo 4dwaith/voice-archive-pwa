@@ -5,7 +5,11 @@ import {
   type ReaderPreferences,
 } from '../data/readerPreferences'
 import type { ReaderAnchor } from '../models/reader'
-import { getReaderAnchor, getReaderScope } from './readerSlice'
+import {
+  getReaderAnchor,
+  getReaderScope,
+  getReaderViewMode,
+} from './readerSlice'
 import { selectTextSizeStep } from './textSizeSlice'
 import type { AppDispatch, RootState } from './store'
 
@@ -17,11 +21,16 @@ export function createReaderPreferencesListener(
 
   listener.startListening({
     predicate: (_action, current, previous) =>
+      getReaderViewMode(current) !== getReaderViewMode(previous) ||
       selectTextSizeStep(current) !== selectTextSizeStep(previous) ||
       getReaderAnchor(current) !== getReaderAnchor(previous),
     effect: async (_action, api) => {
       const state = api.getState()
       const previous = api.getOriginalState()
+      if (getReaderViewMode(state) !== getReaderViewMode(previous)) {
+        preferences.viewMode = getReaderViewMode(state)
+        writeReaderPreferences(preferences)
+      }
       const step = selectTextSizeStep(state)
       if (step !== selectTextSizeStep(previous)) {
         preferences.textSizeStep = step

@@ -16,6 +16,7 @@ import type {
 } from '../models/reader'
 
 export type ReaderState = {
+  viewMode: 'text' | 'pdf' | 'both'
   areControlsVisible: boolean
   layoutKey: string | null
   measurementSave: ReaderMeasurementSave | null
@@ -43,6 +44,7 @@ export type ReaderState = {
 }
 
 const initialState: ReaderState = {
+  viewMode: 'text',
   areControlsVisible: true,
   layoutKey: null,
   measurementSave: null,
@@ -83,6 +85,9 @@ const readerSlice = createSlice({
   name: 'reader',
   initialState,
   reducers: {
+    setReaderViewMode(state, action: PayloadAction<ReaderState['viewMode']>) {
+      state.viewMode = action.payload
+    },
     setControlsVisible(state, action: PayloadAction<boolean>) {
       state.areControlsVisible = action.payload
     },
@@ -218,6 +223,8 @@ const readerSlice = createSlice({
       state.tocPresentation = action.payload
     },
     openReader(state, action: PayloadAction<ReaderScope>) {
+      state.selectedSegmentId = null
+      state.highlightedSegmentId = null
       state.areControlsVisible = true
       state.selectedSectionId = null
       state.tocNavigationError = null
@@ -231,6 +238,8 @@ const readerSlice = createSlice({
     },
     closeReader(state, action: PayloadAction<ReaderScope>) {
       if (!hasMatchingScope(state.scope, action.payload)) return
+      state.selectedSegmentId = null
+      state.highlightedSegmentId = null
       state.scope = null
       state.anchor = null
       state.layoutKey = null
@@ -282,6 +291,7 @@ const readerSlice = createSlice({
     },
   },
   selectors: {
+    getReaderViewMode: (state) => state.viewMode,
     getPageNavigationIntent: (state) => state.pageNavigationIntent,
     getPageNavigationError: (state) => state.pageNavigationError,
     getTocNavigationError: (state) => state.tocNavigationError,
@@ -304,6 +314,7 @@ const readerSlice = createSlice({
 })
 
 export const {
+  setReaderViewMode,
   setControlsVisible,
   reportTocNavigationError,
   openReader,
@@ -324,6 +335,7 @@ export const {
   reportSegmentError,
 } = readerSlice.actions
 export const {
+  getReaderViewMode,
   hasReaderNavigated,
   getPageNavigationIntent,
   getPageNavigationError,

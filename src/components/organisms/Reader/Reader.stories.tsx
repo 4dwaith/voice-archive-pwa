@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter } from 'react-router'
-import { setControlsVisible } from '../../../store/readerSlice'
+import {
+  setControlsVisible,
+  setReaderViewMode,
+} from '../../../store/readerSlice'
 import { Provider } from 'react-redux'
 import { Reader } from './Reader'
 import { readerStoryContentVersion } from '../../../mock-data/readerBook'
@@ -19,6 +22,7 @@ import {
 } from '../../../../.storybook/helpers/seedReaderBook'
 
 type ReaderStoryArgs = {
+  viewMode: 'text' | 'pdf' | 'both'
   bookId: number
   areControlsVisible: boolean
   hasChapter: boolean
@@ -46,6 +50,7 @@ function ApplyStoryTextSize() {
 }
 
 function ShowReader({
+  viewMode,
   bookId,
   areControlsVisible,
   width,
@@ -54,6 +59,10 @@ function ShowReader({
   fontFamily,
 }: ReaderStoryArgs) {
   const [store] = useState(createAppStore)
+
+  useEffect(() => {
+    store.dispatch(setReaderViewMode(viewMode))
+  }, [store, viewMode])
 
   useEffect(() => {
     while (selectTextSizeStep(store.getState()) < textSizeStep)
@@ -94,6 +103,7 @@ const meta = {
   title: 'Organisms/Reader',
   parameters: { layout: 'fullscreen' },
   args: {
+    viewMode: 'text',
     bookId: 91001,
     hasChapter: false,
     tocScenario: 'standard',
@@ -104,6 +114,7 @@ const meta = {
     fontFamily: 'monospace',
   },
   argTypes: {
+    viewMode: { control: 'select', options: ['text', 'pdf', 'both'] },
     areControlsVisible: { control: 'boolean' },
     bookId: { control: false },
     hasChapter: { control: false },
@@ -159,4 +170,8 @@ export const PartialBookIndex: Story = {
 
 export const SearchableChapter: Story = {
   args: { bookId: 91007, hasChapter: true, tocScenario: 'search' },
+}
+
+export const PdfRegions: Story = {
+  args: { bookId: 91008, tocScenario: 'pdf', viewMode: 'both', width: 1100 },
 }

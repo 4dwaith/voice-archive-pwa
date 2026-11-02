@@ -36,6 +36,7 @@
     "dompurify": "3.4.17",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-pdf": "11.0.0",
     "react-redux": "^9.3.0",
     "react-router": "^7.18.3",
     "zod": "4.6.7"
@@ -75,6 +76,7 @@
     "vite": "8.3.3",
     "vite-plugin-istanbul": "9.0.1",
     "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-static-copy": "4.1.1",
     "vitest": "5.0.5"
   },
   "cypress-cucumber-preprocessor": {

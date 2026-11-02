@@ -31,7 +31,13 @@ export function createAppStore() {
   const readerTocListener = createReaderTocListener()
   const readerSearchListener = createReaderSearchListener()
   return configureStore({
-    preloadedState: { textSize: { step: preferences.textSizeStep } },
+    preloadedState: {
+      textSize: { step: preferences.textSizeStep },
+      reader: {
+        ...readerReducer(undefined, { type: 'initialize' }),
+        viewMode: preferences.viewMode ?? 'text',
+      },
+    },
     reducer: rootReducer,
     middleware: (defaults) =>
       defaults()

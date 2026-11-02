@@ -1,6 +1,26 @@
 Feature: Structured book synchronization
   Readers open a book and cache version-pinned structured content locally.
 
+  @live
+  Scenario: Selected text opens PDF regions and manual browsing uses byte ranges
+    Given a synchronization book with PDF regions
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I tap exposed book text
+    And I select a text segment
+    And I open the PDF beside the text
+    Then the selected PDF pages render through partial delivery
+    When I browse a distant physical PDF page
+    Then PDF browsing fetches more ranges without navigating text
+
+  Scenario: A failed PDF can be retried without losing selected text
+    Given a synchronization book whose PDF initially fails
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I select book text with the keyboard
+    And I open the PDF beside the text
+    Then I can retry the PDF while keeping selected text
+
   Scenario: Book entry and Home use application history
     Given a book without published text
     When I open the synchronization book from the library

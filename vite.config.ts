@@ -3,10 +3,14 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import istanbul from 'vite-plugin-istanbul'
+import { createPdfAssetsPlugin } from './scripts/pdfAssets.ts'
 
 export default defineConfig({
+  resolve: { dedupe: ['react', 'react-dom'] },
+  optimizeDeps: { include: ['react-pdf'] },
   build: { sourcemap: process.env.VITE_COVERAGE === 'true' },
   plugins: [
+    createPdfAssetsPlugin(),
     ...(process.env.VITE_COVERAGE === 'true'
       ? [
           istanbul({

@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { database } from '../data/database'
+import { apiBaseUrl } from '../api-client/baseApi'
 import {
   useReaderNavigation,
   type ReaderNavigation,
@@ -26,6 +27,8 @@ import {
   reportPageMeasurement,
   getSelectedSegmentId,
   getHighlightedSegmentId,
+  getReaderViewMode,
+  setReaderViewMode,
 } from '../store/readerSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
 import {
@@ -76,6 +79,7 @@ export function ReaderProvider({
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
   const tocPresentation = useAppSelector(getTocPresentation)
   const selectedSegmentId = useAppSelector(getSelectedSegmentId)
+  const viewMode = useAppSelector(getReaderViewMode)
   const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
   const pageScope = useAppSelector(getPageScope)
   const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
@@ -85,6 +89,67 @@ export function ReaderProvider({
   const status = useAppSelector(getSearchStatus)
   const error = useAppSelector(getSearchError)
   const isOpen = useAppSelector(isSearchOpen)
+  // Text selection already has its complete chapter in memory. Use those regions
+  // immediately so a same-page selection does not unmount the existing canvas.
+  const selectedRegions = navigation.currentChapterSegments.find(
+    (segment) => segment.id === selectedSegmentId,
+  )?.regions
+
+  const pdfInput = useLiveQuery(async () => {
+    if (bookId === undefined || !contentVersion) return undefined
+    const content = await database.content.get(bookId)
+    if (content?.version !== contentVersion) return undefined
+    const file = content.manifest.files.find(
+      (file) =>
+        file.kind === 'source_pdf' &&
+        file.id === content.manifest.source_pdf_file_id,
+    )
+    const segment =
+      selectedSegmentId === null
+        ? undefined
+        : await database.segments
+            .where('[bookId+version+id]')
+            .equals([bookId, contentVersion, selectedSegmentId])
+            .first()
+    return {
+      bookId,
+      contentVersion,
+      selectedSegmentId,
+      url: file ? new URL(file.url, apiBaseUrl).href : null,
+      regions: segment?.regions ?? [],
+    }
+  }, [bookId, contentVersion, selectedSegmentId])
+
+  const pdf = useMemo<ReaderContextValue['reader']['pdf']>(
+    () => ({
+      scopeKey: `${bookId}:${contentVersion}`,
+      url:
+        pdfInput?.bookId === bookId &&
+        pdfInput?.contentVersion === contentVersion
+          ? (pdfInput?.url ?? null)
+          : null,
+      regions:
+        selectedRegions ??
+        (pdfInput?.bookId === bookId &&
+        pdfInput?.contentVersion === contentVersion &&
+        pdfInput?.selectedSegmentId === selectedSegmentId
+          ? (pdfInput?.regions ?? [])
+          : []),
+      viewMode,
+      setViewMode: (mode) => {
+        dispatch(setReaderViewMode(mode))
+      },
+    }),
+    [
+      bookId,
+      contentVersion,
+      selectedSegmentId,
+      selectedRegions,
+      pdfInput,
+      viewMode,
+      dispatch,
+    ],
+  )
 
   const isBookDownloadComplete = useLiveQuery(
     async () => {
@@ -220,6 +285,7 @@ export function ReaderProvider({
       },
       reader: {
         areControlsVisible,
+        pdf,
         search,
         textSizePercent,
         selectedSegmentId,
@@ -240,6 +306,7 @@ export function ReaderProvider({
       hasPendingPageNavigation,
       textSizePercent,
       areControlsVisible,
+      pdf,
       search,
       selectedSegmentId,
       highlightedSegmentId,

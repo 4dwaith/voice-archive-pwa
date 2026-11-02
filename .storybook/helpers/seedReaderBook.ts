@@ -1,4 +1,5 @@
 import { database } from '../../src/data/database'
+import pdfUrl from '../../cypress/fixtures/reader.pdf?url'
 import {
   readerBookContent,
   readerBookSection,
@@ -8,7 +9,7 @@ import {
 } from '../../src/mock-data/readerBook'
 
 export type ReaderTocScenario =
-  'standard' | 'overflowing' | 'unavailable' | 'partial' | 'search'
+  'standard' | 'overflowing' | 'unavailable' | 'partial' | 'search' | 'pdf'
 
 // Scenario-owned records: seed idempotently, retaining committed measurements.
 export async function seedReaderBook(
@@ -69,6 +70,11 @@ export async function seedReaderBook(
   ]
 
   const isPartial = tocScenario === 'partial'
+  if (tocScenario === 'pdf')
+    segments[0].regions = [
+      { page_index: 0, x0: 0.2, y0: 0.25, x1: 0.8, y1: 0.35 },
+      { page_index: 1, x0: 0.1, y0: 0.15, x1: 0.6, y1: 0.3 },
+    ]
   if (tocScenario === 'search') {
     const text = `${segments[0].text_content}\nFind this river. Find this river again.`
     segments[0] = {
@@ -106,6 +112,22 @@ export async function seedReaderBook(
           : undefined,
         manifest: {
           ...readerBookContent.manifest,
+          ...(tocScenario === 'pdf'
+            ? {
+                source_pdf_file_id: 9,
+                files: [
+                  {
+                    id: 9,
+                    kind: 'source_pdf' as const,
+                    book_id: bookId,
+                    section_id: null,
+                    url: new URL(pdfUrl, window.location.href).href,
+                    byte_size: 2000,
+                    metadata: { page_count: 3 },
+                  },
+                ],
+              }
+            : {}),
           content_version: readerStoryContentVersion,
           section_count: isPartial
             ? 1

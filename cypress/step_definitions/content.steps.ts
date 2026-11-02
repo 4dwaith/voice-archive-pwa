@@ -8,6 +8,7 @@ import type {
   SectionReadOutput,
   SegmentReadOutput,
 } from '../../src/api-client/generated/schemas'
+import type { Region } from '../../src/api-client/generated/endpoints'
 
 const version = 'a3027b66-924c-4c9a-aad5-660ba7a733bc'
 const nextVersion = '1ac04088-bfcb-44e0-bcdf-ff025c93dcac'
@@ -287,7 +288,10 @@ function preparePublishedBook() {
 
 Given('a published synchronization book', preparePublishedBook)
 
-function prepareBookWithMedia() {
+function prepareBookWithMedia(
+  pdfContent = mediaFixture.pdf,
+  pdfRegions?: Region[],
+) {
   if (Cypress.expose('mode') !== 'live') {
     mockBook()
     const files = [
@@ -296,8 +300,8 @@ function prepareBookWithMedia() {
         kind: 'source_pdf',
         book_id: id,
         section_id: null,
-        byte_size: 500,
-        metadata: { page_count: 1 },
+        byte_size: Cypress.Buffer.from(pdfContent, 'base64').length,
+        metadata: { page_count: pdfRegions ? 3 : 1 },
         url: '/api/v1/files/101',
       },
       {
@@ -329,8 +333,25 @@ function prepareBookWithMedia() {
         next_offset: null,
       },
     })
+    if (pdfRegions)
+      cy.intercept('GET', `${apiUrl()}/api/v1/books/${id}/segments?*`, {
+        body: {
+          content_version: version,
+          items: [
+            {
+              ...segment,
+              regions: pdfRegions,
+              page_indexes: [
+                ...new Set(pdfRegions.map((region) => region.page_index)),
+              ],
+            },
+            { ...segment, id: 2, source_key: 'b', sequence: 2 },
+          ],
+          next_offset: null,
+        },
+      })
     for (const [fileId, encoded, type] of [
-      [101, mediaFixture.pdf, 'application/pdf'],
+      [101, pdfContent, 'application/pdf'],
       [102, mediaFixture.audio, 'audio/mpeg'],
     ] as const) {
       const bytes = Cypress.Buffer.from(encoded, 'base64')
@@ -339,7 +360,12 @@ function prepareBookWithMedia() {
           request.headers.range &&
           (!request.headers['if-range'] ||
             request.headers['if-range'] === '"fixture"')
-        const body = partial ? bytes.subarray(0, 16) : bytes
+        const range = /bytes=(\d+)-(\d*)/.exec(String(request.headers.range))
+        const start = range ? Number(range[1]) : 0
+        const end = range?.[2]
+          ? Math.min(Number(range[2]), bytes.length - 1)
+          : bytes.length - 1
+        const body = partial ? bytes.subarray(start, end + 1) : bytes
         request.reply({
           statusCode: partial ? 206 : 200,
           body: body.buffer.slice(
@@ -350,8 +376,11 @@ function prepareBookWithMedia() {
             'content-type': type,
             etag: '"fixture"',
             'accept-ranges': 'bytes',
+            'content-length': String(body.length),
+            'access-control-expose-headers':
+              'ETag, Accept-Ranges, Content-Range',
             ...(partial
-              ? { 'content-range': `bytes 0-15/${bytes.length}` }
+              ? { 'content-range': `bytes ${start}-${end}/${bytes.length}` }
               : {}),
           },
         })
@@ -375,7 +404,7 @@ function prepareBookWithMedia() {
       expect(response.status).to.equal(201)
       return (await response.json()).id as number
     }
-    const pdf = await upload('source_pdf', mediaFixture.pdf, 'application/pdf')
+    const pdf = await upload('source_pdf', pdfContent, 'application/pdf')
     const audio = await upload(
       'audio_chapter',
       mediaFixture.audio,
@@ -393,6 +422,10 @@ function prepareBookWithMedia() {
       ...input,
       source_pdf_file_id: pdf,
       sections: [{ ...input.sections[0], audio_file_id: audio }],
+      segments: input.segments.map((row, index) => ({
+        ...row,
+        ...(index === 0 && pdfRegions ? { regions: pdfRegions } : {}),
+      })),
     }
     const publication = await win.fetch(
       `${apiUrl()}/api/v1/books/${id}/content-imports`,
@@ -417,6 +450,125 @@ Given('a fully cached synchronization book', () => {
 Given('a fully cached synchronization book with prepared media', () => {
   prepareBookWithMedia()
   cy.then(cacheBookFromLibrary)
+})
+
+let pdfRangeBytes = 0
+let initialPdfRangeBytes = 0
+let pdfByteSize = 0
+let textPageBeforePdfBrowse: string | undefined
+
+function preparePdfBook() {
+  pdfRangeBytes = 0
+  cy.readFile('cypress/fixtures/reader-range.pdf', 'base64').then(
+    (encoded: string) => {
+      pdfByteSize = Cypress.Buffer.from(encoded, 'base64').length
+      prepareBookWithMedia(encoded, [
+        { page_index: 0, x0: 0.2, y0: 0.25, x1: 0.8, y1: 0.35 },
+        { page_index: 1, x0: 0.1, y0: 0.15, x1: 0.6, y1: 0.3 },
+      ])
+    },
+  )
+  if (Cypress.expose('mode') === 'live')
+    cy.intercept('GET', `${apiUrl()}/api/v1/files/*`, (request) => {
+      request.on('response', (response) => {
+        if (response.statusCode === 206) {
+          const range = /^bytes (\d+)-(\d+)\/\d+$/.exec(
+            String(response.headers['content-range']),
+          )
+          expect(range).not.to.equal(null)
+          pdfRangeBytes += Number(
+            response.headers['content-length'] ??
+              Number(range![2]) - Number(range![1]) + 1,
+          )
+        }
+      })
+    })
+}
+
+Given('a synchronization book with PDF regions', preparePdfBook)
+
+Given('a synchronization book whose PDF initially fails', () => {
+  preparePdfBook()
+  cy.intercept(
+    { method: 'GET', url: `${apiUrl()}/api/v1/files/*`, times: 1 },
+    { statusCode: 503 },
+  )
+})
+
+When('I select book text with the keyboard', () => {
+  cy.get('[data-reader-segment-id]').first().focus()
+  cy.press(Cypress.Keyboard.Keys.ENTER)
+})
+
+Then('I can retry the PDF while keeping selected text', () => {
+  cy.contains('The PDF could not be displayed.').should('be.visible')
+  cy.get('[data-reader-selected="true"]').should('exist')
+  cy.findByRole('button', { name: 'Retry PDF' }).click()
+  cy.get('[data-pdf-page] canvas')
+    .should('have.length', 2)
+    .each(($canvas) => cy.wrap($canvas).should('be.visible'))
+
+  cy.get('[data-reader-segment-id]').last().focus()
+  cy.press(Cypress.Keyboard.Keys.ENTER)
+  cy.get('[data-pdf-region]').should('not.exist')
+  cy.contains('This text has no PDF regions.').should('be.visible')
+})
+
+When('I open the PDF beside the text', () => {
+  cy.findByLabelText('Reading view').select('both')
+})
+
+Then('the selected PDF pages render through partial delivery', () => {
+  cy.get('[data-pdf-page] canvas')
+    .should('have.length', 2)
+    .each(($canvas) => cy.wrap($canvas).should('be.visible'))
+  cy.get('[data-pdf-region]').should('have.length', 2)
+  cy.then(() => {
+    if (Cypress.expose('mode') !== 'live') return
+    expect(pdfRangeBytes).to.be.greaterThan(0).and.lessThan(pdfByteSize)
+    initialPdfRangeBytes = pdfRangeBytes
+    cy.log(
+      `Selected-page partial responses: ${pdfRangeBytes} / ${pdfByteSize} bytes`,
+    )
+  })
+})
+
+When('I browse a distant physical PDF page', () => {
+  cy.get('[data-reader-page]')
+    .invoke('attr', 'data-reader-page')
+    .then((page) => {
+      textPageBeforePdfBrowse = page
+    })
+  cy.findByLabelText('Physical page').clear().type('3')
+  cy.findByRole('button', { name: /^Go$/ }).click()
+})
+
+Then('PDF browsing fetches more ranges without navigating text', () => {
+  cy.get('[data-pdf-page="3"] canvas').should('be.visible')
+  cy.get('[data-pdf-region]').should('not.exist')
+  cy.then(() => {
+    if (Cypress.expose('mode') !== 'live') return
+    expect(pdfRangeBytes).to.be.greaterThan(initialPdfRangeBytes)
+    return cy.writeFile('tmp/phase12-live-ranges.json', {
+      fileBytes: pdfByteSize,
+      selectedPageRangeBytes: initialPdfRangeBytes,
+      afterDistantPageRangeBytes: pdfRangeBytes,
+    })
+  })
+  cy.findByLabelText('PDF pages')
+    .focus()
+    .trigger('keydown', { key: 'PageDown' })
+  cy.get('[data-reader-page]').should(
+    'have.attr',
+    'data-reader-page',
+    textPageBeforePdfBrowse,
+  )
+  cy.viewport(700, 800)
+  cy.findByLabelText('Reading view').should('have.value', 'text').select('pdf')
+  cy.findByRole('article', { name: 'Book text' }).should('not.exist')
+  cy.findByLabelText('Reading view').select('text')
+  cy.get('[data-pdf-page]').should('not.exist')
+  cy.findByRole('article', { name: 'Book text' }).should('be.visible')
 })
 
 Given('a slow synchronization book with a cover', () =>
