@@ -32,20 +32,33 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     Then I see its first reader page
     And the reader controls are visible
-    And the ToC fills the reader below the header
+    When I tap exposed book text
+    Then the reader controls are hidden
+    And I see its first reader page
+    When I reveal the reader controls
+    Then the reader controls are visible
+    And I see its first reader page
+
+  @live
+  Scenario: Collapsing the ToC preserves the text viewport and footer
+    Given a published synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    Then the ToC fills the reader below the header
     When I collapse the table of contents
     Then the ToC shrinks to its toggle without moving the text or footer
     When I expand the table of contents
     Then the ToC fills the reader below the header
-    When I tap exposed book text
-    Then the reader controls are hidden
-    And I see its first reader page
-    When I select a text segment
+
+  @live
+  Scenario: Selecting text keeps the reader controls hidden
+    Given a published synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I select a text segment
     Then the text segment is selected
     And the reader controls are hidden
-    When I reveal the reader controls
-    Then the reader controls are visible
-    And I see its first reader page
 
   @live
   Scenario: A fully cached book remains available when the network fails
@@ -131,16 +144,21 @@ Feature: Structured book synchronization
     And I select the nested ToC destination
     Then I see the nested section text
 
-  Scenario: Footer navigation moves locally and jumps across chapters within the index
+  Scenario: Footer navigation moves within a chapter
     Given a synchronization book with two chapters
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     And I move forward one chapter page
     Then the second chapter page is displayed
-    When I jump to the last indexed book page
+
+  Scenario: Book navigation jumps across chapters within the index
+    Given a synchronization book with two chapters
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I jump to the last indexed book page
     Then the second chapter opens at the indexed book boundary
 
-  Scenario: Touch swipes and keyboard page keys navigate while reading
+  Scenario: A touch swipe turns the page without revealing controls
     Given a synchronization book with a nested destination
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
@@ -148,20 +166,34 @@ Feature: Structured book synchronization
     And I swipe left across the book text
     Then the text shows page 2
     And the reader controls are hidden
-    When I press the previous-page key
+
+  Scenario: PageUp turns back without revealing controls
+    Given a synchronization book with a nested destination
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I move to chapter page 2
+    And I focus the text and hide the controls
+    And I press the previous-page key
     Then the text shows page 1
     And the reader controls are hidden
-    When I focus a text segment and hide the controls
-    And I press the right arrow key
-    Then the text shows page 2
+
+  Scenario Outline: Repeated <direction> arrow presses preserve reader focus
+    Given a synchronization book with a nested destination
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I move to chapter page <start>
+    And I focus a text segment and hide the controls
+    And I press the <direction> arrow key
+    Then the text shows page <next>
     And the reader keeps keyboard focus
-    When I press the right arrow key
-    Then the text shows page 3
-    When I press the left arrow key
-    Then the text shows page 2
-    When I press the left arrow key
-    Then the text shows page 1
+    When I press the <direction> arrow key
+    Then the text shows page <last>
     And the reader controls are hidden
+
+    Examples:
+      | direction | start | next | last |
+      | right     | 1     | 2    | 3    |
+      | left      | 3     | 2    | 1    |
 
   Scenario: Reload restores text size and an interior segment position
     Given a synchronization book with two chapters
@@ -176,22 +208,61 @@ Feature: Structured book synchronization
     When I save a position for an obsolete version and reload
     Then I see its first reader page
 
-  Scenario: Book search opens an exact later match and retains results until book closure
+  Scenario: Search results protect the reader from modal keyboard input
     Given a searchable synchronization book
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     And I submit a book search with Enter
     Then the search modal protects the reader and shows both occurrences
-    When I dismiss search with Escape
+
+  Scenario: Dismissing search returns keyboard focus to Results
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    And I dismiss search with Escape
     Then focus returns to the search results button
-    When I reopen search results
+
+  Scenario: Choosing a later search result opens its exact position
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
     And I open the later matching occurrence
     Then the exact later match is displayed
-    When I reopen search results
+
+  Scenario: Dismissing search preserves the results
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    And I dismiss search with Escape
+    And I reopen search results
     Then both matching occurrences remain available
-    When I clear search and submit it again by button
+
+  Scenario: Opening a match preserves the search results
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    And I open the later matching occurrence
+    And I reopen search results
     Then both matching occurrences remain available
-    When I dismiss search with Escape
+
+  Scenario: Clearing search allows another submission by button
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    And I clear search and submit it again by button
+    Then both matching occurrences remain available
+
+  Scenario: Leaving the book clears its search results
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I submit a book search with Enter
+    And I dismiss search with Escape
     And I use the header Home button
     Then I return to the synchronization library
     When I go forward in browser history

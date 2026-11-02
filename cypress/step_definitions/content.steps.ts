@@ -874,6 +874,26 @@ When('I move forward one chapter page', () => {
     .click()
 })
 
+When('I move to chapter page {int}', (page: number) => {
+  cy.findByRole('slider', { name: 'Chapter page' })
+    .should('have.attr', 'aria-disabled', 'false')
+    .should(($slider) => {
+      expect(Number($slider.attr('aria-valuemax'))).to.be.at.least(page)
+    })
+    .then(($slider) => {
+      const slider = $slider[0]
+      const count = Number($slider.attr('aria-valuemax'))
+
+      cy.wrap($slider).click(
+        slider.clientLeft + ((page - 0.5) / count) * slider.clientWidth,
+        slider.clientTop + slider.clientHeight / 2,
+      )
+    })
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'data-reader-page', String(page))
+    .and('have.attr', 'aria-busy', 'false')
+})
+
 Then('the second chapter page is displayed', () => {
   cy.findByRole('article', { name: 'Book text' }).should(
     'have.attr',
@@ -989,12 +1009,13 @@ When('I focus a text segment and hide the controls', () => {
   cy.press(Cypress.Keyboard.Keys.ESC)
 })
 
-When('I press the right arrow key', () => {
-  cy.press(Cypress.Keyboard.Keys.RIGHT)
-})
+When('I press the {word} arrow key', (direction: 'left' | 'right') => {
+  const key = {
+    left: Cypress.Keyboard.Keys.LEFT,
+    right: Cypress.Keyboard.Keys.RIGHT,
+  }[direction]
 
-When('I press the left arrow key', () => {
-  cy.press(Cypress.Keyboard.Keys.LEFT)
+  cy.press(key)
 })
 
 Then('the reader keeps keyboard focus', () => {
