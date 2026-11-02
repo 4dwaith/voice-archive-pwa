@@ -64,8 +64,8 @@ export function createReaderTocListener() {
             const range = readiness.downloadedChapterRanges.get(id)
             return (
               range &&
-              target.sequence >= range.start &&
-              target.sequence < range.end
+              target.sequence >= range.startSegmentSequenceNumber &&
+              target.sequence < range.endSegmentSequenceNumber
             )
           })
         const measurement =

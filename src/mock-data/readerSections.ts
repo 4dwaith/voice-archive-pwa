@@ -1,4 +1,4 @@
-import type { ReaderSection } from '../models/reader.ts'
+import type { ReaderSection } from '../models/reader'
 
 // Shared synthetic example for stories and independent component checks.
 export const readerSections: ReaderSection[] = [

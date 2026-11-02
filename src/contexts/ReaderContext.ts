@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react'
 import type { TextSearchResult } from '../data/searchBookText'
 import type {
-  ReaderPageNavigation,
-  ReaderPageMeasurement,
+  ReaderPageNavigationRequest,
+  ReaderChapterMeasurement,
   ReaderSegmentError,
   ReaderTocPresentation,
 } from '../models/reader'
@@ -31,17 +31,17 @@ export type ReaderContextValue = {
     setTocPresentation: (presentation: ReaderTocPresentation) => void
   }
   navigation: {
-    pageScope: ReaderPageNavigation['scope']
-    setPageScope: (scope: ReaderPageNavigation['scope']) => void
+    pageScope: ReaderPageNavigationRequest['scope']
+    setPageScope: (scope: ReaderPageNavigationRequest['scope']) => void
     currentPage: number
     pageCount: number | null
     globalPage: number | null
     totalPageCount: number | null
     indexedPageCount: number
     isPageNavigationPending: boolean
-    requestPageNavigation: (intent: ReaderPageNavigation) => void
+    requestPageNavigation: (intent: ReaderPageNavigationRequest) => void
     setCurrentPage: (pageNumber: number) => void
-    reportPageMeasurement: (report: ReaderPageMeasurement) => void
+    reportPageMeasurement: (report: ReaderChapterMeasurement) => void
   }
   reader: {
     search?: ReaderSearchValue

@@ -8,7 +8,7 @@ import { resolvePageNumber } from '../components/atoms/ReaderProgressNavigation/
 import type {
   ReaderAnchor,
   ReaderScope,
-  ReaderPageNavigation,
+  ReaderPageNavigationRequest,
   StoredReaderMeasurement,
   ReaderMeasurementSave,
   ReaderSegmentError,
@@ -24,7 +24,7 @@ export type ReaderState = {
   sectionExpansion: Record<number, boolean>
   tocPresentation: ReaderTocPresentation
 
-  pageScope: ReaderPageNavigation['scope']
+  pageScope: ReaderPageNavigationRequest['scope']
 
   scope: ReaderScope | null
   hasNavigated: boolean
@@ -32,7 +32,7 @@ export type ReaderState = {
 
   pageNavigationIntent: {
     requestId: string
-    scope: ReaderPageNavigation['scope']
+    scope: ReaderPageNavigationRequest['scope']
     pageNumber: number
   } | null
   pageNavigationError: string | null
@@ -117,13 +117,16 @@ const readerSlice = createSlice({
       )
         state.measurementSave = action.payload
     },
-    setPageScope(state, action: PayloadAction<ReaderPageNavigation['scope']>) {
+    setPageScope(
+      state,
+      action: PayloadAction<ReaderPageNavigationRequest['scope']>,
+    ) {
       if (state.pageScope !== action.payload) state.pageNavigationIntent = null
       state.pageScope = action.payload
     },
     requestPageNavigation: {
       prepare(
-        request: ReaderPageNavigation & {
+        request: ReaderPageNavigationRequest & {
           currentPage: number | null
           pageCount: number | null
         },
@@ -135,7 +138,7 @@ const readerSlice = createSlice({
         {
           payload,
         }: PayloadAction<
-          ReaderPageNavigation & {
+          ReaderPageNavigationRequest & {
             currentPage: number | null
             pageCount: number | null
             requestId: string

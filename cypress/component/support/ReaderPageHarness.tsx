@@ -12,7 +12,7 @@ import {
   type ReaderContextValue,
 } from '../../../src/contexts/ReaderContext'
 import type {
-  ReaderPageMeasurement,
+  ReaderChapterMeasurement,
   ReaderLayoutMeasurement,
   ReaderSegment,
 } from '../../../src/models/reader'
@@ -46,7 +46,7 @@ export function ReaderPageHarness({
   ref: Ref<ReaderPageControls>
   children?: ReactNode
   layoutOnly?: boolean
-  onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
+  onReportPageMeasurement?: (report: ReaderChapterMeasurement) => void
   onPageMeasure?: (report: ReaderLayoutMeasurement) => void
   onLayoutKeyChange?: (key: string | null) => void
 }) {
@@ -75,7 +75,7 @@ export function ReaderPageHarness({
   )
 
   const reportPageMeasurement = useCallback(
-    (report: ReaderPageMeasurement) => onReportPageMeasurement?.(report),
+    (report: ReaderChapterMeasurement) => onReportPageMeasurement?.(report),
     [onReportPageMeasurement],
   )
 

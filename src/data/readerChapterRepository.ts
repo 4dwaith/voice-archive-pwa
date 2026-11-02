@@ -1,15 +1,18 @@
 import { database } from './database'
 import { getContentSections } from './contentRepository'
-
-// Half-open bounds in canonical segment sequence order.
-type ReaderChapterRange = { start: number; end: number }
+import type { CachedSegment } from '../models/content'
+import type {
+  BookDownloadStatus,
+  ReaderChapterRange,
+  ReaderBookStatus,
+} from '../models/reader'
 
 // Called inside a transaction. Counts, primary keys and source-key lookups prove
 // availability without materializing segment text.
 export async function readChapterAvailability(
   bookId: number,
   contentVersion: string,
-) {
+): Promise<BookDownloadStatus | null> {
   const content = await database.content.get(bookId)
 
   if (content?.version !== contentVersion) return null
@@ -72,7 +75,10 @@ export async function readChapterAvailability(
       const chapterId = String(chapter.id)
 
       if (chapter.first_segment_source_key === null) {
-        downloadedChapterRanges.set(chapterId, { start: 0, end: 0 })
+        downloadedChapterRanges.set(chapterId, {
+          startSegmentSequenceNumber: 0,
+          endSegmentSequenceNumber: 0,
+        })
         continue
       }
 
@@ -80,8 +86,8 @@ export async function readChapterAvailability(
 
       if (startSequence !== undefined && nextChapterStartSequence !== undefined)
         downloadedChapterRanges.set(chapterId, {
-          start: startSequence,
-          end: nextChapterStartSequence,
+          startSegmentSequenceNumber: startSequence,
+          endSegmentSequenceNumber: nextChapterStartSequence,
         })
 
       nextChapterStartSequence = startSequence
@@ -90,8 +96,8 @@ export async function readChapterAvailability(
     // All unsectioned text before the first root chapter.
     if (nextChapterStartSequence !== undefined)
       downloadedChapterRanges.set('before', {
-        start: 0,
-        end: nextChapterStartSequence,
+        startSegmentSequenceNumber: 0,
+        endSegmentSequenceNumber: nextChapterStartSequence,
       })
   }
 
@@ -109,7 +115,7 @@ export async function readChapterSegments(
   bookId: number,
   contentVersion: string,
   chapterId: string,
-) {
+): Promise<CachedSegment[] | undefined> {
   return database.transaction(
     'r',
     database.content,
@@ -123,13 +129,14 @@ export async function readChapterSegments(
       const range = chapterAvailability?.downloadedChapterRanges.get(chapterId)
 
       if (range === undefined) return undefined
-      if (range.start === range.end) return []
+      if (range.startSegmentSequenceNumber === range.endSegmentSequenceNumber)
+        return []
 
       return database.segments
         .where('[bookId+version+sequence]')
         .between(
-          [bookId, contentVersion, range.start],
-          [bookId, contentVersion, range.end],
+          [bookId, contentVersion, range.startSegmentSequenceNumber],
+          [bookId, contentVersion, range.endSegmentSequenceNumber],
           true,
           false,
         )
@@ -142,7 +149,7 @@ export async function readReaderChapterReadiness(
   bookId: number,
   contentVersion: string,
   layoutKey: string | null,
-) {
+): Promise<ReaderBookStatus | null> {
   return database.transaction(
     'r',
     [

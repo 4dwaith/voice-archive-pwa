@@ -1,7 +1,10 @@
 import { useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { database } from '../data/database'
-import { useReaderNavigation } from '../hooks/useReaderNavigation'
+import {
+  useReaderNavigation,
+  type ReaderNavigation,
+} from '../hooks/useReaderNavigation'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   reportLayoutKey,
@@ -48,8 +51,7 @@ export function ReaderProvider({
   contentVersion,
   restorePosition = true,
 }: {
-  children:
-    ReactNode | ((data: ReturnType<typeof useReaderNavigation>) => ReactNode)
+  children: ReactNode | ((data: ReaderNavigation) => ReactNode)
   bookId?: number
   restorePosition?: boolean
   contentVersion?: string

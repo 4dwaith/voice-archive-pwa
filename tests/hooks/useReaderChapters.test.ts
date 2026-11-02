@@ -78,8 +78,8 @@ describe('live reader chapters', () => {
       expect(
         result.current.chapters?.downloadedChapterRanges.get('before'),
       ).toEqual({
-        start: 0,
-        end: 4,
+        startSegmentSequenceNumber: 0,
+        endSegmentSequenceNumber: 4,
       }),
     )
 
@@ -122,8 +122,8 @@ describe('live reader chapters', () => {
       expect(
         result.current.chapters?.downloadedChapterRanges.get('10'),
       ).toEqual({
-        start: 4,
-        end: 15,
+        startSegmentSequenceNumber: 4,
+        endSegmentSequenceNumber: 15,
       }),
     )
 
@@ -152,8 +152,8 @@ describe('live reader chapters', () => {
     await waitFor(() =>
       expect(result.current.chapters?.downloadedChapterRanges.get('3')).toEqual(
         {
-          start: 15,
-          end: Infinity,
+          startSegmentSequenceNumber: 15,
+          endSegmentSequenceNumber: Infinity,
         },
       ),
     )

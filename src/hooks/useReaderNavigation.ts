@@ -2,7 +2,14 @@ import { useEffect, useMemo } from 'react'
 import { readReaderPreferences } from '../data/readerPreferences'
 import { getGraphemeBoundaries } from '../components/atoms/ReaderChapterLayout/getGraphemeBoundaries'
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { ReaderPageNavigation, ReaderSection } from '../models/reader'
+import type { CachedSegment } from '../models/content'
+import type {
+  ReaderAnchor,
+  ReaderBookStatus,
+  ReaderPageNavigationRequest,
+  ReaderSection,
+  StoredReaderMeasurement,
+} from '../models/reader'
 import { database } from '../data/database'
 import {
   readChapterSegments,
@@ -30,12 +37,46 @@ import {
   resolvePageStart,
   resolvePageSectionSelection,
 } from './resolveAnchorPage'
+import {
+  deriveGlobalPage,
+  deriveTocSections,
+  locateChapter,
+} from './deriveReaderNavigation'
+
+// Keep content, anchor candidates and measurements in one query-tagged snapshot.
+type ReaderNavigationSnapshot = {
+  queryKey: string
+  hasContent: boolean
+  chapterInfo: ReaderBookStatus | null
+  // Absent while waiting for an opening target or a downloaded chapter.
+  currentChapterId?: string
+  segments: CachedSegment[]
+  measurement?: StoredReaderMeasurement
+  firstAnchor: ReaderAnchor | null
+}
+
+// Expose derived pages, chapter data and navigation actions through the provider.
+export type ReaderNavigation = {
+  // Undefined while loading; null when chapter metadata is unavailable.
+  chapterInfo: ReaderBookStatus | null | undefined
+  tocSections: ReaderSection[]
+  currentChapterId: string | undefined
+  currentChapterSegments: CachedSegment[]
+  layoutKey: string | null
+  currentPage: number | null
+  globalPage: number | null
+  pageCount: number | null
+  totalPageCount: number | null
+  indexedPageCount: number
+  setCurrentPage: (pageNumber: number) => void
+  requestNavigation: (request: ReaderPageNavigationRequest) => void
+}
 
 export function useReaderNavigation(
   bookId?: number,
   contentVersion?: string,
   restorePosition = true,
-) {
+): ReaderNavigation {
   const dispatch = useAppDispatch()
   const scope = useAppSelector(getReaderScope)
   const anchor = useAppSelector(getReaderAnchor)
@@ -78,7 +119,9 @@ export function useReaderNavigation(
   )
 
   // Read content and committed measurements together as downloads and layout saves arrive.
-  const snapshot = useLiveQuery(async () => {
+  const snapshot = useLiveQuery(async (): Promise<
+    ReaderNavigationSnapshot | undefined
+  > => {
     if (bookId === undefined || !contentVersion || !isActive) return undefined
 
     return database.transaction(
@@ -165,15 +208,11 @@ export function useReaderNavigation(
         // Segment sequence ranges identify the chapter containing the anchor.
         const currentChapterId =
           anchorSegment && chapterInfo
-            ? chapterInfo.chapterIds.find((id) => {
-                const range = chapterInfo.downloadedChapterRanges.get(id)
-
-                return (
-                  range &&
-                  anchorSegment!.sequence >= range.start &&
-                  anchorSegment!.sequence < range.end
-                )
-              })
+            ? locateChapter(
+                anchorSegment.sequence,
+                chapterInfo.chapterIds,
+                chapterInfo.downloadedChapterRanges,
+              )
             : undefined
         const currentChapterSegments = currentChapterId
           ? await readChapterSegments(bookId, contentVersion, currentChapterId)
@@ -225,59 +264,9 @@ export function useReaderNavigation(
   )
   const chapterInfo = data?.chapterInfo
   const chapterId = data?.currentChapterId
-  const prefixIndex = chapterId
-    ? (chapterInfo?.indexedChapterIds.indexOf(chapterId) ?? -1)
-    : -1
-
-  // Book numbering is known only within the contiguous indexed chapter prefix.
-  const globalPage =
-    currentPage !== null && chapterInfo && prefixIndex >= 0
-      ? currentPage +
-        chapterInfo.indexedChapterIds
-          .slice(0, prefixIndex)
-          .reduce((sum, id) => sum + chapterInfo.countsByChapter.get(id)!, 0)
-      : null
-
-  function getUnavailableReason(chapterId: string, hasTarget = true) {
-    if (!hasTarget) return 'No text target'
-    if (!chapterInfo?.readyChapterIds.has(chapterId)) return 'Preparing pages'
-    if (chapterInfo.countsByChapter.get(chapterId) === 0)
-      return 'No readable pages'
-    return undefined
-  }
-
+  const globalPage = deriveGlobalPage(currentPage, chapterId, chapterInfo)
   const sections = chapterInfo?.sections ?? []
-  const sectionsById = new Map(sections.map((section) => [section.id, section]))
-
-  // Nested entries share their root chapter's page readiness.
-  const tocSections: ReaderSection[] = sections.map((section) => {
-    let root = section
-
-    while (root.parent_id !== null) {
-      const parent = sectionsById.get(root.parent_id)
-      if (!parent) break
-      root = parent
-    }
-
-    return {
-      ...section,
-      unavailableReason: getUnavailableReason(
-        String(root.id),
-        section.first_segment_source_key !== null,
-      ),
-    }
-  })
-
-  // Leading text before the first section gets its own synthetic ToC entry.
-  const before = chapterInfo?.downloadedChapterRanges.get('before')
-  if (before && before.end > before.start)
-    tocSections.unshift({
-      id: 0,
-      parent_id: null,
-      title: 'Before',
-      sequence: -1,
-      unavailableReason: getUnavailableReason('before'),
-    })
+  const tocSections = deriveTocSections(chapterInfo)
 
   function setCurrentPage(pageNumber: number) {
     const anchor = resolvePageStart(
@@ -304,7 +293,7 @@ export function useReaderNavigation(
   }
 
   // Supply current bounds; the reducer orders and accumulates navigation requests.
-  function requestNavigation(request: ReaderPageNavigation) {
+  function requestNavigation(request: ReaderPageNavigationRequest) {
     dispatch(
       requestPageNavigation({
         ...request,

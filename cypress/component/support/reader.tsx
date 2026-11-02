@@ -1,7 +1,7 @@
 import { createRef, type ReactNode } from 'react'
 import { readerPageSegments } from '../../../src/mock-data/readerPages'
 import type {
-  ReaderPageMeasurement,
+  ReaderChapterMeasurement,
   ReaderLayoutMeasurement,
   ReaderSegment,
 } from '../../../src/models/reader'
@@ -30,7 +30,7 @@ export function mountReaderPage({
   waitForLayout?: boolean
   children?: ReactNode
   layoutOnly?: boolean
-  onReportPageMeasurement?: (report: ReaderPageMeasurement) => void
+  onReportPageMeasurement?: (report: ReaderChapterMeasurement) => void
   onPageMeasure?: (report: ReaderLayoutMeasurement) => void
   onLayoutKeyChange?: (key: string | null) => void
 } = {}) {
