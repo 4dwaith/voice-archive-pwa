@@ -980,6 +980,29 @@ When('I focus the text and hide the controls', () => {
     .type('{esc}')
 })
 
+When('I focus a text segment and hide the controls', () => {
+  cy.findByRole('article', { name: 'Book text' })
+    .should('have.attr', 'aria-busy', 'false')
+    .find('[data-reader-segment-id]')
+    .first()
+    .focus()
+  cy.press(Cypress.Keyboard.Keys.ESC)
+})
+
+When('I press the right arrow key', () => {
+  cy.press(Cypress.Keyboard.Keys.RIGHT)
+})
+
+When('I press the left arrow key', () => {
+  cy.press(Cypress.Keyboard.Keys.LEFT)
+})
+
+Then('the reader keeps keyboard focus', () => {
+  cy.findByRole('region', { name: /^Reader$/ })
+    .should('be.focused')
+    .and('have.css', 'outline-style', 'none')
+})
+
 When('I swipe left across the book text', () => {
   cy.findByRole('article', { name: 'Book text' }).then(async ($article) => {
     const rect = $article[0].getBoundingClientRect()

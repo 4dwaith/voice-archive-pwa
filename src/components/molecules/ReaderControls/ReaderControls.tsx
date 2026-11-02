@@ -112,7 +112,13 @@ export function ReaderControls({
       (!selection || selection.isCollapsed)
     ) {
       event.preventDefault()
-      if (!event.repeat) requestPageMove(delta)
+      if (!event.repeat) {
+        // Page changes can replace focused text; keep later keys on the reader.
+        isReturningFocus.current = true
+        surface.current?.focus({ preventScroll: true })
+        isReturningFocus.current = false
+        requestPageMove(delta)
+      }
       return
     }
 
@@ -234,7 +240,7 @@ export function ReaderControls({
       role="region"
       aria-label="Reader"
       tabIndex={0}
-      className="relative h-full w-full focus-visible:outline-4 focus-visible:-outline-offset-4 focus-visible:outline-accent"
+      className="relative h-full w-full outline-none"
       onPointerDownCapture={recordPointerFocus}
       onPointerUpCapture={clearPointerFocus}
       onPointerCancelCapture={clearPointerFocus}

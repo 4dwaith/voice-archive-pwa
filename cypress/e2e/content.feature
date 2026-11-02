@@ -151,6 +151,17 @@ Feature: Structured book synchronization
     When I press the previous-page key
     Then the text shows page 1
     And the reader controls are hidden
+    When I focus a text segment and hide the controls
+    And I press the right arrow key
+    Then the text shows page 2
+    And the reader keeps keyboard focus
+    When I press the right arrow key
+    Then the text shows page 3
+    When I press the left arrow key
+    Then the text shows page 2
+    When I press the left arrow key
+    Then the text shows page 1
+    And the reader controls are hidden
 
   Scenario: Reload restores text size and an interior segment position
     Given a synchronization book with two chapters

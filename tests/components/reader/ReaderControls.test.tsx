@@ -361,6 +361,32 @@ describe('ReaderControls', () => {
   })
 
   describe('keyboard paging', () => {
+    it('keeps paging when the focused text is replaced', async () => {
+      const context = createContextValue()
+      context.reader.areControlsVisible = false
+      const user = userEvent.setup()
+      const renderPage = (page: number) => (
+        <ReaderContext value={context}>
+          <ReaderControls controls={<button>Home</button>}>
+            <p key={page} tabIndex={0}>
+              Book content
+            </p>
+          </ReaderControls>
+        </ReaderContext>
+      )
+      const view = render(renderPage(1))
+      screen.getByText('Book content').focus()
+      vi.mocked(context.reader.setControlsVisible).mockClear()
+
+      await user.keyboard('{ArrowRight}')
+      view.rerender(renderPage(2))
+      await user.keyboard('{ArrowRight}')
+
+      expect(context.navigation.requestPageNavigation).toHaveBeenCalledTimes(2)
+      expect(screen.getByRole('region', { name: 'Reader' })).toHaveFocus()
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+    })
+
     it.each([
       ['PageDown', 1],
       ['ArrowRight', 1],
