@@ -13,8 +13,8 @@ import {
 
 export function mountReaderPage({
   segments = readerPageSegments,
-  width = 360,
-  height = 252,
+  width = 472,
+  height = 324,
   pageCount = null,
   waitForLayout = true,
   onLayoutKeyChange,

@@ -193,9 +193,12 @@ describe('ReaderChapterLayout', () => {
     cy.get('.reader-segment p').should(($paragraph) => {
       const range = $paragraph[0].ownerDocument.createRange()
       range.selectNodeContents($paragraph[0])
+      const width = $paragraph[0]
+        .closest('[data-reader-page-window]')!
+        .getBoundingClientRect().width
 
       for (const rect of Array.from(range.getClientRects()))
-        expect(rect.width).to.be.at.most(320.5)
+        expect(rect.width).to.be.at.most(width + 0.5)
     })
   })
 
@@ -215,7 +218,7 @@ describe('ReaderChapterLayout', () => {
 
     layout.updateProps({ page: 2 })
 
-    cy.get('[data-reader-host]').should('have.css', 'height', '252px')
+    cy.get('[data-reader-host]').should('have.css', 'height', '324px')
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
@@ -226,9 +229,9 @@ describe('ReaderChapterLayout', () => {
       'Second page line 1',
     )
 
-    cy.get('[data-reader-host]').invoke('css', 'height', '146px')
+    cy.get('[data-reader-host]').invoke('css', 'height', '182px')
 
-    cy.get('[data-reader-host]').should('have.css', 'height', '146px')
+    cy.get('[data-reader-host]').should('have.css', 'height', '182px')
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
@@ -250,7 +253,7 @@ describe('ReaderChapterLayout', () => {
       'data-layout-page-count',
       '4',
     )
-    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '18px')
+    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '24px')
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="102"]',
       'Second page line 1',
@@ -263,11 +266,7 @@ describe('ReaderChapterLayout', () => {
       'data-layout-page-count',
       '5',
     )
-    cy.get('[data-reader-page-columns]').should(
-      'have.css',
-      'font-size',
-      '20.25px',
-    )
+    cy.get('[data-reader-page-columns]').should('have.css', 'font-size', '27px')
 
     assertTextIsOnVisiblePage(
       '[data-reader-segment-id="101"]',
@@ -282,7 +281,7 @@ describe('ReaderChapterLayout', () => {
 
     layout.updateProps({ page: 2 })
 
-    cy.get('[data-reader-host]').should('have.css', 'width', '360px')
+    cy.get('[data-reader-host]').should('have.css', 'width', '472px')
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
@@ -290,9 +289,9 @@ describe('ReaderChapterLayout', () => {
     )
     assertTextIsOnVisiblePage('strong > em', 'word029')
 
-    cy.get('[data-reader-host]').invoke('css', 'width', '200px')
+    cy.get('[data-reader-host]').invoke('css', 'width', '254px')
 
-    cy.get('[data-reader-host]').should('have.css', 'width', '200px')
+    cy.get('[data-reader-host]').should('have.css', 'width', '254px')
     cy.get('[data-reader-layout-host]').should(
       'have.attr',
       'data-layout-page-count',
@@ -399,7 +398,7 @@ describe('ReaderChapterLayout', () => {
       const result = report.firstCall.args[0]
 
       expect(result.layoutKey).to.equal(reportKey.lastCall.args[0])
-      expect(result).to.include({ height: 212, textSizePercent: 100 })
+      expect(result).to.include({ height: 284, textSizePercent: 100 })
       expect(result.width).to.be.closeTo(320.4, 0.02)
       expect(result.unmappableSegmentIds).to.deep.equal([])
       expect(result.pages).to.deep.equal(

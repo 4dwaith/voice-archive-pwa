@@ -34,7 +34,7 @@ describe('Reader', () => {
     let viewport: DOMRect
     let pageCount: number
 
-    cy.viewport(360, 252)
+    cy.viewport(360, 324)
     cy.then(async () => {
       await database.open()
       await database.content.put(readerBookContent)
@@ -76,7 +76,7 @@ describe('Reader', () => {
     cy.get('main').should(($main) => {
       const rect = $main[0].getBoundingClientRect()
       expect(rect.top).to.equal(0)
-      expect(rect.height).to.equal(252)
+      expect(rect.height).to.equal(324)
     })
     cy.get('[data-reader-overlay]').should(($overlay) => {
       expect($overlay[0].getBoundingClientRect().top).to.equal(0)

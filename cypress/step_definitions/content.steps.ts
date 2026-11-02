@@ -2,6 +2,7 @@ import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 import { READER_PREFERENCES_KEY } from '../../src/data/readerPreferences'
 import mediaFixture from '../fixtures/content-media.json'
 import type { contentTestHarness } from '../../src/testing/contentTestHarness'
+import type { StoredReaderMeasurement } from '../../src/models/reader'
 import type {
   ContentManifestOutput,
   SectionReadOutput,
@@ -515,6 +516,70 @@ When('its manifest becomes unreachable', () => {
     forceNetworkError: true,
   })
 })
+
+function readStoredMeasurements() {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<StoredReaderMeasurement[]>((resolve, reject) => {
+        const request = win.indexedDB.open('voice-archive-e2e-test')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const database = request.result
+          const transaction = database.transaction('measurements')
+          const rows = transaction.objectStore('measurements').getAll()
+          transaction.oncomplete = () => {
+            database.close()
+            resolve(rows.result.filter((row) => row.bookId === id))
+          }
+          transaction.onabort = () => {
+            database.close()
+            reject(transaction.error)
+          }
+        }
+      }),
+  )
+}
+
+Given('its reader measurements are committed', () => {
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'aria-busy',
+    'false',
+  )
+  cy.findByRole('button', { name: /^Book$/ }).click()
+  cy.findByRole('slider', { name: 'Book page' }).should(($slider) => {
+    expect($slider.attr('aria-valuetext')).not.to.contain('total unknown')
+  })
+  cy.get('[data-reader-measurer]').should('not.exist')
+  readStoredMeasurements().then((records) => {
+    expect(records).to.have.length(2)
+    expect(
+      records.every((record) => record.contentVersion === currentVersion),
+    ).to.equal(true)
+    expect(records.flatMap((record) => record.pages).length).to.be.greaterThan(
+      0,
+    )
+    cy.wrap(records).as('committedMeasurements')
+  })
+})
+
+Then('the offline reader reuses its stored measurements', () => {
+  cy.contains('[role="status"]', 'Available offline.').should('be.visible')
+  cy.findByRole('article', { name: 'Book text' }).should(
+    'have.attr',
+    'aria-busy',
+    'false',
+  )
+  cy.findByRole('button', { name: /^Book$/ }).click()
+  cy.findByRole('slider', { name: 'Book page' }).should(($slider) => {
+    expect($slider.attr('aria-valuetext')).not.to.contain('total unknown')
+  })
+  cy.get('[data-reader-measurer]').should('not.exist')
+  cy.get<StoredReaderMeasurement[]>('@committedMeasurements').then((before) => {
+    readStoredMeasurements().should('deep.equal', before)
+  })
+})
+
 Then('its cached text remains available offline', () => {
   harness().then(async (data) => {
     expect((await data.open(id)).status).to.equal('offline')
@@ -754,11 +819,31 @@ Given('a synchronization book with a nested destination', () =>
 )
 
 When('I select the nested ToC destination', () => {
-  cy.findByRole('navigation', { name: 'Table of contents' }).within(() => {
-    cy.findByRole('button', { name: 'Nested destination' })
-      .should('be.enabled')
-      .click()
+  // Cypress's focusable-element list omits native summary elements.
+  cy.get('summary[aria-label="Subsections of Chapter"]').then(($summary) => {
+    $summary[0].focus()
   })
+  cy.focused()
+    .should('have.attr', 'aria-label', 'Subsections of Chapter')
+    .and('have.css', 'outline-style', 'solid')
+  cy.press(Cypress.Keyboard.Keys.ENTER)
+  cy.findByRole('button', { name: 'Nested destination' }).should('not.exist')
+
+  cy.press(Cypress.Keyboard.Keys.ENTER)
+  cy.findByRole('navigation', { name: 'Table of contents' }).within(() => {
+    cy.get('li > button').should(($buttons) => {
+      expect(
+        [...$buttons].map((button) => button.textContent?.trim()),
+      ).to.deep.equal(['Chapter', 'Nested destination'])
+    })
+    cy.findByRole('button', { name: 'Nested destination' }).should('be.enabled')
+  })
+  cy.findByRole('button', { name: 'Nested destination' }).click()
+  cy.findByRole('button', { name: 'Nested destination' }).should(
+    'have.attr',
+    'aria-current',
+    'true',
+  )
   cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
     key: 'Escape',
   })

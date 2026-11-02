@@ -54,6 +54,15 @@ Feature: Structured book synchronization
     Then its cached text remains available offline
     And I see its first reader page
 
+  @live
+  Scenario: Offline reload reuses committed reader measurements
+    Given a fully cached synchronization book
+    And its reader measurements are committed
+    When its manifest becomes unreachable
+    And I reload the reader
+    Then the offline reader reuses its stored measurements
+    And I see its first reader page
+
   Scenario: The opening placeholder uses the library cover while waiting for content
     Given a slow synchronization book with a cover
     When I open the synchronization book from the library

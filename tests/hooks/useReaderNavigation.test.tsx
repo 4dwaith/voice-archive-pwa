@@ -73,9 +73,19 @@ describe('Reader anchor navigation', () => {
   })
 
   it('keeps newer direct navigation when saved content arrives later', async () => {
+    const content = await seedContent()
+    const savedTarget = (await database.segments.toArray())[0]
+    await database.segments.delete([7, 'version', savedTarget.sequence])
+    await database.content.put({ ...content, complete: false })
+    await database.segments
+      .where('[bookId+version+id]')
+      .equals([7, 'version', 2])
+      .modify({ text_content: 'abc' })
     saveOpeningPosition()
     const { result, store } = renderNavigation()
-    await waitFor(() => expect(store.getState().reader.scope?.bookId).toBe(7))
+
+    await waitFor(() => expect(result.current.chapterInfo).toBeDefined())
+    expect(store.getState().reader.anchor).toBeNull()
 
     act(() => {
       store.dispatch(
@@ -86,7 +96,10 @@ describe('Reader anchor navigation', () => {
         }),
       )
     })
-    await act(seedContent)
+    await act(async () => {
+      await database.segments.put(savedTarget)
+      await database.content.put(content)
+    })
     await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
 
     expect(store.getState().reader.anchor).toEqual({
