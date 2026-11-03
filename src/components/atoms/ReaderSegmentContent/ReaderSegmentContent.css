@@ -61,6 +61,7 @@
 }
 .reader-segment[data-reader-highlighted] {
   background-color: #fff0b3;
+  box-shadow: inset -3px 0 #805700;
 }
 .reader-segment[data-reader-selected] {
   background-color: #dcefe9;

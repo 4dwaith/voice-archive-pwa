@@ -52,8 +52,6 @@ export const ProvideReaderStory: Decorator<ReaderStoryArgs> =
         highlightedSegmentId: args.highlightedSegmentId,
         selectSegment: (segmentId) =>
           updateArgs({ selectedSegmentId: segmentId }),
-        highlightSegment: (segmentId) =>
-          updateArgs({ highlightedSegmentId: segmentId }),
         reportLayoutKey: () => undefined,
         reportSegmentError: () => undefined,
       },

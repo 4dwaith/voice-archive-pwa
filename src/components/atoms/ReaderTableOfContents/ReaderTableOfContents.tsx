@@ -17,6 +17,7 @@ function ReaderSectionList({
     selectSection,
     setSectionExpanded,
   } = useReaderContext().toc
+  const audio = useReaderContext().reader.audio
 
   return (
     <ul hidden={isHidden} className="m-0 list-none p-0">
@@ -33,7 +34,10 @@ function ReaderSectionList({
                 selectedSectionId === section.id ? 'true' : undefined
               }
               disabled={!!section.unavailableReason}
-              onClick={() => selectSection(section.id)}
+              onClick={() => {
+                audio?.pausePlayback({ restartFromPage: true })
+                selectSection(section.id)
+              }}
             >
               <span
                 className={

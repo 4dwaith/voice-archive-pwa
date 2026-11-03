@@ -10,11 +10,7 @@ import { Provider } from 'react-redux'
 import { ReaderProvider } from '../../src/contexts/ReaderProvider'
 import { useReaderContext } from '../../src/contexts/ReaderContext'
 import { createAppStore } from '../../src/store/store'
-import {
-  selectSegment,
-  highlightSegment,
-  reportSegmentError,
-} from '../../src/store/readerSlice'
+import { selectSegment, reportSegmentError } from '../../src/store/readerSlice'
 
 afterEach(cleanup)
 
@@ -30,9 +26,6 @@ function ShowReaderActions() {
         {reader.highlightedSegmentId ?? 'none'}
       </output>
       <button onClick={() => reader.selectSegment(2)}>Select segment</button>
-      <button onClick={() => reader.highlightSegment(1)}>
-        Highlight segment
-      </button>
       <button
         onClick={() =>
           reader.reportSegmentError({
@@ -140,15 +133,6 @@ describe('ReaderProvider production adapter', () => {
     expect(store.getState().reader.selectedSegmentId).toBe(2)
   })
 
-  it('dispatches context highlighting to Redux without changing selection', () => {
-    const store = renderReaderProvider()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Highlight segment' }))
-
-    expect(store.getState().reader.highlightedSegmentId).toBe(1)
-    expect(store.getState().reader.selectedSegmentId).toBeNull()
-  })
-
   it('reflects selection dispatched outside the UI into context', () => {
     const store = renderReaderProvider()
 
@@ -157,16 +141,6 @@ describe('ReaderProvider production adapter', () => {
     })
 
     expect(screen.getByLabelText('Selected segment')).toHaveTextContent('2')
-  })
-
-  it('reflects highlighting dispatched outside the UI into context', () => {
-    const store = renderReaderProvider()
-
-    act(() => {
-      store.dispatch(highlightSegment(1))
-    })
-
-    expect(screen.getByLabelText('Highlighted segment')).toHaveTextContent('1')
   })
 
   it('dispatches segment errors reported through context', () => {

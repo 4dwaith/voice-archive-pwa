@@ -1,11 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { Region } from '../api-client/generated/endpoints'
 import type { TextSearchResult } from '../data/searchBookText'
+import type { ReaderAudioSnapshot } from '../models/readerAudio'
 import type {
   ReaderPageNavigationRequest,
   ReaderChapterMeasurement,
   ReaderSegmentError,
   ReaderTocPresentation,
+  ReaderSegment,
 } from '../models/reader'
 
 export type ReaderSearchValue = {
@@ -45,7 +47,17 @@ export type ReaderContextValue = {
     reportPageMeasurement: (report: ReaderChapterMeasurement) => void
   }
   reader: {
+    audio?: Pick<ReaderAudioSnapshot, 'isPlaying' | 'status' | 'error'> & {
+      canPlay: boolean
+      segment: ReaderSegment | null
+      isSegmentSplit: boolean
+      togglePlayback: () => void
+      pausePlayback: (options?: { restartFromPage: boolean }) => void
+      seekBySeconds: (seconds: number) => void
+      readProgress: () => number
+    }
     pdf?: {
+      segmentId?: number | null
       url: string | null
       regions: Region[]
       viewMode: 'text' | 'pdf'
@@ -59,7 +71,6 @@ export type ReaderContextValue = {
     selectedSegmentId: number | null
     highlightedSegmentId: number | null
     selectSegment: (segmentId: number | null) => void
-    highlightSegment: (segmentId: number | null) => void
     reportSegmentError: (report: {
       segmentId: number
       error: ReaderSegmentError | null

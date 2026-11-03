@@ -6,7 +6,7 @@ const buttonClass =
   'min-h-12 rounded-lg border-2 border-ink px-3 font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40'
 
 export function ReaderSearch() {
-  const search = useReaderContext().reader.search
+  const { search, audio } = useReaderContext().reader
   const [query, setQuery] = useState(search?.resultsQuery ?? '')
   const [isInvalid, setInvalid] = useState(false)
   const input = useRef<HTMLInputElement>(null)
@@ -92,7 +92,10 @@ export function ReaderSearch() {
               >
                 <button
                   type="button"
-                  onClick={() => search.openResult(result)}
+                  onClick={() => {
+                    audio?.pausePlayback({ restartFromPage: true })
+                    search.openResult(result)
+                  }}
                   className="min-h-12 w-full p-2 text-left focus-visible:outline-4 focus-visible:-outline-offset-4 focus-visible:outline-accent"
                 >
                   <span className="block font-bold">{result.chapterTitle}</span>{' '}

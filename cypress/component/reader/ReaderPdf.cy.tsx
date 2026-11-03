@@ -20,6 +20,7 @@ const firstRegions = [
 ]
 
 afterEach(() => {
+  cy.mount(<></>)
   cy.document().then((document) => {
     document.documentElement.style.fontSize = ''
   })

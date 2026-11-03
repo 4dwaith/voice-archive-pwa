@@ -307,3 +307,37 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     And I open search at maximum text size
     Then the search field and actions remain usable
+
+  @live
+  Scenario: Narration skips untimed text and uses native audio range delivery
+    Given a synchronization book with narration after untimed text
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I play the page narration
+    Then the browser plays narration and replaces page steps with second skips
+    When I skip five seconds and pause narration
+    Then narration pauses and the page controls return
+
+  Scenario Outline: Reader navigation controls pause narration
+    Given a synchronization book with narration after untimed text
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I play the page narration
+    Then the browser plays narration and replaces page steps with second skips
+    When I navigate using the <control> control during narration
+    Then narration pauses and the page controls return
+
+    Examples:
+      | control  |
+      | contents |
+      | search   |
+
+  Scenario: A failed narration file stops playback and can be retried
+    Given a synchronization book with narration after untimed text
+    And its narration file initially fails
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I play the page narration
+    Then narration reports the file failure without continuing
+    When I play the page narration
+    Then the browser plays narration and replaces page steps with second skips

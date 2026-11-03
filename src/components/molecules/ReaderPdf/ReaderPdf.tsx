@@ -25,7 +25,12 @@ const controlClass =
   'min-h-[48px] border-2 border-ink bg-page px-[12px] font-bold focus-visible:outline-4 focus-visible:outline-accent disabled:opacity-50'
 
 export default function ReaderPdf() {
-  const { pdf, selectedSegmentId } = useReaderContext().reader
+  const {
+    pdf,
+    selectedSegmentId: selectedId,
+    audio,
+  } = useReaderContext().reader
+  const selectedSegmentId = pdf?.segmentId ?? selectedId
   const regions = pdf?.regions ?? []
   const viewport = useRef<HTMLDivElement>(null)
   const canCenter = useRef(true)
@@ -103,9 +108,14 @@ export default function ReaderPdf() {
 
   useLayoutEffect(centerRegions, [regions, width, zoom, centerRegions])
 
+  function pauseForPdfNavigation() {
+    if (audio?.isPlaying) audio.pausePlayback()
+    canCenter.current = false
+  }
+
   function browsePage(page: number) {
     if (!Number.isInteger(page) || page < 1 || page > pageCount) return
-    canCenter.current = false
+    pauseForPdfNavigation()
     setManualPage({ selectionId: selectedSegmentId, page })
     setVisiblePage(page)
     viewport.current?.scrollTo({ top: 0, left: 0 })
@@ -196,15 +206,9 @@ export default function ReaderPdf() {
         tabIndex={0}
         aria-label="PDF pages"
         className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable] focus-visible:outline-4 focus-visible:outline-accent"
-        onWheel={() => {
-          canCenter.current = false
-        }}
-        onPointerDown={() => {
-          canCenter.current = false
-        }}
-        onTouchStart={() => {
-          canCenter.current = false
-        }}
+        onWheel={pauseForPdfNavigation}
+        onPointerDown={pauseForPdfNavigation}
+        onTouchStart={pauseForPdfNavigation}
         onKeyDown={(event) => {
           if (
             [
@@ -218,7 +222,7 @@ export default function ReaderPdf() {
               'End',
             ].includes(event.key)
           )
-            canCenter.current = false
+            pauseForPdfNavigation()
         }}
         onScroll={() => {
           const container = viewport.current!

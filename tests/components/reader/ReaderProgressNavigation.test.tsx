@@ -13,6 +13,7 @@ afterEach(cleanup)
 
 function renderNavigation(
   overrides: Partial<ReaderContextValue['navigation']> = {},
+  isPlaying?: boolean,
 ) {
   const context: ReaderContextValue = {
     toc: {
@@ -41,13 +42,27 @@ function renderNavigation(
       ...overrides,
     },
     reader: {
+      audio:
+        isPlaying === undefined
+          ? undefined
+          : {
+              isPlaying,
+              status: isPlaying ? 'playing' : 'paused',
+              error: null,
+              canPlay: true,
+              segment: null,
+              isSegmentSplit: false,
+              togglePlayback: vi.fn(),
+              pausePlayback: vi.fn(),
+              seekBySeconds: vi.fn(),
+              readProgress: () => 0,
+            },
       areControlsVisible: true,
       setControlsVisible: () => undefined,
       textSizePercent: 100,
       selectedSegmentId: null,
       highlightedSegmentId: null,
       selectSegment: vi.fn(),
-      highlightSegment: vi.fn(),
       reportLayoutKey: () => undefined,
       reportSegmentError: vi.fn(),
     },
@@ -67,6 +82,30 @@ function renderNavigation(
 }
 
 describe('ReaderProgressNavigation', () => {
+  it('pauses before requesting a progress-bar destination', () => {
+    const context = renderNavigation({}, true)
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' })
+
+    expect(context.reader.audio!.pausePlayback).toHaveBeenCalledExactlyOnceWith(
+      {
+        restartFromPage: true,
+      },
+    )
+    expect(context.navigation.requestPageNavigation).toHaveBeenCalledWith({
+      scope: 'local',
+      kind: 'absolute',
+      pageNumber: 6,
+    })
+    expect(
+      vi.mocked(context.reader.audio!.pausePlayback).mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      vi.mocked(context.navigation.requestPageNavigation).mock
+        .invocationCallOrder[0],
+    )
+  })
+
   describe('page view', () => {
     it('shows the chapter position', () => {
       renderNavigation()

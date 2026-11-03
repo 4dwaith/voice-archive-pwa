@@ -15,6 +15,7 @@ import {
 
 import type { ReaderNavigation } from '../../../hooks/useReaderNavigation'
 import { ReaderModeSwitch } from '../../molecules/ReaderControls/ReaderModeSwitch'
+import { ReaderNarration } from '../../molecules/ReaderControls/ReaderNarration'
 
 export function ReaderTextControls({
   sections,
@@ -65,6 +66,7 @@ export function ReaderText({
   return (
     <div className="relative h-full w-full">
       <ReaderPage segments={currentChapterSegments} label="Book text" />
+      <ReaderNarration />
       <div className="pointer-events-none absolute inset-0">
         {chapterInfo && (
           <PageMeasurer

@@ -20,8 +20,13 @@ export function ReaderControls({
   children: ReactNode
   controls?: ReactNode
 }) {
-  const { areControlsVisible, setControlsVisible, selectedSegmentId, pdf } =
-    useReaderContext().reader
+  const {
+    areControlsVisible,
+    setControlsVisible,
+    selectedSegmentId,
+    pdf,
+    audio,
+  } = useReaderContext().reader
   const { requestPageNavigation, globalPage, indexedPageCount, pageCount } =
     useReaderContext().navigation
   const suppressClick = useRef(false)
@@ -89,7 +94,7 @@ export function ReaderControls({
           ) {
             suppressClick.current = true
             pointer.current = null
-            requestPageMove(
+            requestReaderMove(
               (Math.abs(dx) >= Math.abs(dy) ? dx : dy) < 0 ? 1 : -1,
             )
           }
@@ -206,7 +211,11 @@ export function ReaderControls({
     [areControlsVisible],
   )
 
-  function requestPageMove(delta: number) {
+  function requestReaderMove(delta: number) {
+    if (audio?.isPlaying) {
+      audio.seekBySeconds(delta * 5)
+      return
+    }
     const available = globalPage === null ? pageCount : indexedPageCount
     if (available === null || available <= 0) return
 
@@ -225,7 +234,11 @@ export function ReaderControls({
     isPointerFocus.current = false
   }
 
-  function showControlsForKeyboardFocus() {
+  function showControlsForKeyboardFocus(
+    event: React.FocusEvent<HTMLDivElement>,
+  ) {
+    if (!event.currentTarget.contains(event.target as Node)) return
+    if ((event.target as Element).closest('[data-reader-audio-control]')) return
     if (!isPdf && !isPointerFocus.current && !isReturningFocus.current)
       setControlsVisible(true)
   }
@@ -233,6 +246,7 @@ export function ReaderControls({
   function handleReaderKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     // React portals bubble through this component, but modal keys belong to the modal.
     if (!event.currentTarget.contains(event.target as Node)) return
+    if ((event.target as Element).closest('[data-reader-audio-control]')) return
     if (isPdf) return
     isPointerFocus.current = false
 
@@ -261,7 +275,7 @@ export function ReaderControls({
         isReturningFocus.current = true
         surface.current?.focus({ preventScroll: true })
         isReturningFocus.current = false
-        requestPageMove(delta)
+        requestReaderMove(delta)
       }
       return
     }

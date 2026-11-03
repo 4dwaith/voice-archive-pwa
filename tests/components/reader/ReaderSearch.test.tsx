@@ -54,7 +54,6 @@ function renderSearch(overrides: Partial<ReaderSearchValue> = {}) {
       selectedSegmentId: null,
       highlightedSegmentId: null,
       selectSegment: vi.fn(),
-      highlightSegment: vi.fn(),
       reportSegmentError: vi.fn(),
       search,
     },

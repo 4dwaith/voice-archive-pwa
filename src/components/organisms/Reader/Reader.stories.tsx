@@ -156,6 +156,10 @@ export const ControlsHidden: Story = {
   args: { bookId: 91003, hasChapter: true, areControlsVisible: false },
 }
 
+export const Narration: Story = {
+  args: { bookId: 91009, hasChapter: true, tocScenario: 'audio' },
+}
+
 export const OverflowingToc: Story = {
   args: { bookId: 91004, hasChapter: true, tocScenario: 'overflowing' },
 }

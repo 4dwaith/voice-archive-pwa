@@ -7,39 +7,16 @@ import {
   type PointerEvent,
 } from 'react'
 import { useReaderContext } from '../../../contexts/ReaderContext'
+import { ReaderAudioButton } from '../../molecules/ReaderControls/ReaderAudioButton'
+import { NavigationArrows } from './NavigationArrows'
 import {
   resolvePageNumber,
   resolvePageNumberFromFraction,
 } from './resolvePageNumber'
 
-function NavigationArrows({
-  direction,
-  noOfArrows,
-}: {
-  direction: number
-  noOfArrows: number
-}) {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-[max(24px,1em)] w-[max(36px,1.5em)] shrink-0 text-lg"
-      viewBox="0 0 36 24"
-      fill="currentColor"
-    >
-      <g transform={direction < 0 ? 'rotate(180 18 12)' : undefined}>
-        {Array.from({ length: noOfArrows }, (_, index) => (
-          <path
-            key={index}
-            d="M0 3 L10 12 L0 21Z"
-            transform={`translate(${(36 - noOfArrows * 12) / 2 + index * 12} 0)`}
-          />
-        ))}
-      </g>
-    </svg>
-  )
-}
-
 export function ReaderProgressNavigation({ message }: { message?: string }) {
+  const audio = useReaderContext().reader.audio
+  const isAudio = audio?.isPlaying ?? false
   const {
     pageScope,
     setPageScope,
@@ -78,8 +55,9 @@ export function ReaderProgressNavigation({ message }: { message?: string }) {
   ) {
     if (!canNavigate) return
     const target = resolvePageNumber(requestedPage, available)
-    if (target === null || target === page) return
+    if (target === null) return
 
+    audio?.pausePlayback({ restartFromPage: true })
     requestPageNavigation(
       kind === 'absolute'
         ? { scope: pageScope, kind, pageNumber: target }
@@ -221,41 +199,79 @@ export function ReaderProgressNavigation({ message }: { message?: string }) {
             {direction > 0 && (
               <div className="min-w-0 self-center text-center wrap-anywhere">
                 <p id={helpId} className="text-base">
-                  {isBook && total === null
-                    ? `${indexedPageCount} pages indexed. Book total unknown.`
-                    : total === null
-                      ? 'Chapter pages have not been counted yet.'
-                      : total === 0
-                        ? `No ${isBook ? 'book' : 'chapter'} pages available.`
-                        : page === null
-                          ? 'Book position unknown. Use Chapter view to navigate.'
-                          : 'Tap a page segment to jump.'}
+                  {isAudio
+                    ? 'Audio skips use seconds.'
+                    : isBook && total === null
+                      ? `${indexedPageCount} pages indexed. Book total unknown.`
+                      : total === null
+                        ? 'Chapter pages have not been counted yet.'
+                        : total === 0
+                          ? `No ${isBook ? 'book' : 'chapter'} pages available.`
+                          : page === null
+                            ? 'Book position unknown. Use Chapter view to navigate.'
+                            : 'Tap a page segment to jump.'}
                 </p>
                 <p role="status">
-                  {message ?? (isPageNavigationPending ? 'Changing page…' : '')}
+                  {audio?.error ??
+                    (audio?.status === 'preparing'
+                      ? 'Preparing narration…'
+                      : audio?.status === 'buffering'
+                        ? 'Buffering narration…'
+                        : audio?.status === 'ended'
+                          ? 'No more narrated segments.'
+                          : (message ??
+                            (isPageNavigationPending ? 'Changing page…' : '')))}
                 </p>
+                <ReaderAudioButton />
               </div>
             )}
             <div
               role="group"
-              aria-label={direction < 0 ? 'Previous pages' : 'Next pages'}
-              className="flex flex-col gap-4 @min-[40em]:flex-row"
+              aria-label={
+                isAudio
+                  ? direction < 0
+                    ? 'Rewind audio'
+                    : 'Advance audio'
+                  : direction < 0
+                    ? 'Previous pages'
+                    : 'Next pages'
+              }
+              className={`flex flex-col gap-4 ${isAudio ? '@min-[60em]:flex-row' : '@min-[40em]:flex-row'}`}
             >
-              {(direction < 0 ? [25, 5, 1] : [1, 5, 25]).map((step) => {
-                const noOfArrows = step === 1 ? 1 : step === 5 ? 2 : 3
+              {(direction < 0
+                ? isAudio
+                  ? [30, 15, 5]
+                  : [25, 5, 1]
+                : isAudio
+                  ? [5, 15, 30]
+                  : [1, 5, 25]
+              ).map((step) => {
+                const noOfArrows =
+                  step === (isAudio ? 5 : 1)
+                    ? 1
+                    : step === (isAudio ? 15 : 5)
+                      ? 2
+                      : 3
 
                 return (
                   <button
                     key={step}
                     type="button"
                     className={`${buttonClass} flex min-w-11 items-center justify-center gap-1 px-4.5 py-2`}
-                    aria-label={`${direction < 0 ? 'Back' : 'Forward'} ${step} ${step === 1 ? 'page' : 'pages'}`}
+                    aria-label={`${direction < 0 ? 'Back' : 'Forward'} ${step} ${isAudio ? 'seconds' : step === 1 ? 'page' : 'pages'}`}
                     disabled={
-                      !canNavigate ||
-                      (direction < 0 ? page! <= 1 : page! >= available!)
+                      isAudio
+                        ? audio?.status === 'preparing'
+                        : !canNavigate ||
+                          (direction < 0 ? page! <= 1 : page! >= available!)
                     }
                     onClick={() =>
-                      requestNavigation(page! + direction * step, 'relative')
+                      isAudio
+                        ? audio?.seekBySeconds(direction * step)
+                        : requestNavigation(
+                            page! + direction * step,
+                            'relative',
+                          )
                     }
                   >
                     <NavigationArrows
@@ -264,6 +280,7 @@ export function ReaderProgressNavigation({ message }: { message?: string }) {
                     />
                     <span className="text-lg leading-none font-bold">
                       {step}
+                      {isAudio ? 's' : ''}
                     </span>
                   </button>
                 )

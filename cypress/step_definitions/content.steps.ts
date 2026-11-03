@@ -311,6 +311,7 @@ Given('a published synchronization book', preparePublishedBook)
 function prepareBookWithMedia(
   pdfContent = mediaFixture.pdf,
   pdfRegions?: Region[],
+  narrationAudio?: string,
 ) {
   if (Cypress.expose('mode') !== 'live') {
     mockBook()
@@ -330,7 +331,11 @@ function prepareBookWithMedia(
         book_id: null,
         section_id: 1,
         byte_size: 500,
-        metadata: { duration_ms: 1000, sample_rate: 44100, channels: 1 },
+        metadata: {
+          duration_ms: narrationAudio ? 20000 : 1000,
+          sample_rate: 16000,
+          channels: 1,
+        },
         url: '/api/v1/files/102',
       },
     ]
@@ -353,26 +358,36 @@ function prepareBookWithMedia(
         next_offset: null,
       },
     })
-    if (pdfRegions)
+    if (pdfRegions || narrationAudio)
       cy.intercept('GET', `${apiUrl()}/api/v1/books/${id}/segments?*`, {
         body: {
           content_version: version,
           items: [
             {
               ...segment,
-              regions: pdfRegions,
+              regions: pdfRegions ?? [],
               page_indexes: [
-                ...new Set(pdfRegions.map((region) => region.page_index)),
+                ...new Set(
+                  (pdfRegions ?? []).map((region) => region.page_index),
+                ),
               ],
             },
-            { ...segment, id: 2, source_key: 'b', sequence: 2 },
+            {
+              ...segment,
+              id: 2,
+              source_key: 'b',
+              sequence: 2,
+              ...(narrationAudio
+                ? { narration_start_ms: 1000, narration_end_ms: 15000 }
+                : {}),
+            },
           ],
           next_offset: null,
         },
       })
     for (const [fileId, encoded, type] of [
       [101, pdfContent, 'application/pdf'],
-      [102, mediaFixture.audio, 'audio/mpeg'],
+      [102, narrationAudio ?? mediaFixture.audio, 'audio/mpeg'],
     ] as const) {
       const bytes = Cypress.Buffer.from(encoded, 'base64')
       cy.intercept('GET', `${apiUrl()}/api/v1/files/${fileId}`, (request) => {
@@ -427,7 +442,7 @@ function prepareBookWithMedia(
     const pdf = await upload('source_pdf', pdfContent, 'application/pdf')
     const audio = await upload(
       'audio_chapter',
-      mediaFixture.audio,
+      narrationAudio ?? mediaFixture.audio,
       'audio/mpeg',
     )
     const response = await win.fetch(`${apiUrl()}/api/v1/books`, {
@@ -445,6 +460,9 @@ function prepareBookWithMedia(
       segments: input.segments.map((row, index) => ({
         ...row,
         ...(index === 0 && pdfRegions ? { regions: pdfRegions } : {}),
+        ...(index === 1 && narrationAudio
+          ? { narration_start_ms: 1000, narration_end_ms: 15000 }
+          : {}),
       })),
     }
     const publication = await win.fetch(
@@ -1526,4 +1544,100 @@ Then('the search field and actions remain usable', () => {
   cy.document().then((document) => {
     document.documentElement.style.fontSize = ''
   })
+})
+
+let audioRangeResponses = 0
+
+Given('a synchronization book with narration after untimed text', () => {
+  audioRangeResponses = 0
+  cy.readFile('cypress/fixtures/narration.mp3', 'base64').then((encoded) => {
+    prepareBookWithMedia(mediaFixture.pdf, undefined, encoded)
+  })
+  cy.intercept('GET', `${apiUrl()}/api/v1/files/*`, (request) => {
+    request.on('response', (response) => {
+      if (
+        response.statusCode === 206 &&
+        String(response.headers['content-type']).startsWith('audio/')
+      )
+        audioRangeResponses++
+    })
+  })
+})
+
+When('I play the page narration', () => {
+  cy.findByRole('button', { name: 'Play' }).click()
+})
+
+Then(
+  'the browser plays narration and replaces page steps with second skips',
+  () => {
+    cy.get('[data-reader-audio]').should(($audio) => {
+      const audio = $audio[0] as HTMLAudioElement
+      expect(audio.paused).to.equal(false)
+      expect(audio.currentTime).to.be.greaterThan(1)
+    })
+    cy.get('[data-reader-page] [data-reader-source-key="b"]').should(
+      'have.attr',
+      'data-reader-highlighted',
+      'true',
+    )
+    cy.findByRole('button', { name: 'Forward 5 seconds' }).should('be.visible')
+    cy.findByRole('button', { name: 'Forward 1 page' }).should('not.exist')
+    if (Cypress.expose('mode') === 'live')
+      cy.then(() => expect(audioRangeResponses).to.be.greaterThan(0))
+  },
+)
+
+When('I skip five seconds and pause narration', () => {
+  cy.findByRole('button', { name: 'Forward 5 seconds' }).click()
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).currentTime).to.be.greaterThan(6),
+  )
+  cy.findByRole('button', { name: 'Pause' }).click()
+})
+
+When(
+  'I navigate using the {word} control during narration',
+  (control: string) => {
+    if (control === 'contents') {
+      cy.findByRole('navigation', { name: 'Table of contents' })
+        .findByRole('button', { name: /^Chapter$/ })
+        .click()
+    } else {
+      cy.findByRole('button', { name: 'Search book' }).click()
+      cy.findByRole('searchbox', { name: 'Search book text' }).type(
+        'text{enter}',
+      )
+      cy.findByRole('list', { name: 'Matching occurrences' })
+        .findAllByRole('button')
+        .first()
+        .click()
+    }
+  },
+)
+
+Then('narration pauses and the page controls return', () => {
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+  )
+  cy.findByRole('button', { name: 'Forward 1 page' }).should('be.visible')
+  cy.findByRole('button', { name: 'Play' }).should('be.visible')
+})
+
+Given('its narration file initially fails', () => {
+  cy.intercept(
+    { method: 'GET', url: `${apiUrl()}/api/v1/files/102`, times: 1 },
+    { statusCode: 503 },
+  )
+})
+
+Then('narration reports the file failure without continuing', () => {
+  cy.findByRole('status').should(
+    'contain.text',
+    'audio file could not be loaded',
+  )
+  cy.findByRole('button', { name: 'Play' }).should('be.enabled')
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+  )
 })

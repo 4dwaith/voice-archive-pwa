@@ -17,7 +17,7 @@ type StoryArgs = Pick<
   | 'indexedPageCount'
   | 'isPageNavigationPending'
   | 'requestPageNavigation'
-> & { message?: string }
+> & { message?: string; audioState: 'absent' | 'paused' | 'playing' | 'error' }
 
 const ProvideProgressStory: Decorator<StoryArgs> =
   function ProvideProgressStory(Story) {
@@ -65,13 +65,39 @@ const ProvideProgressStory: Decorator<StoryArgs> =
         reportPageMeasurement: () => undefined,
       },
       reader: {
+        audio:
+          args.audioState === 'absent'
+            ? undefined
+            : {
+                isPlaying: args.audioState === 'playing',
+                status:
+                  args.audioState === 'error'
+                    ? 'error'
+                    : args.audioState === 'playing'
+                      ? 'playing'
+                      : 'paused',
+                error:
+                  args.audioState === 'error'
+                    ? 'The audio file could not be played. Try Play again.'
+                    : null,
+                canPlay: true,
+                segment: null,
+                isSegmentSplit: false,
+                togglePlayback: () =>
+                  updateArgs({
+                    audioState:
+                      args.audioState === 'playing' ? 'paused' : 'playing',
+                  }),
+                pausePlayback: () => updateArgs({ audioState: 'paused' }),
+                seekBySeconds: fn(),
+                readProgress: () => 0,
+              },
         areControlsVisible: true,
         setControlsVisible: () => undefined,
         textSizePercent: 100,
         selectedSegmentId: null,
         highlightedSegmentId: null,
         selectSegment: () => undefined,
-        highlightSegment: () => undefined,
         reportLayoutKey: () => undefined,
         reportSegmentError: () => undefined,
       },
@@ -93,6 +119,7 @@ const meta = {
   tags: ['autodocs'],
 
   args: {
+    audioState: 'absent',
     message: '',
     pageScope: 'local',
     currentPage: 7,
@@ -105,6 +132,10 @@ const meta = {
   },
 
   argTypes: {
+    audioState: {
+      control: 'select',
+      options: ['absent', 'paused', 'playing', 'error'],
+    },
     message: { control: 'text' },
     pageScope: { control: 'inline-radio', options: ['local', 'global'] },
     currentPage: { control: { type: 'number', min: 1, step: 1 } },
@@ -123,6 +154,10 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+export const AudioPlaying: Story = { args: { audioState: 'playing' } }
+
+export const AudioError: Story = { args: { audioState: 'error' } }
 
 export const KnownTotal: Story = {}
 

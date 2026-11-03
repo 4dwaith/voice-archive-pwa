@@ -1,5 +1,10 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useReaderAudio } from '../hooks/useReaderAudio'
+import {
+  resolveNarrationPages,
+  resolveNarrationTargetId,
+} from '../hooks/resolveNarrationPages'
 import { database } from '../data/database'
 import { apiBaseUrl } from '../api-client/baseApi'
 import {
@@ -22,11 +27,10 @@ import {
   getSectionExpansionPredicate,
   getTocPresentation,
   selectSegment,
-  highlightSegment,
   reportSegmentError,
   reportPageMeasurement,
   getSelectedSegmentId,
-  getHighlightedSegmentId,
+  getReaderAnchor,
   getReaderViewMode,
   setReaderViewMode,
 } from '../store/readerSlice'
@@ -79,6 +83,30 @@ export function ReaderProvider({
   const isSectionExpanded = useAppSelector(getSectionExpansionPredicate)
   const tocPresentation = useAppSelector(getTocPresentation)
   const selectedSegmentId = useAppSelector(getSelectedSegmentId)
+  const anchor = useAppSelector(getReaderAnchor)
+  const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
+  const measurement = navigation.currentChapterId
+    ? navigation.chapterInfo?.measurementsByChapter.get(
+        navigation.currentChapterId,
+      )
+    : undefined
+  const targetId = resolveNarrationTargetId({
+    selectedSegmentId,
+    anchor,
+    currentPage,
+    segments: navigation.currentChapterSegments,
+    measurement,
+  })
+  const {
+    elementRef: audioElementRef,
+    selectAudioSegment,
+    value: playback,
+    highlightedSegmentId,
+  } = useReaderAudio(bookId, contentVersion, {
+    targetId,
+    anchor,
+    isNavigationPending: hasPendingPageNavigation,
+  })
   const viewMode = useAppSelector(getReaderViewMode)
   const setViewMode = useCallback(
     (mode: 'text' | 'pdf') => {
@@ -86,9 +114,11 @@ export function ReaderProvider({
     },
     [dispatch],
   )
-  const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
+  const displayedSegmentId =
+    highlightedSegmentId ??
+    (playback.isPlaying ? playback.segment?.id : null) ??
+    selectedSegmentId
   const pageScope = useAppSelector(getPageScope)
-  const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
   const textSizePercent = useAppSelector(selectTextSizePercent)
   const results = useAppSelector(getSearchResults)
   const resultsQuery = useAppSelector(getSearchResultsQuery)
@@ -98,7 +128,7 @@ export function ReaderProvider({
   // Text selection already has its complete chapter in memory. Use those regions
   // immediately so a same-page selection does not unmount the existing canvas.
   const selectedRegions = navigation.currentChapterSegments.find(
-    (segment) => segment.id === selectedSegmentId,
+    (segment) => segment.id === displayedSegmentId,
   )?.regions
 
   const pdfInput = useLiveQuery(async () => {
@@ -111,23 +141,25 @@ export function ReaderProvider({
         file.id === content.manifest.source_pdf_file_id,
     )
     const segment =
-      selectedSegmentId === null
+      displayedSegmentId === null
         ? undefined
         : await database.segments
             .where('[bookId+version+id]')
-            .equals([bookId, contentVersion, selectedSegmentId])
+            .equals([bookId, contentVersion, displayedSegmentId])
             .first()
     return {
       bookId,
       contentVersion,
-      selectedSegmentId,
+      selectedSegmentId: displayedSegmentId,
       url: file ? new URL(file.url, apiBaseUrl).href : null,
       regions: segment?.regions ?? [],
+      segment: segment ?? null,
     }
-  }, [bookId, contentVersion, selectedSegmentId])
+  }, [bookId, contentVersion, displayedSegmentId])
 
   const pdf = useMemo<ReaderContextValue['reader']['pdf']>(
     () => ({
+      segmentId: displayedSegmentId,
       url:
         pdfInput?.bookId === bookId &&
         pdfInput?.contentVersion === contentVersion
@@ -137,7 +169,7 @@ export function ReaderProvider({
         selectedRegions ??
         (pdfInput?.bookId === bookId &&
         pdfInput?.contentVersion === contentVersion &&
-        pdfInput?.selectedSegmentId === selectedSegmentId
+        pdfInput?.selectedSegmentId === displayedSegmentId
           ? (pdfInput?.regions ?? [])
           : []),
       viewMode,
@@ -146,13 +178,48 @@ export function ReaderProvider({
     [
       bookId,
       contentVersion,
-      selectedSegmentId,
+      displayedSegmentId,
       selectedRegions,
       pdfInput,
       viewMode,
       setViewMode,
     ],
   )
+
+  const audio = useMemo(() => {
+    // Narration retains cues only. Reuse reader text, or the one-record PDF lookup,
+    // when the playing segment has not reached the displayed chapter yet.
+    const segment =
+      playback.segment === null
+        ? null
+        : (navigation.currentChapterSegments.find(
+            (segment) => segment.id === playback.segment?.id,
+          ) ??
+          (pdfInput !== undefined &&
+          pdfInput.bookId === bookId &&
+          pdfInput.contentVersion === contentVersion &&
+          pdfInput.segment?.id === playback.segment.id
+            ? pdfInput.segment
+            : null))
+    return {
+      ...playback,
+      segment,
+      isSegmentSplit:
+        playback.segment !== null &&
+        resolveNarrationPages(
+          playback.segment.id,
+          navigation.currentChapterSegments,
+          measurement,
+        ).length > 1,
+    }
+  }, [
+    playback,
+    navigation.currentChapterSegments,
+    measurement,
+    pdfInput,
+    bookId,
+    contentVersion,
+  ])
 
   const isBookDownloadComplete = useLiveQuery(
     async () => {
@@ -218,7 +285,6 @@ export function ReaderProvider({
       ReaderContextValue['reader'],
       | 'setControlsVisible'
       | 'selectSegment'
-      | 'highlightSegment'
       | 'reportSegmentError'
       | 'reportLayoutKey'
     >
@@ -255,16 +321,14 @@ export function ReaderProvider({
         },
         selectSegment: (segmentId) => {
           dispatch(selectSegment(segmentId))
-        },
-        highlightSegment: (segmentId) => {
-          dispatch(highlightSegment(segmentId))
+          selectAudioSegment(segmentId)
         },
         reportSegmentError: (report) => {
           dispatch(reportSegmentError(report))
         },
       },
     }),
-    [dispatch, bookId, contentVersion],
+    [dispatch, bookId, contentVersion, selectAudioSegment],
   )
   const value = useMemo<ReaderContextValue>(
     () => ({
@@ -290,6 +354,7 @@ export function ReaderProvider({
         areControlsVisible,
         pdf,
         search,
+        audio,
         textSizePercent,
         selectedSegmentId,
         highlightedSegmentId,
@@ -311,6 +376,7 @@ export function ReaderProvider({
       areControlsVisible,
       pdf,
       search,
+      audio,
       selectedSegmentId,
       highlightedSegmentId,
       actions,
@@ -321,6 +387,12 @@ export function ReaderProvider({
 
   return (
     <ReaderContext value={value}>
+      <audio
+        ref={audioElementRef}
+        hidden
+        preload="metadata"
+        data-reader-audio
+      />
       {typeof children === 'function' ? children(navigation) : children}
     </ReaderContext>
   )

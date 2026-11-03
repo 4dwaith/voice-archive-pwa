@@ -48,7 +48,6 @@ describe('ReaderPage', () => {
         selectedSegmentId: null,
         highlightedSegmentId: null,
         selectSegment: vi.fn(),
-        highlightSegment: vi.fn(),
         reportLayoutKey: () => undefined,
         reportSegmentError: vi.fn(),
       },

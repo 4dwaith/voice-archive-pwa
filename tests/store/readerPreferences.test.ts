@@ -14,7 +14,6 @@ import {
   setReaderAnchor,
   setReaderViewMode,
   selectSegment,
-  highlightSegment,
 } from '../../src/store/readerSlice'
 import { database } from '../../src/data/database'
 import { seedContent } from '../helpers/readerMeasurements'
@@ -58,13 +57,12 @@ describe('Reader preferences', () => {
   )
 
   it.each(['open', 'close'] as const)(
-    'clears selected and highlighted text on reader %s',
+    'clears selected text on reader %s',
     (event) => {
       const store = createAppStore()
       const scope = { bookId: 7, contentVersion: 'version' }
       store.dispatch(openReader(scope))
       store.dispatch(selectSegment(1))
-      store.dispatch(highlightSegment(2))
 
       store.dispatch(
         event === 'open'
@@ -73,7 +71,6 @@ describe('Reader preferences', () => {
       )
 
       expect(store.getState().reader.selectedSegmentId).toBeNull()
-      expect(store.getState().reader.highlightedSegmentId).toBeNull()
     },
   )
 

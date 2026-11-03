@@ -75,7 +75,6 @@ const meta = {
           selectedSegmentId: null,
           highlightedSegmentId: null,
           selectSegment: () => {},
-          highlightSegment: () => {},
           reportSegmentError: () => {},
           search: {
             ...args,

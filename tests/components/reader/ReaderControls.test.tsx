@@ -46,16 +46,32 @@ function createContextValue(): ReaderContextValue {
       selectedSegmentId: null,
       highlightedSegmentId: null,
       selectSegment: vi.fn(),
-      highlightSegment: vi.fn(),
       reportLayoutKey: () => undefined,
       reportSegmentError: vi.fn(),
     },
   }
 }
 
-function renderControls(isVisible = true, mode?: 'text' | 'pdf') {
+function renderControls(
+  isVisible = true,
+  mode?: 'text' | 'pdf',
+  isPlaying?: boolean,
+) {
   const context = createContextValue()
   context.reader.areControlsVisible = isVisible
+  if (isPlaying !== undefined)
+    context.reader.audio = {
+      isPlaying,
+      status: isPlaying ? 'playing' : 'paused',
+      error: null,
+      canPlay: true,
+      segment: null,
+      isSegmentSplit: false,
+      togglePlayback: vi.fn(),
+      pausePlayback: vi.fn(),
+      seekBySeconds: vi.fn(),
+      readProgress: () => 0,
+    }
   if (mode)
     context.reader.pdf = {
       url: null,
@@ -590,6 +606,20 @@ describe('ReaderControls', () => {
   })
 
   describe('page gestures', () => {
+    it.each([-1, 1])('seeks %i audio steps while playing', (direction) => {
+      const { context } = renderControls(false, undefined, true)
+      const text = screen.getByText('Book content')
+
+      dispatchTouches(text, 'touchstart', [[200, 200]])
+      dispatchTouches(text, 'touchmove', [[200 - direction * 100, 200]])
+      dispatchTouches(text, 'touchend', [])
+
+      expect(
+        context.reader.audio!.seekBySeconds,
+      ).toHaveBeenCalledExactlyOnceWith(direction * 5)
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+
     it('accepts a slower deliberate swipe', () => {
       const { context } = renderControls(false)
       const text = screen.getByText('Book content')
@@ -729,6 +759,20 @@ describe('ReaderControls', () => {
   })
 
   describe('keyboard paging', () => {
+    it.each([
+      ['PageDown', 5],
+      ['PageUp', -5],
+    ])('seeks audio with %s while playing', (key, seconds) => {
+      const { context } = renderControls(false, undefined, true)
+
+      fireEvent.keyDown(screen.getByText('Book content'), { key })
+
+      expect(
+        context.reader.audio!.seekBySeconds,
+      ).toHaveBeenCalledExactlyOnceWith(seconds)
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+
     it('keeps paging when the focused text is replaced', async () => {
       const context = createContextValue()
       context.reader.areControlsVisible = false

@@ -122,7 +122,6 @@ export function ReaderPageHarness({
       selectedSegmentId: inputs.selectedSegmentId,
       highlightedSegmentId: null,
       selectSegment: () => undefined,
-      highlightSegment: () => undefined,
       reportLayoutKey,
       reportSegmentError: () => undefined,
     },

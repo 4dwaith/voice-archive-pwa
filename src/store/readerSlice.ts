@@ -39,7 +39,6 @@ export type ReaderState = {
   pageNavigationError: string | null
 
   selectedSegmentId: number | null
-  highlightedSegmentId: number | null
   segmentErrors: Record<number, ReaderSegmentError>
 }
 
@@ -63,7 +62,6 @@ const initialState: ReaderState = {
   pageNavigationError: null,
 
   selectedSegmentId: null,
-  highlightedSegmentId: null,
   segmentErrors: {},
 }
 
@@ -224,7 +222,6 @@ const readerSlice = createSlice({
     },
     openReader(state, action: PayloadAction<ReaderScope>) {
       state.selectedSegmentId = null
-      state.highlightedSegmentId = null
       state.areControlsVisible = true
       state.selectedSectionId = null
       state.tocNavigationError = null
@@ -239,7 +236,6 @@ const readerSlice = createSlice({
     closeReader(state, action: PayloadAction<ReaderScope>) {
       if (!hasMatchingScope(state.scope, action.payload)) return
       state.selectedSegmentId = null
-      state.highlightedSegmentId = null
       state.scope = null
       state.anchor = null
       state.layoutKey = null
@@ -275,9 +271,6 @@ const readerSlice = createSlice({
     selectSegment(state, action: PayloadAction<number | null>) {
       state.selectedSegmentId = action.payload
     },
-    highlightSegment(state, action: PayloadAction<number | null>) {
-      state.highlightedSegmentId = action.payload
-    },
     reportSegmentError(
       state,
       action: PayloadAction<{
@@ -309,7 +302,6 @@ const readerSlice = createSlice({
     getPageScope: (state) => state.pageScope,
     isPageNavigationPending: (state) => state.pageNavigationIntent !== null,
     getSelectedSegmentId: (state) => state.selectedSegmentId,
-    getHighlightedSegmentId: (state) => state.highlightedSegmentId,
   },
 })
 
@@ -331,7 +323,6 @@ export const {
   setSectionExpanded,
   setTocPresentation,
   selectSegment,
-  highlightSegment,
   reportSegmentError,
 } = readerSlice.actions
 export const {
@@ -352,6 +343,5 @@ export const {
   getSectionExpansionPredicate,
   getTocPresentation,
   getSelectedSegmentId,
-  getHighlightedSegmentId,
 } = readerSlice.selectors
 export default readerSlice.reducer
