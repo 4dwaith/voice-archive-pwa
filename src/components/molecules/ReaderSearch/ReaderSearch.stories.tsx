@@ -85,7 +85,6 @@ const meta = {
                 results: [],
                 resultsQuery: '',
                 status: 'idle',
-                isOpen: false,
                 error: null,
               }),
             openResult: (result) => {
@@ -119,4 +118,8 @@ export const RetainedResults: Story = {}
 
 export const LoadingWithRetainedResults: Story = {
   args: { status: 'loading', isOpen: true },
+}
+
+export const EmptySearch: Story = {
+  args: { status: 'idle', isOpen: true, resultsQuery: '', results: [] },
 }

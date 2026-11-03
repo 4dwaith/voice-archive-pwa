@@ -31,6 +31,11 @@ describe('Reader PDF geometry', () => {
     let canvas: HTMLCanvasElement
     const store = createAppStore()
     cy.viewport(1200, 800)
+    // The Boox browser lacks Iterator; PDF.js must load its compatibility build.
+    cy.window().then((window) => {
+      Reflect.deleteProperty(window, 'Iterator')
+    })
+
     cy.window()
       .its('Worker.prototype')
       .then((prototype) => {

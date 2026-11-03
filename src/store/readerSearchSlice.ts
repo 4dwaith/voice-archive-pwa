@@ -55,7 +55,11 @@ const readerSearchSlice = createSlice({
   name: 'readerSearch',
   initialState,
   reducers: {
-    clearReaderSearch: (state) => ({ ...initialState, scope: state.scope }),
+    clearReaderSearch: (state) => ({
+      ...initialState,
+      scope: state.scope,
+      isOpen: state.isOpen,
+    }),
     setSearchOpen(state, action: PayloadAction<boolean>) {
       state.isOpen = action.payload
     },

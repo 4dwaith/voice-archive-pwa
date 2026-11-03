@@ -6,6 +6,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react'
+import { useGesture } from '@use-gesture/react'
 import { SEGMENT_DOUBLE_TAP_INTERVAL_MS } from '../../atoms/ReaderSegmentContent/ReaderSegmentContent'
 import { useReaderContext } from '../../../contexts/ReaderContext'
 
@@ -38,6 +39,7 @@ export function ReaderControls({
   )
 
   const surface = useRef<HTMLDivElement>(null)
+  const gestureSurface = useRef<HTMLDivElement>(null)
   const overlay = useRef<HTMLDivElement>(null)
   const isPointerFocus = useRef(false)
   const isReturningFocus = useRef(false)
@@ -45,140 +47,147 @@ export function ReaderControls({
     x: number
     y: number
     canToggle: boolean
-    canSwipe: boolean
-    pointerId: number
-    startedAt: number
   } | null>(null)
 
-  useEffect(() => {
-    const element = surface.current!
-    let gesture: {
-      touches: Touch[]
-      startedAt: number
-      dx: number
-      dy: number
-    } | null = null
+  function isExcludedGestureTarget(target: EventTarget | null) {
+    return (
+      !(target instanceof Element) ||
+      !!target.closest(INTERACTIVE_TARGETS) ||
+      !!overlay.current?.contains(target)
+    )
+  }
 
-    function cancelModeSwipe() {
-      gesture = null
-    }
-
-    function startModeSwipe(event: TouchEvent) {
-      gesture = null
-      if (event.touches.length !== 2 || !setViewMode) return
-      pointer.current = null
-      if (pendingToggle.current !== null) clearTimeout(pendingToggle.current)
-      const touches = Array.from(event.touches).sort(
-        (a, b) => a.identifier - b.identifier,
-      )
-      if (
-        touches.some(
-          (touch) =>
-            (touch.target as Element).closest(INTERACTIVE_TARGETS) ||
-            overlay.current?.contains(touch.target as Node),
-        )
-      )
-        return
-      gesture = { touches, startedAt: event.timeStamp, dx: 0, dy: 0 }
-    }
-
-    function trackModeSwipe(event: TouchEvent) {
-      if (!gesture) return
-      const current = Array.from(event.touches).sort(
-        (a, b) => a.identifier - b.identifier,
-      )
-      const start = gesture.touches
-      if (
-        current.length !== 2 ||
-        current.some(
-          (touch, index) => touch.identifier !== start[index].identifier,
-        ) ||
-        event.timeStamp - gesture.startedAt > 600
-      ) {
-        cancelModeSwipe()
-        return
-      }
-      const dx = current.map(
-        (touch, index) => touch.clientX - start[index].clientX,
-      )
-      const dy = current.map(
-        (touch, index) => touch.clientY - start[index].clientY,
-      )
-      const initialSpan = Math.hypot(
-        start[1].clientX - start[0].clientX,
-        start[1].clientY - start[0].clientY,
-      )
-      // A change in finger spacing or direction belongs to native pinch/rotation.
-      if (
-        Math.hypot(dx[1] - dx[0], dy[1] - dy[0]) >
-        Math.max(12, initialSpan * 0.15)
-      ) {
-        cancelModeSwipe()
-        return
-      }
-      gesture.dx = (dx[0] + dx[1]) / 2
-      gesture.dy = (dy[0] + dy[1]) / 2
-      if (
-        Math.abs(gesture.dy) > 12 &&
-        Math.abs(gesture.dy) >= Math.abs(gesture.dx)
-      ) {
-        cancelModeSwipe()
-        return
-      }
-      if (
-        dx[0] * dx[1] > 0 &&
-        Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5
-      ) {
-        if (!event.cancelable) {
-          cancelModeSwipe()
-          return
+  useGesture(
+    {
+      onDrag: ({
+        first,
+        last,
+        event,
+        movement: [dx, dy],
+        touches,
+        canceled,
+        memo,
+      }) => {
+        const gesture: { isBlocked: boolean } = first
+          ? { isBlocked: isPdf || isExcludedGestureTarget(event.target) }
+          : memo
+        if (!gesture) return
+        if (touches > 1 || event.type === 'touchcancel' || canceled)
+          gesture.isBlocked = true
+        const selection = surface.current?.ownerDocument.getSelection()
+        if (selection && !selection.isCollapsed) gesture.isBlocked = true
+        if (Math.hypot(dx, dy) > 4 && pointer.current)
+          pointer.current.canToggle = false
+        if (last) {
+          const major = Math.max(Math.abs(dx), Math.abs(dy))
+          const minor = Math.min(Math.abs(dx), Math.abs(dy))
+          if (
+            !gesture.isBlocked &&
+            event.type.startsWith('touch') &&
+            major >= 48 &&
+            major >= minor * 1.5
+          ) {
+            suppressClick.current = true
+            pointer.current = null
+            requestPageMove(
+              (Math.abs(dx) >= Math.abs(dy) ? dx : dy) < 0 ? 1 : -1,
+            )
+          }
         }
-        event.preventDefault()
-      }
-    }
-
-    function finishModeSwipe(event: TouchEvent) {
-      const completed = gesture
-      gesture = null
-      if (
-        !completed ||
-        !setViewMode ||
-        event.timeStamp - completed.startedAt > 600 ||
-        Math.abs(completed.dx) < 48 ||
-        Math.abs(completed.dx) < Math.abs(completed.dy) * 1.5
-      )
-        return
-      event.preventDefault()
-      event.stopPropagation()
-      suppressClick.current = true
-      setViewMode(isPdf ? 'text' : 'pdf')
-    }
-
-    element.addEventListener('touchstart', startModeSwipe, {
-      capture: true,
-      passive: true,
-    })
-    element.addEventListener('touchmove', trackModeSwipe, {
-      capture: true,
-      passive: false,
-    })
-    element.addEventListener('touchend', finishModeSwipe, {
-      capture: true,
-      passive: false,
-    })
-    element.addEventListener('touchcancel', cancelModeSwipe, true)
-    return () => {
-      element.removeEventListener('touchstart', startModeSwipe, true)
-      element.removeEventListener('touchmove', trackModeSwipe, true)
-      element.removeEventListener('touchend', finishModeSwipe, true)
-      element.removeEventListener('touchcancel', cancelModeSwipe, true)
-    }
-  }, [setViewMode, isPdf])
+        return gesture
+      },
+      onPinch: ({
+        first,
+        last,
+        event,
+        origin,
+        movement: [scale, angle],
+        canceled,
+        memo,
+      }) => {
+        const gesture: {
+          origin: number[]
+          isBlocked: boolean
+          hasClaimed: boolean
+        } = first
+          ? {
+              origin,
+              isBlocked:
+                !setViewMode ||
+                !('touches' in event) ||
+                Array.from(event.touches).some((touch) =>
+                  isExcludedGestureTarget(touch.target),
+                ),
+              hasClaimed: false,
+            }
+          : memo
+        if (!gesture) return
+        pointer.current = null
+        if (pendingToggle.current !== null) clearTimeout(pendingToggle.current)
+        if (
+          canceled ||
+          event.type === 'touchcancel' ||
+          (!last && 'touches' in event && event.touches.length !== 2)
+        )
+          gesture.isBlocked = true
+        if (
+          !gesture.isBlocked &&
+          (Math.abs(scale - 1) > 0.15 || Math.abs(angle) > 15)
+        ) {
+          gesture.isBlocked = true
+        }
+        const dx = origin[0] - gesture.origin[0]
+        const dy = origin[1] - gesture.origin[1]
+        if (
+          !last &&
+          !gesture.isBlocked &&
+          // Letting the first small move through lets Chrome claim the gesture.
+          Math.abs(dx) > 0 &&
+          Math.abs(dx) >= Math.abs(dy) * 1.5
+        ) {
+          if (event.cancelable) {
+            event.preventDefault()
+            gesture.hasClaimed = true
+          } else {
+            gesture.isBlocked = true
+          }
+        }
+        if (
+          last &&
+          !gesture.isBlocked &&
+          gesture.hasClaimed &&
+          Math.abs(dx) >= 48 &&
+          Math.abs(dx) >= Math.abs(dy) * 1.5
+        ) {
+          suppressClick.current = true
+          setViewMode?.(isPdf ? 'text' : 'pdf')
+        }
+        return gesture
+      },
+    },
+    {
+      target: gestureSurface,
+      eventOptions: { passive: false, capture: true },
+      drag: {
+        enabled: !isPdf,
+        pointer: { touch: true, capture: false, keys: false },
+        threshold: 0,
+      },
+      pinch: {
+        pointer: { touch: true },
+        threshold: [0, 0],
+        pinchOnWheel: false,
+      },
+    },
+  )
 
   const previousMode = useRef(isPdf)
   useEffect(() => {
-    if (previousMode.current !== isPdf)
+    if (previousMode.current !== isPdf) {
+      isReturningFocus.current = true
       surface.current?.focus({ preventScroll: true })
+      isReturningFocus.current = false
+    }
     previousMode.current = isPdf
   }, [isPdf])
 
@@ -294,9 +303,6 @@ export function ReaderControls({
       x: event.clientX,
       y: event.clientY,
       canToggle,
-      canSwipe: canToggle && event.pointerType === 'touch',
-      pointerId: event.pointerId,
-      startedAt: event.timeStamp,
     }
   }
 
@@ -312,34 +318,6 @@ export function ReaderControls({
 
   function cancelGesture() {
     pointer.current = null
-  }
-
-  function navigateWithSwipe(event: PointerEvent<HTMLDivElement>) {
-    const start = pointer.current
-    if (!start || start.pointerId !== event.pointerId) return
-
-    const dx = event.clientX - start.x
-    const dy = event.clientY - start.y
-    if (Math.hypot(dx, dy) > 4) start.canToggle = false
-    const selection = event.currentTarget.ownerDocument.getSelection()
-
-    if (
-      !start.canSwipe ||
-      event.timeStamp - start.startedAt > 600 ||
-      (selection && !selection.isCollapsed)
-    )
-      return
-
-    // Require a short, deliberate swipe with one clearly dominant direction.
-    const major = Math.max(Math.abs(dx), Math.abs(dy))
-    const minor = Math.min(Math.abs(dx), Math.abs(dy))
-    if (major < 48 || major < minor * 1.5) return
-
-    // The browser may emit a click after pointer-up; consume it after paging.
-    pointer.current = null
-    suppressClick.current = true
-    event.preventDefault()
-    requestPageMove((Math.abs(dx) >= Math.abs(dy) ? dx : dy) < 0 ? 1 : -1)
   }
 
   function toggleControlsForTap(event: MouseEvent<HTMLDivElement>) {
@@ -378,18 +356,18 @@ export function ReaderControls({
       tabIndex={0}
       className="relative h-full w-full outline-none"
       onPointerDownCapture={recordPointerFocus}
-      onPointerUpCapture={clearPointerFocus}
+      onClickCapture={clearPointerFocus}
       onPointerCancelCapture={clearPointerFocus}
       onFocusCapture={showControlsForKeyboardFocus}
       onKeyDownCapture={handleReaderKeyDown}
     >
       <div
+        ref={gestureSurface}
         className={`h-full w-full ${isPdf ? '' : 'touch-pinch-zoom'}`}
         onClickCapture={suppressClickAfterSwipe}
         onPointerDown={recordGestureStart}
         onPointerMove={cancelTapAfterMovement}
         onPointerCancel={cancelGesture}
-        onPointerUp={navigateWithSwipe}
         onClick={toggleControlsForTap}
       >
         {children}

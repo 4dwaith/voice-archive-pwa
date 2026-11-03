@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { ReaderProvider } from '../../../contexts/ReaderProvider'
 import { ReaderControls } from '../../molecules/ReaderControls/ReaderControls'
+import { ReaderModeSwitch } from '../../molecules/ReaderControls/ReaderModeSwitch'
+import { ReaderPdfBoundary } from '../../molecules/ReaderPdf/ReaderPdfBoundary'
 import { ReaderText, ReaderTextControls } from './ReaderText'
 import { useAppSelector } from '../../../store/hooks'
 import { getReaderViewMode } from '../../../store/readerSlice'
@@ -34,9 +36,22 @@ export function Reader({
             }
           >
             {mode === 'pdf' ? (
-              <Suspense fallback={<p role="status">Loading PDF…</p>}>
-                <ReaderPdf />
-              </Suspense>
+              <ReaderPdfBoundary>
+                <Suspense
+                  fallback={
+                    <div className="h-full bg-page">
+                      <header className="border-b-2 border-ink p-2">
+                        <ReaderModeSwitch />
+                      </header>
+                      <p role="status" className="p-4">
+                        Loading PDF…
+                      </p>
+                    </div>
+                  }
+                >
+                  <ReaderPdf />
+                </Suspense>
+              </ReaderPdfBoundary>
             ) : (
               <ReaderText
                 bookId={bookId}

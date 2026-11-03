@@ -1,4 +1,10 @@
-import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
+import {
+  Given,
+  When,
+  Then,
+  Before,
+  After,
+} from '@badeball/cypress-cucumber-preprocessor'
 import { READER_PREFERENCES_KEY } from '../../src/data/readerPreferences'
 import mediaFixture from '../fixtures/content-media.json'
 import type { contentTestHarness } from '../../src/testing/contentTestHarness'
@@ -9,6 +15,20 @@ import type {
   SegmentReadOutput,
 } from '../../src/api-client/generated/schemas'
 import type { Region } from '../../src/api-client/generated/endpoints'
+
+Before({ tags: '@touch' }, () =>
+  Cypress.automation('remote:debugger:protocol', {
+    command: 'Emulation.setTouchEmulationEnabled',
+    params: { enabled: true, maxTouchPoints: 2 },
+  }),
+)
+
+After({ tags: '@touch' }, () =>
+  Cypress.automation('remote:debugger:protocol', {
+    command: 'Emulation.setTouchEmulationEnabled',
+    params: { enabled: false },
+  }),
+)
 
 const version = 'a3027b66-924c-4c9a-aad5-660ba7a733bc'
 const nextVersion = '1ac04088-bfcb-44e0-bcdf-ff025c93dcac'
@@ -500,6 +520,63 @@ When('I select book text with the keyboard', () => {
   cy.press(Cypress.Keyboard.Keys.ENTER)
 })
 
+function swipeReader(direction: string, fingerCount: number) {
+  return cy.findByRole('region', { name: /^Reader$/ }).then(async ($reader) => {
+    const window = $reader[0].ownerDocument.defaultView!
+    // Chrome input coordinates are in the outer viewport; the AUT is scaled
+    // inside Cypress's cross-origin iframe, whose frameElement is inaccessible.
+    const tree = await Cypress.automation('remote:debugger:protocol', {
+      command: 'Page.getFrameTree',
+    })
+    const frame = tree.frameTree.childFrames.find(
+      (entry: { frame: { url: string } }) =>
+        entry.frame.url === window.location.href,
+    ).frame
+    const owner = await Cypress.automation('remote:debugger:protocol', {
+      command: 'DOM.getFrameOwner',
+      params: { frameId: frame.id },
+    })
+    const box = await Cypress.automation('remote:debugger:protocol', {
+      command: 'DOM.getBoxModel',
+      params: { backendNodeId: owner.backendNodeId },
+    })
+    const [left, top, right] = box.model.content
+    const rect = $reader[0].getBoundingClientRect()
+    const scale = (right - left) / window.innerWidth
+    const x = left + (rect.left + rect.width * 0.7) * scale
+    const y = top + (rect.top + rect.height * 0.6) * scale
+    const dx = direction === 'left' ? -120 : 120
+    const sendTouches = (type: string, offset: number) =>
+      Cypress.automation('remote:debugger:protocol', {
+        command: 'Input.dispatchTouchEvent',
+        params: {
+          type,
+          touchPoints:
+            type === 'touchEnd'
+              ? []
+              : [
+                  { id: 1, x: x + offset * scale, y, radiusX: 5, radiusY: 5 },
+                  {
+                    id: 2,
+                    x: x + (offset + 60) * scale,
+                    y,
+                    radiusX: 5,
+                    radiusY: 5,
+                  },
+                ].slice(0, fingerCount),
+        },
+      })
+
+    await sendTouches('touchStart', 0)
+    // Real fingers begin with small movement before committing to a direction.
+    await sendTouches('touchMove', dx / 120)
+    await sendTouches('touchMove', dx / 6)
+    await sendTouches('touchMove', dx / 2)
+    await sendTouches('touchMove', dx)
+    await sendTouches('touchEnd', dx)
+  })
+}
+
 When(
   'I swipe {word} with two fingers across the reader',
   (direction: string) => {
@@ -511,58 +588,7 @@ When(
           textPageBeforePdfBrowse = page
         })
     }
-    cy.findByRole('region', { name: /^Reader$/ }).then(async ($reader) => {
-      const window = $reader[0].ownerDocument.defaultView!
-      // Chrome input coordinates are in the outer viewport; the AUT is scaled
-      // inside Cypress's cross-origin iframe, whose frameElement is inaccessible.
-      const tree = await Cypress.automation('remote:debugger:protocol', {
-        command: 'Page.getFrameTree',
-      })
-      const frame = tree.frameTree.childFrames.find(
-        (entry: { frame: { url: string } }) =>
-          entry.frame.url === window.location.href,
-      ).frame
-      const owner = await Cypress.automation('remote:debugger:protocol', {
-        command: 'DOM.getFrameOwner',
-        params: { frameId: frame.id },
-      })
-      const box = await Cypress.automation('remote:debugger:protocol', {
-        command: 'DOM.getBoxModel',
-        params: { backendNodeId: owner.backendNodeId },
-      })
-      const [left, top, right] = box.model.content
-      const rect = $reader[0].getBoundingClientRect()
-      const scale = (right - left) / window.innerWidth
-      const x = left + (rect.left + rect.width * 0.7) * scale
-      const y = top + (rect.top + rect.height * 0.6) * scale
-      const dx = direction === 'left' ? -120 : 120
-      const sendTouches = (type: string, offset: number) =>
-        Cypress.automation('remote:debugger:protocol', {
-          command: 'Input.dispatchTouchEvent',
-          params: {
-            type,
-            touchPoints:
-              type === 'touchEnd'
-                ? []
-                : [
-                    { id: 1, x: x + offset * scale, y, radiusX: 5, radiusY: 5 },
-                    {
-                      id: 2,
-                      x: x + (offset + 60) * scale,
-                      y,
-                      radiusX: 5,
-                      radiusY: 5,
-                    },
-                  ],
-          },
-        })
-
-      await sendTouches('touchStart', 0)
-      await sendTouches('touchMove', dx / 6)
-      await sendTouches('touchMove', dx / 2)
-      await sendTouches('touchMove', dx)
-      await sendTouches('touchEnd', dx)
-    })
+    swipeReader(direction, 2)
   },
 )
 
@@ -578,7 +604,6 @@ Then('the original text page is restored', () => {
     'data-reader-page',
     textPageBeforePdfBrowse,
   )
-  cy.findByRole('button', { name: 'Switch to PDF' }).should('be.visible')
   cy.findByRole('region', { name: 'Source PDF' }).should('not.exist')
 })
 
@@ -1267,30 +1292,7 @@ Then('the reader keeps keyboard focus', () => {
 })
 
 When('I swipe left across the book text', () => {
-  cy.findByRole('article', { name: 'Book text' }).then(async ($article) => {
-    const rect = $article[0].getBoundingClientRect()
-    const y = rect.top + rect.height / 2
-    const startX = rect.right - 80
-    const endX = rect.left + 80
-    // Chrome generates real touch/pointer events, including cancellation and clicks.
-    await Cypress.automation('remote:debugger:protocol', {
-      command: 'Input.dispatchTouchEvent',
-      params: { type: 'touchStart', touchPoints: [{ x: startX, y, id: 1 }] },
-    })
-    for (let step = 1; step <= 4; step++) {
-      await Cypress.automation('remote:debugger:protocol', {
-        command: 'Input.dispatchTouchEvent',
-        params: {
-          type: 'touchMove',
-          touchPoints: [{ x: startX + ((endX - startX) * step) / 4, y, id: 1 }],
-        },
-      })
-    }
-    await Cypress.automation('remote:debugger:protocol', {
-      command: 'Input.dispatchTouchEvent',
-      params: { type: 'touchEnd', touchPoints: [] },
-    })
-  })
+  swipeReader('left', 1)
 })
 
 Then('the text shows page {int}', (page: number) => {
@@ -1379,34 +1381,28 @@ Given('a searchable synchronization book', () => {
 })
 
 Then('book search is unavailable', () => {
-  cy.findByRole('searchbox', { name: 'Search book text' }).should('not.exist')
+  cy.findByRole('button', { name: 'Search book' }).should('not.exist')
 })
 
 Then('book search is available', () => {
-  cy.findByRole('searchbox', { name: 'Search book text' }).should('be.visible')
+  cy.findByRole('button', { name: 'Search book' }).should('be.visible')
+  cy.findByRole('searchbox').should('not.exist')
 })
 
 When('I submit a book search with Enter', () => {
-  cy.findByRole('form', { name: 'Book search' }).should(($form) => {
-    const form = $form[0].getBoundingClientRect()
-    const header = $form[0].closest('header')!.getBoundingClientRect()
-    expect(form.x + form.width / 2).to.be.closeTo(
-      header.x + header.width / 2,
-      1,
-    )
-  })
   cy.findByRole('article', { name: 'Book text' }).should(
     'have.attr',
     'aria-busy',
     'false',
   )
+  cy.findByRole('button', { name: 'Search book' }).click()
   cy.findByRole('searchbox', { name: 'Search book text' }).type(
     'search target{enter}',
   )
 })
 
 Then('the search modal protects the reader and shows both occurrences', () => {
-  cy.findByRole('dialog', { name: 'Search results' }).should(($dialog) => {
+  cy.findByRole('dialog', { name: 'Book search' }).should(($dialog) => {
     const rect = $dialog[0].getBoundingClientRect()
     expect(
       $dialog[0].ownerDocument
@@ -1414,7 +1410,7 @@ Then('the search modal protects the reader and shows both occurrences', () => {
         ?.closest('[role="dialog"]'),
     ).to.equal($dialog[0])
   })
-  cy.focused().should('have.text', 'Search results')
+  cy.focused().should('have.attr', 'aria-label', 'Search book text')
   cy.get('input[aria-label="Search book text"]').focus()
   cy.focused().should(($focused) =>
     expect($focused.closest('[role="dialog"]')).to.have.length(1),
@@ -1436,13 +1432,13 @@ When('I dismiss search with Escape', () => {
   cy.findByRole('dialog').should('not.exist')
 })
 
-Then('focus returns to the search results button', () => {
-  cy.focused().should('have.attr', 'aria-label', 'Reopen search results')
+Then('focus returns to the search button', () => {
+  cy.focused().should('have.attr', 'aria-label', 'Search book')
   cy.findByRole('button', { name: 'Home' }).should('be.visible')
 })
 
 When('I reopen search results', () => {
-  cy.findByRole('button', { name: 'Reopen search results' }).click()
+  cy.findByRole('button', { name: 'Search book' }).click()
 })
 
 When('I open the later matching occurrence', () => {
@@ -1476,24 +1472,58 @@ Then('both matching occurrences remain available', () => {
 
 When('I clear search and submit it again by button', () => {
   cy.findByRole('button', { name: 'Clear search' }).click()
-  cy.findByRole('dialog').should('not.exist')
+  cy.findByRole('dialog', { name: 'Book search' }).should('be.visible')
   cy.focused()
     .should('have.attr', 'aria-label', 'Search book text')
     .and('have.value', '')
-  cy.findByRole('button', { name: 'Reopen search results' }).should(
-    'be.disabled',
-  )
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .children()
+    .should('have.length', 0)
+
   cy.findByRole('searchbox', { name: 'Search book text' }).type('search target')
   cy.findByRole('button', { name: /^Search$/ }).click()
 })
 
 Then('the book search results are cleared', () => {
+  cy.findByRole('button', { name: 'Search book' }).click()
   cy.findByRole('searchbox', { name: 'Search book text' }).should(
     'have.value',
     '',
   )
-  cy.findByRole('button', { name: 'Reopen search results' }).should(
-    'be.disabled',
-  )
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .children()
+    .should('have.length', 0)
+})
+
+When('I open search at maximum text size', () => {
+  cy.document().then((document) => {
+    document.documentElement.style.fontSize = '500%'
+  })
+  cy.findByRole('button', { name: 'Search book' }).scrollIntoView().click()
+})
+
+Then('the search field and actions remain usable', () => {
+  cy.findByRole('searchbox', { name: 'Search book text' })
+    .scrollIntoView()
+    .should(($input) => {
+      const rect = $input[0].getBoundingClientRect()
+      expect(rect.left).to.be.at.least(0)
+      expect(rect.right).to.be.at.most(
+        $input[0].ownerDocument.defaultView!.innerWidth,
+      )
+    })
+    .type('search target{enter}')
+  cy.findByRole('list', { name: 'Matching occurrences' })
+    .children()
+    .should('have.length', 2)
+
+  cy.findByRole('button', { name: 'Clear search' }).scrollIntoView().click()
+  cy.focused().should('have.value', '')
+  cy.findByRole('button', { name: 'Close search' }).scrollIntoView().click()
+
   cy.findByRole('dialog').should('not.exist')
+  cy.focused().should('have.attr', 'aria-label', 'Search book')
+  cy.document().then((document) => {
+    document.documentElement.style.fontSize = ''
+  })
 })

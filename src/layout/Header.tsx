@@ -30,8 +30,8 @@ export function Header({
   }
 
   return (
-    <header className="border-b-2 border-ink/10 bg-white">
-      <div className="mx-auto grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] sm:px-8">
+    <header className="max-h-[50dvh] overflow-y-auto border-b-2 border-ink/10 bg-white">
+      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-8">
         {location.pathname === '/' ? (
           <h1 className="text-xl font-bold">Your library</h1>
         ) : (
@@ -45,11 +45,11 @@ export function Header({
         )}
 
         {location.pathname.startsWith('/books/') && (
-          <div className="col-span-2 row-start-2 empty:hidden sm:col-span-1 sm:col-start-2 sm:row-start-1">
+          <div className="flex flex-1 justify-center empty:hidden">
             {children}
           </div>
         )}
-        <div className="flex shrink-0 items-center justify-self-end gap-2 sm:col-start-3">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
           {actions}
           <div
             className="flex items-center gap-2"

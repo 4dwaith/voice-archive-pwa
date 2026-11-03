@@ -46,6 +46,8 @@ import {
 // Keep content, anchor candidates and measurements in one query-tagged snapshot.
 type ReaderNavigationSnapshot = {
   queryKey: string
+  scopeKey: string
+  anchor: ReaderAnchor | null
   hasContent: boolean
   chapterInfo: ReaderBookStatus | null
   // Absent while waiting for an opening target or a downloaded chapter.
@@ -94,6 +96,7 @@ export function useReaderNavigation(
 
   const isActive =
     scope?.bookId === bookId && scope?.contentVersion === contentVersion
+  const scopeKey = JSON.stringify([bookId, contentVersion, layoutKey])
 
   // Tag each query result with the position and layout that produced it.
   const queryKey = JSON.stringify([
@@ -163,6 +166,8 @@ export function useReaderNavigation(
           )
             return {
               queryKey,
+              scopeKey,
+              anchor,
               hasContent,
               chapterInfo,
               segments: [],
@@ -223,6 +228,8 @@ export function useReaderNavigation(
 
         return {
           queryKey,
+          scopeKey,
+          anchor,
           hasContent,
           chapterInfo,
           currentChapterId,
@@ -236,9 +243,12 @@ export function useReaderNavigation(
     )
   }, [queryKey, isActive])
 
-  // A live query can still expose its previous result while the next one loads.
-  const data =
-    isActive && snapshot?.queryKey === queryKey ? snapshot : undefined
+  // Keep the previous chapter, anchor and measurements together while navigating.
+  // Book/version/layout changes must never reuse that presentation.
+  const displayedData =
+    isActive && snapshot?.scopeKey === scopeKey ? snapshot : undefined
+  // Effects and navigation resolution still require the latest query result.
+  const data = displayedData?.queryKey === queryKey ? displayedData : undefined
 
   // Initialize a missing anchor, or clear it when this content version disappears.
   useEffect(
@@ -258,12 +268,12 @@ export function useReaderNavigation(
 
   // Page numbers are derived from the text anchor for the current layout.
   const currentPage = resolveAnchorPage(
-    anchor,
-    data?.segments ?? [],
-    data?.measurement,
+    data ? anchor : (displayedData?.anchor ?? null),
+    displayedData?.segments ?? [],
+    displayedData?.measurement,
   )
-  const chapterInfo = data?.chapterInfo
-  const chapterId = data?.currentChapterId
+  const chapterInfo = displayedData?.chapterInfo
+  const chapterId = displayedData?.currentChapterId
   const globalPage = deriveGlobalPage(currentPage, chapterId, chapterInfo)
   const sections = chapterInfo?.sections ?? []
   const tocSections = deriveTocSections(chapterInfo)
@@ -436,11 +446,11 @@ export function useReaderNavigation(
     chapterInfo,
     tocSections,
     currentChapterId: chapterId,
-    currentChapterSegments: data?.segments ?? [],
+    currentChapterSegments: displayedData?.segments ?? [],
     layoutKey,
     currentPage,
     globalPage,
-    pageCount: data?.measurement?.pages.length ?? null,
+    pageCount: displayedData?.measurement?.pages.length ?? null,
     totalPageCount: chapterInfo?.totalPageCount ?? null,
     indexedPageCount: chapterInfo?.indexedPageCount ?? 0,
     setCurrentPage,

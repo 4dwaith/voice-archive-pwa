@@ -8,6 +8,7 @@ import {
   type ReaderContextValue,
 } from '../../../src/contexts/ReaderContext'
 import { ReaderControls } from '../../../src/components/molecules/ReaderControls/ReaderControls'
+import { ReaderPdfBoundary } from '../../../src/components/molecules/ReaderPdf/ReaderPdfBoundary'
 
 afterEach(() => {
   cleanup()
@@ -107,22 +108,173 @@ function dispatchPointer(
   fireEvent(element, event)
 }
 
-function dispatchTouches(element: Element, type: string, points: number[][]) {
-  const event = new Event(type, { bubbles: true, cancelable: true })
-  Object.defineProperty(event, 'touches', {
-    value: points.map(([clientX, clientY], index) => ({
-      identifier: index + 1,
-      clientX,
-      clientY,
-      target: element,
-    })),
+function dispatchTouches(
+  element: Element,
+  type: string,
+  points: number[][],
+  timeStamp?: number,
+  canCancel = true,
+) {
+  const event = new Event(type, { bubbles: true, cancelable: canCancel })
+  const touches = points.map(([clientX, clientY], index) => ({
+    identifier: index + 1,
+    clientX,
+    clientY,
+    target: element,
+  }))
+  Object.defineProperties(event, {
+    touches: { value: touches },
+    targetTouches: { value: touches },
+    changedTouches: {
+      value: touches.length ? touches : [{ identifier: 1, target: element }],
+    },
   })
+  if (timeStamp !== undefined)
+    Object.defineProperty(event, 'timeStamp', { value: timeStamp })
   fireEvent(element, event)
   return event
 }
 
 describe('ReaderControls', () => {
+  it.each([true, false])(
+    'preserves controls at %s when returning focus from PDF',
+    (isVisible) => {
+      const { context, update } = renderControls(isVisible, 'pdf')
+      act(() => screen.getByRole('button', { name: 'Content action' }).focus())
+      vi.mocked(context.reader.setControlsVisible).mockClear()
+
+      context.reader.pdf!.viewMode = 'text'
+      update()
+
+      expect(screen.getByRole('region', { name: 'Reader' })).toHaveFocus()
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps a text escape available after PDF initialization fails', () => {
+    const context = createContextValue()
+    context.reader.pdf = {
+      url: null,
+      regions: [],
+      viewMode: 'pdf',
+      setViewMode: vi.fn(),
+    }
+    const logError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    function ThrowPdfError(): never {
+      throw new ReferenceError('Iterator is not defined')
+    }
+
+    try {
+      render(
+        <ReaderContext value={context}>
+          <ReaderControls>
+            <ReaderPdfBoundary>
+              <ThrowPdfError />
+            </ReaderPdfBoundary>
+          </ReaderControls>
+        </ReaderContext>,
+      )
+
+      expect(screen.getByRole('alert')).toHaveTextContent('could not be opened')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Switch to Text' }))
+
+      expect(context.reader.pdf.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'text',
+      )
+    } finally {
+      logError.mockRestore()
+    }
+  })
+
   describe('mode gestures', () => {
+    it('claims the first small horizontal move before switching modes', () => {
+      const { context } = renderControls(false, 'text')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      const firstMove = dispatchTouches(content, 'touchmove', [
+        [199, 100],
+        [299, 100],
+      ])
+
+      expect(firstMove.defaultPrevented).toBe(true)
+      expect(context.reader.pdf!.setViewMode).not.toHaveBeenCalled()
+
+      dispatchTouches(content, 'touchmove', [
+        [100, 100],
+        [200, 100],
+      ])
+      dispatchTouches(content, 'touchend', [])
+
+      expect(context.reader.pdf!.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'pdf',
+      )
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+
+    it('accepts a slower swipe with modest finger spacing changes', () => {
+      const { context } = renderControls(false, 'text')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(
+        content,
+        'touchstart',
+        [
+          [200, 100],
+          [300, 100],
+        ],
+        100,
+      )
+      dispatchTouches(
+        content,
+        'touchmove',
+        [
+          [100, 100],
+          [210, 100],
+        ],
+        1100,
+      )
+      dispatchTouches(content, 'touchend', [], 1200, false)
+
+      expect(context.reader.pdf!.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'pdf',
+      )
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+
+    it('leaves gestures already claimed by the browser alone', () => {
+      const { context } = renderControls(false, 'pdf')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      const movement = new Event('touchmove', {
+        bubbles: true,
+        cancelable: false,
+      })
+      const touches = [100, 200].map((clientX, index) => ({
+        identifier: index + 1,
+        clientX,
+        clientY: 100,
+        target: content,
+      }))
+      Object.defineProperties(movement, {
+        touches: { value: touches },
+        targetTouches: { value: touches },
+        changedTouches: { value: touches },
+      })
+      fireEvent(content, movement)
+      dispatchTouches(content, 'touchend', [])
+
+      expect(context.reader.pdf!.setViewMode).not.toHaveBeenCalled()
+    })
+
     it.each([
       { mode: 'text' as const, dx: -100, destination: 'pdf' },
       { mode: 'pdf' as const, dx: 100, destination: 'text' },
@@ -263,11 +415,13 @@ describe('ReaderControls', () => {
       const { context } = renderControls(false, 'pdf')
       const content = screen.getByText('Book content')
 
-      dispatchPointer(content, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(content, 'pointerup', -100, { pointerType: 'touch' })
+      dispatchTouches(content, 'touchstart', [[200, 100]])
+      const movement = dispatchTouches(content, 'touchmove', [[100, 100]])
+      dispatchTouches(content, 'touchend', [])
       const isUncancelled = fireEvent.keyDown(content, { key: 'PageDown' })
 
       expect(isUncancelled).toBe(true)
+      expect(movement.defaultPrevented).toBe(false)
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })
   })
@@ -362,6 +516,27 @@ describe('ReaderControls', () => {
     expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
   })
 
+  it('keeps touch focus from revealing controls before the tap toggle', () => {
+    vi.useFakeTimers()
+    const { context } = renderControls(false)
+    const text = screen.getByText('Book content')
+    text.setAttribute('data-reader-segment-id', '1')
+    text.setAttribute('data-reader-mappable', 'true')
+
+    dispatchPointer(text, 'pointerdown', 0, { pointerType: 'touch' })
+    dispatchPointer(text, 'pointerup', 0, { pointerType: 'touch' })
+    fireEvent.focusIn(text)
+
+    expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+
+    fireEvent.click(text)
+    act(() => vi.advanceTimersByTime(350))
+
+    expect(context.reader.setControlsVisible).toHaveBeenCalledExactlyOnceWith(
+      true,
+    )
+  })
+
   it('reveals on keyboard focus', async () => {
     const { context } = renderControls(false)
     const user = userEvent.setup()
@@ -415,6 +590,23 @@ describe('ReaderControls', () => {
   })
 
   describe('page gestures', () => {
+    it('accepts a slower deliberate swipe', () => {
+      const { context } = renderControls(false)
+      const text = screen.getByText('Book content')
+
+      dispatchTouches(text, 'touchstart', [[200, 200]], 100)
+      dispatchTouches(text, 'touchmove', [[100, 200]], 1100)
+      dispatchTouches(text, 'touchend', [], 1200)
+
+      expect(
+        context.navigation.requestPageNavigation,
+      ).toHaveBeenCalledExactlyOnceWith({
+        scope: 'local',
+        kind: 'relative',
+        delta: 1,
+      })
+    })
+
     it.each([
       [-100, 0, 1],
       [0, -100, 1],
@@ -424,9 +616,9 @@ describe('ReaderControls', () => {
       const { context } = renderControls(false)
       const text = screen.getByText('Book content')
 
-      dispatchPointer(text, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(text, 'pointermove', dx, { pointerType: 'touch', y: dy })
-      dispatchPointer(text, 'pointerup', dx, { pointerType: 'touch', y: dy })
+      dispatchTouches(text, 'touchstart', [[200, 200]])
+      dispatchTouches(text, 'touchmove', [[200 + dx, 200 + dy]])
+      dispatchTouches(text, 'touchend', [])
       fireEvent.click(text)
 
       expect(
@@ -461,23 +653,22 @@ describe('ReaderControls', () => {
         pointerType: 'mouse',
         duration: 100,
       },
-      {
-        name: 'a long press and drag',
-        dx: 100,
-        dy: 0,
-        pointerType: 'touch',
-        duration: 1000,
-      },
     ])('ignores $name', ({ dx, dy, pointerType, duration }) => {
       const { context } = renderControls()
       const text = screen.getByText('Book content')
 
-      dispatchPointer(text, 'pointerdown', 0, { pointerType, timeStamp: 100 })
-      dispatchPointer(text, 'pointerup', dx, {
-        pointerType,
-        y: dy,
-        timeStamp: 100 + duration,
-      })
+      if (pointerType === 'touch') {
+        dispatchTouches(text, 'touchstart', [[200, 200]])
+        dispatchTouches(text, 'touchmove', [[200 + dx, 200 + dy]])
+        dispatchTouches(text, 'touchend', [])
+      } else {
+        dispatchPointer(text, 'pointerdown', 0, { pointerType, timeStamp: 100 })
+        dispatchPointer(text, 'pointerup', dx, {
+          pointerType,
+          y: dy,
+          timeStamp: 100 + duration,
+        })
+      }
 
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })
@@ -486,12 +677,16 @@ describe('ReaderControls', () => {
       const { context } = renderControls()
       const text = screen.getByText('Book content')
 
-      dispatchPointer(text, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(text, 'pointerdown', 0, {
-        pointerType: 'touch',
-        isPrimary: false,
-      })
-      dispatchPointer(text, 'pointerup', -100, { pointerType: 'touch' })
+      dispatchTouches(text, 'touchstart', [[200, 200]])
+      dispatchTouches(text, 'touchstart', [
+        [200, 200],
+        [300, 200],
+      ])
+      dispatchTouches(text, 'touchmove', [
+        [100, 200],
+        [200, 200],
+      ])
+      dispatchTouches(text, 'touchend', [])
 
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })
@@ -500,9 +695,9 @@ describe('ReaderControls', () => {
       const { context } = renderControls()
       const text = screen.getByText('Book content')
 
-      dispatchPointer(text, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(text, 'pointercancel')
-      dispatchPointer(text, 'pointerup', -100, { pointerType: 'touch' })
+      dispatchTouches(text, 'touchstart', [[200, 200]])
+      dispatchTouches(text, 'touchmove', [[100, 200]])
+      dispatchTouches(text, 'touchcancel', [])
 
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })
@@ -511,8 +706,9 @@ describe('ReaderControls', () => {
       const { context } = renderControls()
       const button = screen.getByRole('button', { name })
 
-      dispatchPointer(button, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(button, 'pointerup', -100, { pointerType: 'touch' })
+      dispatchTouches(button, 'touchstart', [[200, 200]])
+      dispatchTouches(button, 'touchmove', [[100, 200]])
+      dispatchTouches(button, 'touchend', [])
 
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })
@@ -524,8 +720,9 @@ describe('ReaderControls', () => {
       range.selectNodeContents(text)
       window.getSelection()?.addRange(range)
 
-      dispatchPointer(text, 'pointerdown', 0, { pointerType: 'touch' })
-      dispatchPointer(text, 'pointerup', -100, { pointerType: 'touch' })
+      dispatchTouches(text, 'touchstart', [[200, 200]])
+      dispatchTouches(text, 'touchmove', [[100, 200]])
+      dispatchTouches(text, 'touchend', [])
 
       expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
     })

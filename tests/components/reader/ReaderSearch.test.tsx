@@ -68,8 +68,19 @@ function renderSearch(overrides: Partial<ReaderSearchValue> = {}) {
 }
 
 describe('ReaderSearch', () => {
-  it('submits only on explicit submission and rejects blank input', () => {
+  it('opens an empty search from the header without submitting', () => {
     const search = renderSearch()
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search book' }))
+
+    expect(search.setOpen).toHaveBeenCalledWith(true)
+    expect(search.submitQuery).not.toHaveBeenCalled()
+  })
+
+  it('submits only on explicit submission and rejects blank input', () => {
+    const search = renderSearch({ isOpen: true })
 
     fireEvent.submit(screen.getByRole('form', { name: 'Book search' }))
 
@@ -106,6 +117,7 @@ describe('ReaderSearch', () => {
       results: [result],
     })
 
+    expect(screen.getByRole('searchbox')).toHaveValue('<river>')
     expect(screen.getByRole('status')).toHaveTextContent('Searching…')
     expect(screen.getByText('Results for “<river>”')).toBeVisible()
     expect(screen.getByText('<river>', { selector: 'strong' })).toBeVisible()
@@ -133,9 +145,7 @@ describe('ReaderSearch', () => {
   it('reopens retained results without resubmission', () => {
     const search = renderSearch({ status: 'succeeded' })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Reopen search results' }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Search book' }))
 
     expect(search.setOpen).toHaveBeenCalledWith(true)
     expect(search.submitQuery).not.toHaveBeenCalled()

@@ -29,14 +29,23 @@ afterEach(async () => {
 })
 
 describe('Reader anchor navigation', () => {
-  function renderNavigation() {
+  function renderNavigation(
+    onRender?: (navigation: ReturnType<typeof useReaderNavigation>) => void,
+  ) {
     const store = createAppStore()
-    const hook = renderHook(({ version }) => useReaderNavigation(7, version), {
-      initialProps: { version: 'version' },
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <Provider store={store}>{children}</Provider>
-      ),
-    })
+    const hook = renderHook(
+      ({ version }) => {
+        const navigation = useReaderNavigation(7, version)
+        onRender?.(navigation)
+        return navigation
+      },
+      {
+        initialProps: { version: 'version' },
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <Provider store={store}>{children}</Provider>
+        ),
+      },
+    )
     return { ...hook, store }
   }
 
@@ -49,6 +58,43 @@ describe('Reader anchor navigation', () => {
       }),
     )
   }
+
+  it('keeps the chapter and previous page together until the destination is ready', async () => {
+    await seedContent()
+    const measurement = createMeasurement()
+    await database.measurements.put({
+      ...measurement,
+      pages: [0, 1, 2].map((offset) => ({
+        localPage: offset + 1,
+        start: { segmentId: 1, sourceKey: 'text', offset },
+        end: { segmentId: 1, sourceKey: 'text', offset: offset + 1 },
+      })),
+    })
+    const renders: { page: number | null; segmentIds: number[] }[] = []
+    const { result, store } = renderNavigation((navigation) => {
+      renders.push({
+        page: navigation.currentPage,
+        segmentIds: navigation.currentChapterSegments.map(
+          (segment) => segment.id,
+        ),
+      })
+    })
+    await waitFor(() => expect(store.getState().reader.anchor).not.toBeNull())
+    act(() => store.dispatch(reportLayoutKey('layout')))
+    await waitFor(() => expect(result.current.currentPage).toBe(1))
+    act(() => result.current.setCurrentPage(2))
+    await waitFor(() => expect(result.current.currentPage).toBe(2))
+    renders.length = 0
+
+    act(() => result.current.setCurrentPage(3))
+    await waitFor(() => expect(result.current.currentPage).toBe(3))
+
+    expect(renders.length).toBeGreaterThan(0)
+    expect(renders.every(({ page }) => page === 2 || page === 3)).toBe(true)
+    expect(
+      renders.every(({ segmentIds }) => segmentIds.join(',') === '1,2'),
+    ).toBe(true)
+  })
 
   it('waits for a saved target instead of opening interim text', async () => {
     const content = await seedContent()

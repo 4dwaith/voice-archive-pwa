@@ -1,14 +1,17 @@
 Feature: Structured book synchronization
   Readers open a book and cache version-pinned structured content locally.
 
+  @touch
   Scenario: Two-finger swipes switch modes without turning text pages
     Given a synchronization book with a nested destination
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
+    And I focus the text and hide the controls
     And I swipe left with two fingers across the reader
     Then only the PDF surface is open
     When I swipe right with two fingers across the reader
     Then the original text page is restored
+    And the reader controls are hidden
 
   @live
   Scenario: Selected text opens PDF regions and manual browsing uses byte ranges
@@ -187,6 +190,7 @@ Feature: Structured book synchronization
     And I jump to the last indexed book page
     Then the second chapter opens at the indexed book boundary
 
+  @touch
   Scenario: A touch swipe turns the page without revealing controls
     Given a synchronization book with a nested destination
     When I open the synchronization book from the library
@@ -244,13 +248,13 @@ Feature: Structured book synchronization
     And I submit a book search with Enter
     Then the search modal protects the reader and shows both occurrences
 
-  Scenario: Dismissing search returns keyboard focus to Results
+  Scenario: Dismissing search returns keyboard focus to Search
     Given a searchable synchronization book
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     And I submit a book search with Enter
     And I dismiss search with Escape
-    Then focus returns to the search results button
+    Then focus returns to the search button
 
   Scenario: Choosing a later search result opens its exact position
     Given a searchable synchronization book
@@ -296,3 +300,10 @@ Feature: Structured book synchronization
     Then I return to the synchronization library
     When I go forward in browser history
     Then the book search results are cleared
+
+  Scenario: Search remains usable at maximum text size
+    Given a searchable synchronization book
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I open search at maximum text size
+    Then the search field and actions remain usable

@@ -143,36 +143,42 @@ describe('Search request lifecycle', () => {
   })
 
   it.each([
-    clearReaderSearch(),
-    closeReader(scope),
-    requestBookClose(scope.bookId),
-    openReader({ ...scope, bookId: 8 }),
-    openReader({ ...scope, contentVersion: 'replacement' }),
-  ])('invalidates pending results on $type', async (action) => {
-    let finish!: (results: searchRepository.TextSearchResult[]) => void
-    const pending = new Promise<searchRepository.TextSearchResult[]>(
-      (resolve) => {
-        finish = resolve
-      },
-    )
-    vi.spyOn(searchRepository, 'searchBookText')
-      .mockResolvedValueOnce([result])
-      .mockReturnValueOnce(pending)
-    const store = createReaderStore()
-    await submitSearchAndWait(store, 'hit')
-    store.dispatch(submitReaderSearch({ scope, query: 'hit' }))
-
-    store.dispatch(action)
-    finish([result])
-    await pending
-
-    expect(store.getState().readerSearch).toMatchObject({
-      submittedQuery: '',
-      status: 'idle',
-      results: [],
+    { action: clearReaderSearch(), isOpen: true },
+    { action: closeReader(scope), isOpen: false },
+    { action: requestBookClose(scope.bookId), isOpen: false },
+    { action: openReader({ ...scope, bookId: 8 }), isOpen: false },
+    {
+      action: openReader({ ...scope, contentVersion: 'replacement' }),
       isOpen: false,
-    })
-  })
+    },
+  ])(
+    'invalidates pending results on $action.type',
+    async ({ action, isOpen }) => {
+      let finish!: (results: searchRepository.TextSearchResult[]) => void
+      const pending = new Promise<searchRepository.TextSearchResult[]>(
+        (resolve) => {
+          finish = resolve
+        },
+      )
+      vi.spyOn(searchRepository, 'searchBookText')
+        .mockResolvedValueOnce([result])
+        .mockReturnValueOnce(pending)
+      const store = createReaderStore()
+      await submitSearchAndWait(store, 'hit')
+      store.dispatch(submitReaderSearch({ scope, query: 'hit' }))
+
+      store.dispatch(action)
+      finish([result])
+      await pending
+
+      expect(store.getState().readerSearch).toMatchObject({
+        submittedQuery: '',
+        status: 'idle',
+        results: [],
+        isOpen,
+      })
+    },
+  )
 
   it.each([
     { name: 'resubmitting', actions: [] },

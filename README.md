@@ -198,6 +198,12 @@ Shared WebStorm configurations live together in `.run/`:
   Chrome with WebStorm's JavaScript debugger attached. Use **Run** to start either
   configuration, then set breakpoints in component or application source files.
   These use the npm configuration's **Browser / Live Edit** settings.
+  The **dev** configuration uses `vite.lan.config.ts`, listening at
+  `http://192.168.18.22:5173/` for PC and Boox access. It proxies `/api` (including
+  PDF ranges) to `http://127.0.0.1:8000`; the backend can keep its existing local
+  IDE startup. Browser API requests use the frontend's origin. To launch the same
+  frontend from a terminal, use `npm run dev -- --config vite.lan.config.ts`.
+  Update the LAN host and IDE browser URL if the PC's reserved address changes.
   Ports are fixed to 5173 and 6006 respectively; stop any server already using
   that port first. Storybook's own automatic browser launch is disabled in its
   debugger configuration to avoid opening a second window.
@@ -210,6 +216,21 @@ the project runtime. The native configuration type ID is
 `JavaScriptTestRunnerVitest` (its displayed name in WebStorm is **Vitest**).
 Individual tests can also run/debug from the editor gutter. Contract checking
 needs the backend; the test configuration does not.
+
+For Boox debugging, enable **Apps > top-right menu > App Management > USB Debug
+Mode** ([Boox guide](https://booxsupport.zendesk.com/hc/en-us/articles/8569441562004-App-Management-Settings)).
+Use Chrome on the device and connect it to the PC by USB. In desktop Chrome, open `chrome://inspect/#devices`,
+enable **Discover USB devices**, authorize the PC on the Boox, and choose **inspect**
+for the reader tab. Console shows frontend errors; Network shows API/PDF requests;
+Sources supports breakpoints in the Vite TypeScript modules. Device/browser support
+for remote inspection varies; see [Chrome's Android debugging guide](https://developer.chrome.com/docs/devtools/remote-debugging).
+
+Reader layout hashing works on plain HTTP LAN origins. PWA installation/service
+workers still require a secure context; LAN HTTP is intended for browser testing.
+
+Reader gestures are owned by `ReaderControls`, using `@use-gesture/react` for
+touch tracking. One finger turns text pages; two fingers swiped horizontally
+switch Text/PDF. PDF scrolling and native pinch remain browser-controlled.
 
 ## Component development
 

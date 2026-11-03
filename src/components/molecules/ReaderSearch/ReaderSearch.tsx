@@ -7,11 +7,9 @@ const buttonClass =
 
 export function ReaderSearch() {
   const search = useReaderContext().reader.search
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(search?.resultsQuery ?? '')
   const [isInvalid, setInvalid] = useState(false)
-  const title = useRef<HTMLHeadingElement>(null)
   const input = useRef<HTMLInputElement>(null)
-  const reopen = useRef<HTMLButtonElement>(null)
   if (!search) return null
 
   function submitQuery(event: FormEvent) {
@@ -22,59 +20,43 @@ export function ReaderSearch() {
 
   return (
     <Dialog.Root open={search.isOpen} onOpenChange={search.setOpen}>
-      <form
-        aria-label="Book search"
-        onSubmit={submitQuery}
-        className="flex items-center gap-2"
-      >
-        <Dialog.Trigger asChild>
-          <button
-            ref={reopen}
-            type="button"
-            className={buttonClass}
-            disabled={search.status === 'idle'}
-            aria-label="Reopen search results"
-          >
-            Results
-          </button>
-        </Dialog.Trigger>
-        <input
-          ref={input}
-          type="search"
-          aria-label="Search book text"
-          aria-invalid={isInvalid}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="min-h-12 min-w-0 flex-1 rounded-lg border-2 border-ink px-2 focus-visible:outline-4 focus-visible:outline-accent"
-        />
-        <button type="submit" className={buttonClass}>
+      <Dialog.Trigger asChild>
+        <button type="button" className={buttonClass} aria-label="Search book">
           Search
         </button>
-        {isInvalid && <span role="alert">Enter a search phrase.</span>}
-      </form>
+      </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Dialog.Content
-          onCloseAutoFocus={(event) => {
-            // Clear disables the trigger; return to the editable search field instead.
-            if (reopen.current?.disabled) {
-              event.preventDefault()
-              input.current?.focus({ preventScroll: true })
-            }
-          }}
           onOpenAutoFocus={(event) => {
             event.preventDefault()
-            title.current?.focus()
+            input.current?.focus()
           }}
-          className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col gap-3 border-2 border-ink bg-white p-4"
+          className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col gap-3 overflow-y-auto border-2 border-ink bg-white p-4"
         >
-          <Dialog.Title ref={title} tabIndex={-1} className="text-xl font-bold">
-            Search results
+          <Dialog.Title className="shrink-0 text-xl font-bold">
+            Book search
           </Dialog.Title>
-          <Dialog.Description>
+          <Dialog.Description className="shrink-0">
             Choose an occurrence to open its text.
           </Dialog.Description>
-          <div className="flex gap-2">
+          <form
+            aria-label="Book search"
+            onSubmit={submitQuery}
+            className="flex shrink-0 flex-wrap items-center gap-2"
+          >
+            <input
+              ref={input}
+              type="search"
+              aria-label="Search book text"
+              aria-invalid={isInvalid}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="min-h-12 w-full min-w-0 rounded-lg border-2 border-ink px-2 focus-visible:outline-4 focus-visible:outline-accent"
+            />
+            <button type="submit" className={buttonClass}>
+              Search
+            </button>
             <button
               type="button"
               className={buttonClass}
@@ -82,22 +64,27 @@ export function ReaderSearch() {
                 setQuery('')
                 setInvalid(false)
                 search.clear()
+                input.current?.focus()
               }}
             >
               Clear search
             </button>
-            <Dialog.Close className={buttonClass}>Close search</Dialog.Close>
-          </div>
+            <Dialog.Close type="button" className={buttonClass}>
+              Close search
+            </Dialog.Close>
+            {isInvalid && (
+              <p role="alert" className="w-full">
+                Enter a search phrase.
+              </p>
+            )}
+          </form>
           {search.status === 'loading' && <p role="status">Searching…</p>}
           {search.error && <p role="alert">{search.error}</p>}
           {search.resultsQuery && <p>Results for “{search.resultsQuery}”</p>}
           {search.status === 'succeeded' && search.results.length === 0 && (
             <p role="status">No matches.</p>
           )}
-          <ol
-            className="min-h-0 overflow-y-auto"
-            aria-label="Matching occurrences"
-          >
+          <ol className="shrink-0" aria-label="Matching occurrences">
             {search.results.map((result) => (
               <li
                 key={`${result.segmentId}:${result.offset}`}
