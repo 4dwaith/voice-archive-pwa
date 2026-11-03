@@ -10,7 +10,13 @@ import {
   selectTextSizeStep,
 } from '../store/textSizeSlice'
 
-export function Header({ children }: { children?: ReactNode }) {
+export function Header({
+  children,
+  actions,
+}: {
+  children?: ReactNode
+  actions?: ReactNode
+}) {
   const dispatch = useAppDispatch()
   const textSizeStep = useAppSelector(selectTextSizeStep)
   const textSizePercent = useAppSelector(selectTextSizePercent)
@@ -43,31 +49,34 @@ export function Header({ children }: { children?: ReactNode }) {
             {children}
           </div>
         )}
-        <div
-          className="flex shrink-0 items-center justify-self-end gap-2 sm:col-start-3"
-          aria-label="Text size controls"
-        >
-          <button
-            type="button"
-            className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => dispatch(decreaseTextSize())}
-            disabled={textSizeStep === MIN_TEXT_SIZE_STEP}
-            aria-label="Make text smaller"
+        <div className="flex shrink-0 items-center justify-self-end gap-2 sm:col-start-3">
+          {actions}
+          <div
+            className="flex items-center gap-2"
+            aria-label="Text size controls"
           >
-            A−
-          </button>
-          <button
-            type="button"
-            className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => dispatch(increaseTextSize())}
-            disabled={textSizeStep === MAX_TEXT_SIZE_STEP}
-            aria-label="Make text larger"
-          >
-            A+
-          </button>
-          <span className="sr-only" aria-live="polite">
-            Text size {textSizePercent} percent
-          </span>
+            <button
+              type="button"
+              className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => dispatch(decreaseTextSize())}
+              disabled={textSizeStep === MIN_TEXT_SIZE_STEP}
+              aria-label="Make text smaller"
+            >
+              A−
+            </button>
+            <button
+              type="button"
+              className="grid min-h-12 min-w-12 place-items-center rounded-xl bg-white text-2xl font-bold shadow-sm ring-1 ring-ink/15 hover:bg-accent-soft focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => dispatch(increaseTextSize())}
+              disabled={textSizeStep === MAX_TEXT_SIZE_STEP}
+              aria-label="Make text larger"
+            >
+              A+
+            </button>
+            <span className="sr-only" aria-live="polite">
+              Text size {textSizePercent} percent
+            </span>
+          </div>
         </div>
       </div>
     </header>

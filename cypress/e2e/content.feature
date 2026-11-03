@@ -1,6 +1,15 @@
 Feature: Structured book synchronization
   Readers open a book and cache version-pinned structured content locally.
 
+  Scenario: Two-finger swipes switch modes without turning text pages
+    Given a synchronization book with a nested destination
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I swipe left with two fingers across the reader
+    Then only the PDF surface is open
+    When I swipe right with two fingers across the reader
+    Then the original text page is restored
+
   @live
   Scenario: Selected text opens PDF regions and manual browsing uses byte ranges
     Given a synchronization book with PDF regions
@@ -8,7 +17,7 @@ Feature: Structured book synchronization
     And I wait for book synchronization to finish
     And I tap exposed book text
     And I select a text segment
-    And I open the PDF beside the text
+    And I open the source PDF
     Then the selected PDF pages render through partial delivery
     When I browse a distant physical PDF page
     Then PDF browsing fetches more ranges without navigating text
@@ -18,7 +27,7 @@ Feature: Structured book synchronization
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
     And I select book text with the keyboard
-    And I open the PDF beside the text
+    And I open the source PDF
     Then I can retry the PDF while keeping selected text
 
   Scenario: Book entry and Home use application history

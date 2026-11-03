@@ -52,9 +52,16 @@ function createContextValue(): ReaderContextValue {
   }
 }
 
-function renderControls(isVisible = true) {
+function renderControls(isVisible = true, mode?: 'text' | 'pdf') {
   const context = createContextValue()
   context.reader.areControlsVisible = isVisible
+  if (mode)
+    context.reader.pdf = {
+      url: null,
+      regions: [],
+      viewMode: mode,
+      setViewMode: vi.fn(),
+    }
   const show = () => (
     <ReaderContext value={context}>
       <ReaderControls controls={<button>Home</button>}>
@@ -100,7 +107,171 @@ function dispatchPointer(
   fireEvent(element, event)
 }
 
+function dispatchTouches(element: Element, type: string, points: number[][]) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'touches', {
+    value: points.map(([clientX, clientY], index) => ({
+      identifier: index + 1,
+      clientX,
+      clientY,
+      target: element,
+    })),
+  })
+  fireEvent(element, event)
+  return event
+}
+
 describe('ReaderControls', () => {
+  describe('mode gestures', () => {
+    it.each([
+      { mode: 'text' as const, dx: -100, destination: 'pdf' },
+      { mode: 'pdf' as const, dx: 100, destination: 'text' },
+    ])('switches $mode once without paging', ({ mode, dx, destination }) => {
+      const { context } = renderControls(false, mode)
+      const content = screen.getByText('Book content')
+      dispatchPointer(content, 'pointerdown', 0, { pointerType: 'touch' })
+      dispatchPointer(content, 'pointerdown', 100, {
+        pointerType: 'touch',
+        isPrimary: false,
+      })
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      const movement = dispatchTouches(content, 'touchmove', [
+        [200 + dx, 100],
+        [300 + dx, 100],
+      ])
+      dispatchTouches(content, 'touchend', [[200 + dx, 100]])
+      dispatchTouches(content, 'touchend', [])
+      dispatchPointer(content, 'pointerup', dx, { pointerType: 'touch' })
+      fireEvent.click(content)
+
+      expect(movement.defaultPrevented).toBe(true)
+      expect(context.reader.pdf!.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        destination,
+      )
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      {
+        name: 'pinch',
+        points: [
+          [150, 100],
+          [350, 100],
+        ],
+      },
+      {
+        name: 'vertical movement',
+        points: [
+          [200, 200],
+          [300, 200],
+        ],
+      },
+      {
+        name: 'diagonal movement',
+        points: [
+          [300, 200],
+          [400, 200],
+        ],
+      },
+      {
+        name: 'short movement',
+        points: [
+          [210, 100],
+          [310, 100],
+        ],
+      },
+      { name: 'one finger', points: [[100, 100]] },
+      {
+        name: 'extra fingers',
+        points: [
+          [100, 100],
+          [200, 100],
+          [300, 100],
+        ],
+      },
+    ])('ignores $name', ({ points }) => {
+      const { context } = renderControls(false, 'text')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      dispatchTouches(content, 'touchmove', points)
+      dispatchTouches(content, 'touchend', [])
+
+      expect(context.reader.pdf!.setViewMode).not.toHaveBeenCalled()
+    })
+
+    it('leaves pinch events uncancelled', () => {
+      renderControls(false, 'text')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      const movement = dispatchTouches(content, 'touchmove', [
+        [150, 100],
+        [350, 100],
+      ])
+
+      expect(movement.defaultPrevented).toBe(false)
+    })
+
+    it('abandons cancelled touches', () => {
+      const { context } = renderControls(false, 'text')
+      const content = screen.getByText('Book content')
+
+      dispatchTouches(content, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      dispatchTouches(content, 'touchmove', [
+        [100, 100],
+        [200, 100],
+      ])
+      dispatchTouches(content, 'touchcancel', [])
+      dispatchTouches(content, 'touchend', [])
+
+      expect(context.reader.pdf!.setViewMode).not.toHaveBeenCalled()
+    })
+
+    it('ignores controls', () => {
+      const { context } = renderControls(true, 'text')
+      const button = screen.getByRole('button', { name: 'Home' })
+
+      dispatchTouches(button, 'touchstart', [
+        [200, 100],
+        [300, 100],
+      ])
+      dispatchTouches(button, 'touchmove', [
+        [100, 100],
+        [200, 100],
+      ])
+      dispatchTouches(button, 'touchend', [])
+
+      expect(context.reader.pdf!.setViewMode).not.toHaveBeenCalled()
+    })
+
+    it('leaves PDF single-finger scrolling and page keys alone', () => {
+      const { context } = renderControls(false, 'pdf')
+      const content = screen.getByText('Book content')
+
+      dispatchPointer(content, 'pointerdown', 0, { pointerType: 'touch' })
+      dispatchPointer(content, 'pointerup', -100, { pointerType: 'touch' })
+      const isUncancelled = fireEvent.keyDown(content, { key: 'PageDown' })
+
+      expect(isUncancelled).toBe(true)
+      expect(context.navigation.requestPageNavigation).not.toHaveBeenCalled()
+    })
+  })
+
   it.each([true, false])(
     'toggles a deliberate content tap from %s',
     (isVisible) => {

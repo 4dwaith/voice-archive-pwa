@@ -46,11 +46,10 @@ export type ReaderContextValue = {
   }
   reader: {
     pdf?: {
-      scopeKey: string
       url: string | null
       regions: Region[]
-      viewMode: 'text' | 'pdf' | 'both'
-      setViewMode: (mode: 'text' | 'pdf' | 'both') => void
+      viewMode: 'text' | 'pdf'
+      setViewMode: (mode: 'text' | 'pdf') => void
     }
     search?: ReaderSearchValue
     areControlsVisible: boolean

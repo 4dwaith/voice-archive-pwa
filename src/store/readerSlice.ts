@@ -16,7 +16,7 @@ import type {
 } from '../models/reader'
 
 export type ReaderState = {
-  viewMode: 'text' | 'pdf' | 'both'
+  viewMode: 'text' | 'pdf'
   areControlsVisible: boolean
   layoutKey: string | null
   measurementSave: ReaderMeasurementSave | null
@@ -87,6 +87,7 @@ const readerSlice = createSlice({
   reducers: {
     setReaderViewMode(state, action: PayloadAction<ReaderState['viewMode']>) {
       state.viewMode = action.payload
+      state.areControlsVisible = true
     },
     setControlsVisible(state, action: PayloadAction<boolean>) {
       state.areControlsVisible = action.payload

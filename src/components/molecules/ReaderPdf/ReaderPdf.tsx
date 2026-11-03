@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { useReaderContext } from '../../../contexts/ReaderContext'
+import { ReaderModeSwitch } from '../ReaderControls/ReaderModeSwitch'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -131,7 +132,8 @@ export default function ReaderPdf() {
       aria-label="Source PDF"
       className="flex h-full min-w-0 flex-col bg-page text-[16px] text-ink"
     >
-      <div className="flex max-h-[40%] shrink-0 flex-wrap items-center gap-[8px] overflow-auto border-b-2 border-ink p-[8px]">
+      <header className="flex max-h-[40%] shrink-0 flex-wrap items-center gap-[8px] overflow-auto border-b-2 border-ink p-[8px]">
+        <ReaderModeSwitch />
         <button
           className={controlClass}
           disabled={!pageCount || visiblePage <= 1}
@@ -188,7 +190,7 @@ export default function ReaderPdf() {
             ))}
           </select>
         </label>
-      </div>
+      </header>
       <div
         ref={viewport}
         tabIndex={0}

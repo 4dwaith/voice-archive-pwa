@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { database } from '../data/database'
 import { apiBaseUrl } from '../api-client/baseApi'
@@ -80,6 +80,12 @@ export function ReaderProvider({
   const tocPresentation = useAppSelector(getTocPresentation)
   const selectedSegmentId = useAppSelector(getSelectedSegmentId)
   const viewMode = useAppSelector(getReaderViewMode)
+  const setViewMode = useCallback(
+    (mode: 'text' | 'pdf') => {
+      dispatch(setReaderViewMode(mode))
+    },
+    [dispatch],
+  )
   const highlightedSegmentId = useAppSelector(getHighlightedSegmentId)
   const pageScope = useAppSelector(getPageScope)
   const hasPendingPageNavigation = useAppSelector(isPageNavigationPending)
@@ -122,7 +128,6 @@ export function ReaderProvider({
 
   const pdf = useMemo<ReaderContextValue['reader']['pdf']>(
     () => ({
-      scopeKey: `${bookId}:${contentVersion}`,
       url:
         pdfInput?.bookId === bookId &&
         pdfInput?.contentVersion === contentVersion
@@ -136,9 +141,7 @@ export function ReaderProvider({
           ? (pdfInput?.regions ?? [])
           : []),
       viewMode,
-      setViewMode: (mode) => {
-        dispatch(setReaderViewMode(mode))
-      },
+      setViewMode,
     }),
     [
       bookId,
@@ -147,7 +150,7 @@ export function ReaderProvider({
       selectedRegions,
       pdfInput,
       viewMode,
-      dispatch,
+      setViewMode,
     ],
   )
 

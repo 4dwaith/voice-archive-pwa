@@ -11,7 +11,7 @@ const positionSchema = z.object({
 })
 
 const preferencesSchema = z.object({
-  viewMode: z.enum(['text', 'pdf', 'both']).optional().catch(undefined),
+  viewMode: z.enum(['text', 'pdf']).optional().catch(undefined),
   textSizeStep: z.number().int().min(0).max(MAX_TEXT_SIZE_STEP).catch(0),
   positions: z
     .record(
@@ -22,7 +22,7 @@ const preferencesSchema = z.object({
 })
 
 export type ReaderPreferences = {
-  viewMode?: 'text' | 'pdf' | 'both'
+  viewMode?: 'text' | 'pdf'
   textSizeStep: number
   positions: Record<string, z.infer<typeof positionSchema>>
 }

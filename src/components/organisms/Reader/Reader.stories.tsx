@@ -22,7 +22,7 @@ import {
 } from '../../../../.storybook/helpers/seedReaderBook'
 
 type ReaderStoryArgs = {
-  viewMode: 'text' | 'pdf' | 'both'
+  viewMode: 'text' | 'pdf'
   bookId: number
   areControlsVisible: boolean
   hasChapter: boolean
@@ -114,7 +114,7 @@ const meta = {
     fontFamily: 'monospace',
   },
   argTypes: {
-    viewMode: { control: 'select', options: ['text', 'pdf', 'both'] },
+    viewMode: { control: 'select', options: ['text', 'pdf'] },
     areControlsVisible: { control: 'boolean' },
     bookId: { control: false },
     hasChapter: { control: false },
@@ -173,5 +173,5 @@ export const SearchableChapter: Story = {
 }
 
 export const PdfRegions: Story = {
-  args: { bookId: 91008, tocScenario: 'pdf', viewMode: 'both', width: 1100 },
+  args: { bookId: 91008, tocScenario: 'pdf', viewMode: 'pdf', width: 1100 },
 }

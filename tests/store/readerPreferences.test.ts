@@ -33,26 +33,29 @@ describe('Reader preferences', () => {
   it('restores and persists the reading view without dropping other preferences', () => {
     localStorage.setItem(
       READER_PREFERENCES_KEY,
-      '{"textSizeStep":3,"viewMode":"both"}',
+      '{"textSizeStep":3,"viewMode":"pdf"}',
     )
     const store = createAppStore()
 
-    expect(store.getState().reader.viewMode).toBe('both')
+    expect(store.getState().reader.viewMode).toBe('pdf')
 
-    store.dispatch(setReaderViewMode('pdf'))
+    store.dispatch(setReaderViewMode('text'))
     store.dispatch(increaseTextSize())
 
     expect(readReaderPreferences()).toMatchObject({
-      viewMode: 'pdf',
+      viewMode: 'text',
       textSizeStep: 4,
     })
   })
 
-  it('falls back to text for an invalid saved view', () => {
-    localStorage.setItem(READER_PREFERENCES_KEY, '{"viewMode":"invalid"}')
+  it.each(['invalid', 'both', null, 4])(
+    'falls back to text for unknown mode %s',
+    (viewMode) => {
+      localStorage.setItem(READER_PREFERENCES_KEY, JSON.stringify({ viewMode }))
 
-    expect(createAppStore().getState().reader.viewMode).toBe('text')
-  })
+      expect(createAppStore().getState().reader.viewMode).toBe('text')
+    },
+  )
 
   it.each(['open', 'close'] as const)(
     'clears selected and highlighted text on reader %s',

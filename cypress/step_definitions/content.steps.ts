@@ -500,28 +500,124 @@ When('I select book text with the keyboard', () => {
   cy.press(Cypress.Keyboard.Keys.ENTER)
 })
 
+When(
+  'I swipe {word} with two fingers across the reader',
+  (direction: string) => {
+    if (direction === 'left') {
+      cy.get('[data-reader-page]')
+        .should('have.attr', 'aria-busy', 'false')
+        .invoke('attr', 'data-reader-page')
+        .then((page) => {
+          textPageBeforePdfBrowse = page
+        })
+    }
+    cy.findByRole('region', { name: /^Reader$/ }).then(async ($reader) => {
+      const window = $reader[0].ownerDocument.defaultView!
+      // Chrome input coordinates are in the outer viewport; the AUT is scaled
+      // inside Cypress's cross-origin iframe, whose frameElement is inaccessible.
+      const tree = await Cypress.automation('remote:debugger:protocol', {
+        command: 'Page.getFrameTree',
+      })
+      const frame = tree.frameTree.childFrames.find(
+        (entry: { frame: { url: string } }) =>
+          entry.frame.url === window.location.href,
+      ).frame
+      const owner = await Cypress.automation('remote:debugger:protocol', {
+        command: 'DOM.getFrameOwner',
+        params: { frameId: frame.id },
+      })
+      const box = await Cypress.automation('remote:debugger:protocol', {
+        command: 'DOM.getBoxModel',
+        params: { backendNodeId: owner.backendNodeId },
+      })
+      const [left, top, right] = box.model.content
+      const rect = $reader[0].getBoundingClientRect()
+      const scale = (right - left) / window.innerWidth
+      const x = left + (rect.left + rect.width * 0.7) * scale
+      const y = top + (rect.top + rect.height * 0.6) * scale
+      const dx = direction === 'left' ? -120 : 120
+      const sendTouches = (type: string, offset: number) =>
+        Cypress.automation('remote:debugger:protocol', {
+          command: 'Input.dispatchTouchEvent',
+          params: {
+            type,
+            touchPoints:
+              type === 'touchEnd'
+                ? []
+                : [
+                    { id: 1, x: x + offset * scale, y, radiusX: 5, radiusY: 5 },
+                    {
+                      id: 2,
+                      x: x + (offset + 60) * scale,
+                      y,
+                      radiusX: 5,
+                      radiusY: 5,
+                    },
+                  ],
+          },
+        })
+
+      await sendTouches('touchStart', 0)
+      await sendTouches('touchMove', dx / 6)
+      await sendTouches('touchMove', dx / 2)
+      await sendTouches('touchMove', dx)
+      await sendTouches('touchEnd', dx)
+    })
+  },
+)
+
+Then('only the PDF surface is open', () => {
+  cy.findByRole('region', { name: 'Source PDF' }).should('be.visible')
+  cy.findByRole('button', { name: 'Switch to Text' }).should('be.visible')
+  cy.findByRole('article', { name: 'Book text' }).should('not.exist')
+})
+
+Then('the original text page is restored', () => {
+  cy.get('[data-reader-page]').should(
+    'have.attr',
+    'data-reader-page',
+    textPageBeforePdfBrowse,
+  )
+  cy.findByRole('button', { name: 'Switch to PDF' }).should('be.visible')
+  cy.findByRole('region', { name: 'Source PDF' }).should('not.exist')
+})
+
 Then('I can retry the PDF while keeping selected text', () => {
   cy.contains('The PDF could not be displayed.').should('be.visible')
-  cy.get('[data-reader-selected="true"]').should('exist')
   cy.findByRole('button', { name: 'Retry PDF' }).click()
   cy.get('[data-pdf-page] canvas')
     .should('have.length', 2)
-    .each(($canvas) => cy.wrap($canvas).should('be.visible'))
+    .each(($canvas) =>
+      cy.wrap($canvas).should('have.css', 'visibility', 'visible'),
+    )
 
+  cy.findByRole('button', { name: 'Switch to Text' }).click()
+  cy.get('[data-reader-selected="true"]').should('exist')
   cy.get('[data-reader-segment-id]').last().focus()
   cy.press(Cypress.Keyboard.Keys.ENTER)
+  cy.findByRole('button', { name: 'Switch to PDF' }).click()
   cy.get('[data-pdf-region]').should('not.exist')
   cy.contains('This text has no PDF regions.').should('be.visible')
 })
 
-When('I open the PDF beside the text', () => {
-  cy.findByLabelText('Reading view').select('both')
+When('I open the source PDF', () => {
+  cy.get('[data-reader-page]')
+    .invoke('attr', 'data-reader-page')
+    .then((page) => {
+      textPageBeforePdfBrowse = page
+    })
+  cy.findByRole('region', { name: /^Reader$/ }).trigger('keydown', {
+    key: 'Enter',
+  })
+  cy.findByRole('button', { name: 'Switch to PDF' }).click()
 })
 
 Then('the selected PDF pages render through partial delivery', () => {
   cy.get('[data-pdf-page] canvas')
     .should('have.length', 2)
-    .each(($canvas) => cy.wrap($canvas).should('be.visible'))
+    .each(($canvas) =>
+      cy.wrap($canvas).should('have.css', 'visibility', 'visible'),
+    )
   cy.get('[data-pdf-region]').should('have.length', 2)
   cy.then(() => {
     if (Cypress.expose('mode') !== 'live') return
@@ -534,11 +630,6 @@ Then('the selected PDF pages render through partial delivery', () => {
 })
 
 When('I browse a distant physical PDF page', () => {
-  cy.get('[data-reader-page]')
-    .invoke('attr', 'data-reader-page')
-    .then((page) => {
-      textPageBeforePdfBrowse = page
-    })
   cy.findByLabelText('Physical page').clear().type('3')
   cy.findByRole('button', { name: /^Go$/ }).click()
 })
@@ -558,15 +649,14 @@ Then('PDF browsing fetches more ranges without navigating text', () => {
   cy.findByLabelText('PDF pages')
     .focus()
     .trigger('keydown', { key: 'PageDown' })
+  cy.viewport(700, 800)
+  cy.findByRole('article', { name: 'Book text' }).should('not.exist')
+  cy.findByRole('button', { name: 'Switch to Text' }).click()
   cy.get('[data-reader-page]').should(
     'have.attr',
     'data-reader-page',
     textPageBeforePdfBrowse,
   )
-  cy.viewport(700, 800)
-  cy.findByLabelText('Reading view').should('have.value', 'text').select('pdf')
-  cy.findByRole('article', { name: 'Book text' }).should('not.exist')
-  cy.findByLabelText('Reading view').select('text')
   cy.get('[data-pdf-page]').should('not.exist')
   cy.findByRole('article', { name: 'Book text' }).should('be.visible')
 })

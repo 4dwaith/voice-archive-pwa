@@ -1,5 +1,6 @@
 import { Provider } from 'react-redux'
-import { ReaderProvider } from '../../../src/contexts/ReaderProvider'
+import { MemoryRouter } from 'react-router'
+import { Reader } from '../../../src/components/organisms/Reader/Reader'
 import { database } from '../../../src/data/database'
 import { createAppStore } from '../../../src/store/store'
 import {
@@ -10,7 +11,6 @@ import {
   readerBookContent,
   readerBookSegment,
 } from '../../../src/mock-data/readerBook'
-import { ReaderViews } from '../../../src/components/molecules/ReaderViews/ReaderViews'
 import pdfUrl from '../../fixtures/reader.pdf?url'
 
 const firstRegions = [
@@ -67,31 +67,21 @@ describe('Reader PDF geometry', () => {
           regions,
         })),
       )
-      store.dispatch(setReaderViewMode('both'))
+      store.dispatch(setReaderViewMode('pdf'))
     })
     cy.mount(
       <Provider store={store}>
-        <ReaderProvider
-          bookId={91001}
-          contentVersion={readerBookContent.version}
-        >
+        <MemoryRouter initialEntries={['/books/91001']}>
           <div style={{ width: '100%', height: 600 }}>
-            <ReaderViews>
-              <button onClick={() => store.dispatch(selectSegment(1))}>
-                Multi-page
-              </button>
-              <button onClick={() => store.dispatch(selectSegment(2))}>
-                Same page
-              </button>
-              <button onClick={() => store.dispatch(selectSegment(3))}>
-                Regionless
-              </button>
-            </ReaderViews>
+            <Reader bookId={91001} contentVersion={readerBookContent.version} />
           </div>
-        </ReaderProvider>
+        </MemoryRouter>
       </Provider>,
     )
-    cy.contains('button', 'Multi-page').click()
+    cy.findByLabelText('PDF pages').should('exist')
+    cy.then(() => {
+      store.dispatch(selectSegment(1))
+    })
     cy.location('origin').then((origin) =>
       cy
         .request(`${origin}${import.meta.env.BASE_URL}pdfjs/wasm/qcms_bg.wasm`)
@@ -101,7 +91,7 @@ describe('Reader PDF geometry', () => {
     cy.get('[data-pdf-page] canvas').should('have.length', 2)
     cy.get('[data-pdf-region]').should('have.length', 3)
     cy.get<HTMLCanvasElement>('[data-pdf-page="1"] canvas')
-      .should('be.visible')
+      .should('have.css', 'visibility', 'visible')
       .then(($canvas) => {
         canvas = $canvas[0]
       })
@@ -138,7 +128,9 @@ describe('Reader PDF geometry', () => {
       expect(center).to.be.closeTo(frame.top + frame.height / 2, 2)
     })
 
-    cy.contains('button', 'Same page').click()
+    cy.then(() => {
+      store.dispatch(selectSegment(2))
+    })
     cy.get('[data-pdf-region]').should('have.length', 1)
     cy.get('[data-pdf-page="1"] canvas').should(($canvas) =>
       expect($canvas[0]).to.equal(canvas),
@@ -154,21 +146,25 @@ describe('Reader PDF geometry', () => {
       },
     )
 
-    cy.contains('button', 'Regionless').click()
+    cy.then(() => {
+      store.dispatch(selectSegment(3))
+    })
     cy.get('[data-pdf-region]').should('not.exist')
     cy.contains('This text has no PDF regions.').should('be.visible')
     cy.document().then((document) => {
       document.documentElement.style.fontSize = '500%'
     })
-    cy.findByLabelText('Reading view').should('be.visible')
+    cy.findByRole('button', { name: 'Switch to Text' }).should('be.visible')
     cy.findByLabelText('PDF zoom').should('be.visible')
     cy.document().then((document) => {
       document.documentElement.style.fontSize = ''
     })
     cy.viewport(700, 800)
-    cy.findByLabelText('Reading view').should('have.value', 'text')
+    cy.findByRole('button', { name: 'Switch to Text' })
+      .should('be.visible')
+      .click()
     cy.get('@terminatePdfWorker').should('have.been.called')
     cy.viewport(1200, 800)
-    cy.findByLabelText('Reading view').should('have.value', 'both')
+    cy.findByRole('button', { name: 'Switch to PDF' }).should('be.visible')
   })
 })
