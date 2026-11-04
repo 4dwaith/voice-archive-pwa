@@ -99,12 +99,10 @@ export function ReaderProvider({
   })
   const {
     elementRef: audioElementRef,
-    selectAudioSegment,
     value: playback,
     highlightedSegmentId,
   } = useReaderAudio(bookId, contentVersion, {
     targetId,
-    anchor,
     isNavigationPending: hasPendingPageNavigation,
   })
   const viewMode = useAppSelector(getReaderViewMode)
@@ -321,14 +319,13 @@ export function ReaderProvider({
         },
         selectSegment: (segmentId) => {
           dispatch(selectSegment(segmentId))
-          selectAudioSegment(segmentId)
         },
         reportSegmentError: (report) => {
           dispatch(reportSegmentError(report))
         },
       },
     }),
-    [dispatch, bookId, contentVersion, selectAudioSegment],
+    [dispatch, bookId, contentVersion],
   )
   const value = useMemo<ReaderContextValue>(
     () => ({

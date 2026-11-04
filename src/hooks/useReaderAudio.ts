@@ -13,8 +13,12 @@ import {
   idleReaderAudioSnapshot,
 } from '../services/readerAudioController'
 import { useAppDispatch } from '../store/hooks'
-import { selectSegment, setReaderAnchor } from '../store/readerSlice'
-import type { ReaderAnchor } from '../models/reader'
+import { setReaderAnchor } from '../store/readerSlice'
+import {
+  setReaderAudioPlayback,
+  seekReaderAudioBySeconds,
+} from '../store/readerAudioSlice'
+import { useReaderAudioControl } from './useReaderAudioControl'
 
 const subscribeToNothing = () => () => {}
 const readIdleSnapshot = () => idleReaderAudioSnapshot
@@ -24,11 +28,9 @@ export function useReaderAudio(
   contentVersion: string | undefined,
   {
     targetId,
-    anchor,
     isNavigationPending,
   }: {
     targetId: number | null
-    anchor: ReaderAnchor | null
     isNavigationPending: boolean
   },
 ) {
@@ -87,34 +89,54 @@ export function useReaderAudio(
     player?.subscribe ?? subscribeToNothing,
     player?.getSnapshot ?? readIdleSnapshot,
   )
+
+  useReaderAudioControl(
+    player,
+    bookId,
+    contentVersion,
+    targetId,
+    isNavigationPending,
+  )
   const pausePlayback = useCallback(
     ({ restartFromPage = false } = {}) => {
-      player?.pausePlayback(anchor, restartFromPage)
-      if (restartFromPage) dispatch(selectSegment(null))
+      if (bookId !== undefined && contentVersion)
+        dispatch(
+          setReaderAudioPlayback({
+            bookId,
+            contentVersion,
+            isPlaying: false,
+            restartFromPage,
+          }),
+        )
     },
-    [anchor, player, dispatch],
+    [bookId, contentVersion, dispatch],
   )
   const togglePlayback = useCallback(() => {
-    if (playback.isPlaying) {
+    if (player?.getSnapshot().isPlaying) {
       pausePlayback()
       return
     }
     if (targetId === null || isNavigationPending) return
-    player?.playFromSegment(targetId, anchor)
-  }, [playback, targetId, anchor, pausePlayback, isNavigationPending, player])
-
-  const selectAudioSegment = useCallback(
-    (segmentId: number | null) => {
-      player?.selectSegment(segmentId)
-    },
-    [player],
-  )
+    if (bookId !== undefined && contentVersion)
+      dispatch(
+        setReaderAudioPlayback({ bookId, contentVersion, isPlaying: true }),
+      )
+  }, [
+    targetId,
+    pausePlayback,
+    isNavigationPending,
+    player,
+    bookId,
+    contentVersion,
+    dispatch,
+  ])
 
   const seekBySeconds = useCallback(
     (seconds: number) => {
-      void player?.seekBySeconds(seconds)
+      if (bookId !== undefined && contentVersion)
+        dispatch(seekReaderAudioBySeconds({ bookId, contentVersion, seconds }))
     },
-    [player],
+    [bookId, contentVersion, dispatch],
   )
   const readProgress = useCallback(() => player?.readProgress() ?? 0, [player])
   const canPlay = player !== null && targetId !== null && !isNavigationPending
@@ -140,7 +162,6 @@ export function useReaderAudio(
   return {
     highlightedSegmentId: playback.speakingSegmentId,
     elementRef: setElement,
-    selectAudioSegment,
     value,
   }
 }

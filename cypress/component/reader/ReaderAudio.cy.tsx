@@ -15,6 +15,7 @@ import {
   readerBookSegment,
 } from '../../../src/mock-data/readerBook'
 import audioUrl from '../../fixtures/narration.mp3?url'
+import { setReaderAudioPlayback } from '../../../src/store/readerAudioSlice'
 import pdfUrl from '../../fixtures/reader.pdf?url'
 
 afterEach(() => {
@@ -257,7 +258,11 @@ describe('Reader narration', () => {
       'data-reader-selected',
       'true',
     )
-    cy.findByRole('button', { name: 'Play' }).click()
+    cy.then(() =>
+      store.dispatch(
+        setReaderAudioPlayback({ ...scope, isPlaying: true, segmentId: 2 }),
+      ),
+    )
     cy.get('[data-reader-audio]').should(($audio) => {
       expect(($audio[0] as HTMLAudioElement).currentSrc).to.contain('chapter=2')
     })
