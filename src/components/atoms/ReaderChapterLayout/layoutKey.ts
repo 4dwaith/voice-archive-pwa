@@ -1,5 +1,3 @@
-import { sha256 } from '@noble/hashes/sha2.js'
-
 // Bump when fixed padding, column gap, imported formatting or font policy changes.
 export const READER_LAYOUT_VERSION = '2'
 
@@ -37,8 +35,8 @@ export async function createLayoutKey({
       fontEnvironment,
     ]),
   )
-  // Layout caching must also work on HTTP LAN origins without Web Crypto.
-  return Array.from(sha256(bytes), (byte) =>
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, '0'),
   ).join('')
 }

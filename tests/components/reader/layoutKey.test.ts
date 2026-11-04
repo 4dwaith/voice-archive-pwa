@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   createLayoutKey,
   READER_LAYOUT_VERSION,
@@ -18,7 +18,7 @@ function createDescriptor(): ReaderLayoutDescriptor {
 }
 
 describe('layout keys', () => {
-  it('preserves SHA-256 keys without secure-context Web Crypto', async () => {
+  it('preserves existing SHA-256 keys with Web Crypto', async () => {
     const descriptor = createDescriptor()
     const expected = createHash('sha256')
       .update(
@@ -32,15 +32,10 @@ describe('layout keys', () => {
         ]),
       )
       .digest('hex')
-    vi.stubGlobal('crypto', {})
 
-    try {
-      const key = await createLayoutKey(descriptor)
+    const key = await createLayoutKey(descriptor)
 
-      expect(key).toBe(expected)
-    } finally {
-      vi.unstubAllGlobals()
-    }
+    expect(key).toBe(expected)
   })
 
   it('ignores content and presentation state outside the descriptor', async () => {

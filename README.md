@@ -75,9 +75,9 @@ npm run api:regenerate
 - `api:regenerate` replaces files under `src/api-client/generated/`. Review the diff.
 - Neither command stages files, commits, or modifies backend data.
 - Set `OPENAPI_URL` to override the generation URL. Set `VITE_API_BASE_URL` to
-  override the runtime origin (default `http://127.0.0.1:8000`). Generation and
-  runtime configuration are independent. Ordinary builds use tracked generated
-  output and never fetch OpenAPI.
+  override the runtime origin (development default `http://127.0.0.1:8000`).
+  Generation and runtime configuration are independent. Ordinary builds use
+  tracked generated output and never fetch OpenAPI.
 
 The generation scripts are TypeScript, strictly checked by `npm run build`.
 Node 22.18+ executes them directly with built-in type stripping, so no separate
@@ -92,9 +92,11 @@ IntersectionObserver. Errors while loading more retain the existing books and
 offer a retry; the shelf identifies when all books have loaded.
 
 Run the backend before opening the library. `VITE_API_BASE_URL` is the backend
-origin, defaulting to `http://127.0.0.1:8000`; generated paths already include
-`/api/v1`. Cover paths resolve against that origin and image bytes stay outside
-Redux. Changing the environment setting requires restarting Vite. This phase
+origin, defaulting to `http://127.0.0.1:8000` in development. Production builds use
+`VITE_API_BASE_URL=/` from `.env.production`, resolved against the browser's origin;
+generated paths already include `/api/v1`. Cover, PDF, and audio paths resolve
+against that origin and image bytes stay outside Redux. Changing the environment
+setting requires restarting Vite or rebuilding production. This phase
 does not persist library metadata for offline use.
 
 The infinite endpoint validates the raw response, then resolves file URLs in
@@ -198,12 +200,14 @@ Shared WebStorm configurations live together in `.run/`:
   Chrome with WebStorm's JavaScript debugger attached. Use **Run** to start either
   configuration, then set breakpoints in component or application source files.
   These use the npm configuration's **Browser / Live Edit** settings.
-  The **dev** configuration uses `vite.lan.config.ts`, listening at
-  `http://192.168.18.22:5173/` for PC and Boox access. It proxies `/api` (including
+  The **dev** configuration uses `vite.local.config.ts`, listening at
+  `http://localhost:5173/` on this PC. It proxies `/api` (including
   PDF ranges) to `http://127.0.0.1:8000`; the backend can keep its existing local
   IDE startup. Browser API requests use the frontend's origin. To launch the same
-  frontend from a terminal, use `npm run dev -- --config vite.lan.config.ts`.
-  Update the LAN host and IDE browser URL if the PC's reserved address changes.
+  frontend from a terminal, use `npm run dev -- --config vite.local.config.ts`.
+  Localhost is a loopback address: connections return to this same machine and
+  browsers treat it as a secure context even over HTTP. LAN devices use the
+  [Caddy deployment](../deploy/README.md).
   Ports are fixed to 5173 and 6006 respectively; stop any server already using
   that port first. Storybook's own automatic browser launch is disabled in its
   debugger configuration to avoid opening a second window.
@@ -225,8 +229,9 @@ for the reader tab. Console shows frontend errors; Network shows API/PDF request
 Sources supports breakpoints in the Vite TypeScript modules. Device/browser support
 for remote inspection varies; see [Chrome's Android debugging guide](https://developer.chrome.com/docs/devtools/remote-debugging).
 
-Reader layout hashing works on plain HTTP LAN origins. PWA installation/service
-workers still require a secure context; LAN HTTP is intended for browser testing.
+Reader layout hashing uses the browser's Web Crypto API and requires a secure
+context. Use HTTP localhost for IDE development or the trusted HTTPS origin for
+LAN access. PWA installation and service workers also require a secure context.
 
 Reader gestures are owned by `ReaderControls`, using `@use-gesture/react` for
 touch tracking. One finger turns text pages; two fingers swiped horizontally
