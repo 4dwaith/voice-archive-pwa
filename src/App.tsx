@@ -5,6 +5,7 @@ import { LibraryPage } from './pages/LibraryPage'
 import { BookPage } from './pages/BookPage'
 import { useAppSelector } from './store/hooks'
 import { selectTextSizePercent } from './store/textSizeSlice'
+import { LiveProvider } from './contexts/LiveProvider'
 
 function App() {
   const textSizePercent = useAppSelector(selectTextSizePercent)
@@ -18,13 +19,15 @@ function App() {
   }, [textSizePercent])
 
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route index element={<LibraryPage />} />
-        <Route path="books/:bookId" element={<BookPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <LiveProvider>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<LibraryPage />} />
+          <Route path="books/:bookId" element={<BookPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </LiveProvider>
   )
 }
 

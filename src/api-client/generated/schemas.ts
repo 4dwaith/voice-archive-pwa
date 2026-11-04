@@ -658,6 +658,16 @@ export type ErrorDetailLiteralInternalError = zod.input<
 export type ErrorDetailLiteralInternalErrorOutput = zod.output<
   typeof ErrorDetailLiteralInternalError
 >
+export const ErrorDetailLiteralLiveUnavailable = zod.object({
+  code: zod.literal('live_unavailable').meta({ title: 'Code' }),
+  message: zod.string(),
+})
+export type ErrorDetailLiteralLiveUnavailable = zod.input<
+  typeof ErrorDetailLiteralLiveUnavailable
+>
+export type ErrorDetailLiteralLiveUnavailableOutput = zod.output<
+  typeof ErrorDetailLiteralLiveUnavailable
+>
 export const ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError =
   zod.object({
     code: zod.enum(['route_not_found', 'method_not_allowed', 'http_error']),
@@ -760,6 +770,19 @@ export type InternalErrorResponse = zod.input<typeof InternalErrorResponse>
 export type InternalErrorResponseOutput = zod.output<
   typeof InternalErrorResponse
 >
+export const LiveErrorResponse = zod.object({
+  error: ErrorDetailLiteralLiveUnavailable,
+})
+export type LiveErrorResponse = zod.input<typeof LiveErrorResponse>
+export type LiveErrorResponseOutput = zod.output<typeof LiveErrorResponse>
+export const liveTokenResponseTokenRegExp = new RegExp('\\S')
+export const liveTokenResponseModelRegExp = new RegExp('\\S')
+export const LiveTokenResponse = zod.object({
+  token: zod.string().regex(liveTokenResponseTokenRegExp),
+  model: zod.string().regex(liveTokenResponseModelRegExp),
+})
+export type LiveTokenResponse = zod.input<typeof LiveTokenResponse>
+export type LiveTokenResponseOutput = zod.output<typeof LiveTokenResponse>
 export const NotReadyResponse = zod.object({
   status: zod.literal('unavailable').meta({ title: 'Status' }),
   api_version: zod.literal('v1').meta({ title: 'Api Version' }),
@@ -1760,6 +1783,37 @@ export type DeleteApiV1File500Response = zod.input<
 >
 export type DeleteApiV1File500ResponseOutput = zod.output<
   typeof DeleteApiV1File500Response
+>
+/**
+ * @summary Provision Live Token
+ */
+export const CreateApiV1LiveToken200Response = LiveTokenResponse
+export type CreateApiV1LiveToken200Response = zod.input<
+  typeof CreateApiV1LiveToken200Response
+>
+export type CreateApiV1LiveToken200ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken200Response
+>
+export const CreateApiV1LiveToken405Response = HttpErrorResponse
+export type CreateApiV1LiveToken405Response = zod.input<
+  typeof CreateApiV1LiveToken405Response
+>
+export type CreateApiV1LiveToken405ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken405Response
+>
+export const CreateApiV1LiveToken500Response = InternalErrorResponse
+export type CreateApiV1LiveToken500Response = zod.input<
+  typeof CreateApiV1LiveToken500Response
+>
+export type CreateApiV1LiveToken500ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken500Response
+>
+export const CreateApiV1LiveToken503Response = LiveErrorResponse
+export type CreateApiV1LiveToken503Response = zod.input<
+  typeof CreateApiV1LiveToken503Response
+>
+export type CreateApiV1LiveToken503ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken503Response
 >
 /**
  * @summary Check API liveness

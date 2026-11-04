@@ -8,6 +8,7 @@ import { ReaderAudioButton } from './ReaderAudioButton'
 import { ReaderModeSwitch } from './ReaderModeSwitch'
 import { scrollNarrationToProgress } from './scrollNarration'
 import type { ReaderSegment } from '../../../models/reader'
+import { LiveButton } from '../../atoms/LiveButton/LiveButton'
 
 function NarrationText({
   segment,
@@ -175,6 +176,7 @@ export function ReaderNarration() {
           className="fixed inset-2 z-50 flex flex-col border-2 border-ink bg-page text-ink"
         >
           <header className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-ink p-2">
+            <LiveButton />
             <Dialog.Title
               ref={title}
               tabIndex={-1}

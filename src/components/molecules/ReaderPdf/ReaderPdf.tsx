@@ -142,7 +142,7 @@ export default function ReaderPdf() {
       aria-label="Source PDF"
       className="flex h-full min-w-0 flex-col bg-page text-[16px] text-ink"
     >
-      <header className="flex max-h-[40%] shrink-0 flex-wrap items-center gap-[8px] overflow-auto border-b-2 border-ink p-[8px]">
+      <header className="flex max-h-[40%] shrink-0 flex-wrap items-center gap-[8px] overflow-auto border-b-2 border-ink p-[8px] pl-16">
         <ReaderModeSwitch />
         <button
           className={controlClass}

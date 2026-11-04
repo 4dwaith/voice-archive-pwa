@@ -128,6 +128,12 @@ const injectedRtkApi = api.injectEndpoints({
         method: 'DELETE',
       }),
     }),
+    createApiV1LiveToken: build.mutation<
+      CreateApiV1LiveTokenApiResponse,
+      CreateApiV1LiveTokenApiArg
+    >({
+      query: () => ({ url: `/api/v1/live/token`, method: 'POST' }),
+    }),
     getApiV1Health: build.query<
       GetApiV1HealthApiResponse,
       GetApiV1HealthApiArg
@@ -210,6 +216,9 @@ export type DeleteApiV1FileApiResponse = unknown
 export type DeleteApiV1FileApiArg = {
   fileId: number
 }
+export type CreateApiV1LiveTokenApiResponse =
+  /** status 200 Successful Response */ LiveTokenResponse
+export type CreateApiV1LiveTokenApiArg = void
 export type GetApiV1HealthApiResponse =
   /** status 200 Successful Response */ HealthResponse
 export type GetApiV1HealthApiArg = void
@@ -511,6 +520,17 @@ export type BodyCreateApiV1File = {
   /** File bytes, validated and prepared according to kind */
   file: Blob
 }
+export type LiveTokenResponse = {
+  token: string
+  model: string
+}
+export type ErrorDetailLiteralLiveUnavailable = {
+  code: 'live_unavailable'
+  message: string
+}
+export type LiveErrorResponse = {
+  error: ErrorDetailLiteralLiveUnavailable
+}
 export type HealthResponse = {
   status: 'ok'
   api_version: 'v1'
@@ -532,6 +552,7 @@ export const {
   useListApiV1BookSegmentsQuery,
   useCreateApiV1FileMutation,
   useDeleteApiV1FileMutation,
+  useCreateApiV1LiveTokenMutation,
   useGetApiV1HealthQuery,
   useGetApiV1ReadyQuery,
 } = injectedRtkApi

@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useReaderContext } from '../../../contexts/ReaderContext'
+import { LiveButton } from '../../atoms/LiveButton/LiveButton'
 
 const buttonClass =
   'min-h-12 rounded-lg border-2 border-ink px-3 font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40'
@@ -34,9 +35,12 @@ export function ReaderSearch() {
           }}
           className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col gap-3 overflow-y-auto border-2 border-ink bg-white p-4"
         >
-          <Dialog.Title className="shrink-0 text-xl font-bold">
-            Book search
-          </Dialog.Title>
+          <header className="flex items-center gap-3">
+            <LiveButton />
+            <Dialog.Title className="shrink-0 text-xl font-bold">
+              Book search
+            </Dialog.Title>
+          </header>
           <Dialog.Description className="shrink-0">
             Choose an occurrence to open its text.
           </Dialog.Description>
