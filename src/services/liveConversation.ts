@@ -3,11 +3,13 @@ import { z } from 'zod'
 import { apiBaseUrl } from '../api-client/baseApi'
 import { LiveTokenResponse } from '../api-client/generated/schemas'
 import { createLiveGuidance } from './liveGuidance'
+import { liveToolDeclarations, type createLiveTools } from './liveTools'
 
 const checkpointSchema = z.object({
   handle: z.string().min(1),
   model: z.string().min(1),
   expiresAt: z.number().finite(),
+  effects: z.record(z.string(), z.string()).default({}),
 })
 const checkpointKey = 'voice-archive-live-checkpoint'
 const resumptionWindow = 2 * 60 * 60 * 1000
@@ -44,6 +46,7 @@ export function createLiveConversation(
   readToken: (
     signal: AbortSignal,
   ) => Promise<{ token: string; model: string }> = readLiveToken,
+  tools?: ReturnType<typeof createLiveTools>,
 ) {
   let checkpoint: z.infer<typeof checkpointSchema> | null = null
   try {
@@ -113,6 +116,7 @@ export function createLiveConversation(
   function discard() {
     stop()
     checkpoint = null
+    tools?.clear()
     saveCheckpoint()
     publish({ status: 'idle', error: null })
   }
@@ -129,6 +133,7 @@ export function createLiveConversation(
       return
     }
     const previous = checkpoint
+    if (!previous) tools?.clear()
     publish({ status: 'connecting', error: null })
     let attempt: LiveAttempt | undefined
     let requestedConnection = false
@@ -202,10 +207,26 @@ export function createLiveConversation(
         apiKey: token,
         httpOptions: { apiVersion: 'v1beta' },
       })
+      const effects = previous?.effects ?? {}
+      const toolConnection = tools?.connect(
+        active.abort.signal,
+        effects,
+        saveCheckpoint,
+        (response) => {
+          try {
+            active.session?.sendToolResponse({ functionResponses: [response] })
+          } catch {
+            fail('Live could not send tool results. Start Live again.')
+          }
+        },
+      )
       requestedConnection = true
       const session = await client.live.connect({
         model,
         config: {
+          tools: tools
+            ? [{ functionDeclarations: liveToolDeclarations }]
+            : undefined,
           responseModalities: [Modality.AUDIO],
           // Explicit Start/Continue is the boundary for refreshing static help.
           systemInstruction: createLiveGuidance(),
@@ -215,6 +236,11 @@ export function createLiveConversation(
         callbacks: {
           onmessage(message) {
             if (current !== active) return
+            if (message.toolCallCancellation)
+              toolConnection?.cancel(message.toolCallCancellation.ids ?? [])
+            for (const call of message.toolCall?.functionCalls ?? [])
+              void toolConnection?.invoke(call)
+            if (current !== active) return
             if (message.setupComplete)
               publish({ status: 'connected', error: null })
             if (message.sessionResumptionUpdate) {
@@ -223,6 +249,7 @@ export function createLiveConversation(
                 update.resumable && update.newHandle
                   ? {
                       handle: update.newHandle,
+                      effects,
                       model,
                       expiresAt: Date.now() + resumptionWindow,
                     }

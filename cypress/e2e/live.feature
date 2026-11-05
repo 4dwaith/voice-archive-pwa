@@ -96,6 +96,40 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live reads current settings after a manual change
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    Then Live exchanges browser audio
+    When Live calls "getAppLocation" with ID "library"
+    Then tool "library" reports "reader" as "unavailable"
+    When I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I press the turner "MediaTrackNext" key
+    Then only the PDF surface is open
+    When Live calls "getReaderSettings" with ID "settings"
+    Then tool "settings" reports "viewMode" as "pdf"
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: Voice End releases capture and is not replayed after reload
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    And Live provides resumable checkpoints
+    When I start Live from the library
+    Then Live exchanges browser audio
+    When Live calls "endLiveSession" with ID "end"
+    Then Live has released the microphone
+    When I reload the Live app
+    And I continue Live
+    Then Live resumes the same conversation
+    When Live calls "endLiveSession" with ID "end"
+    Then tool "end" reports "accepted" as "true"
+    And Live resumes the same conversation
+    When I stop Live
+    Then Live has released the microphone
+
   Rule: Playback handoff keeps Live available until narration starts
     Background:
       Given a synchronization book with narration after untimed text

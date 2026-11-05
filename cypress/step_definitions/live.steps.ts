@@ -6,6 +6,7 @@ type AudioEvidence = {
   stream?: MediaStream
   resolvePlay?: () => void
   rejectPlay?: () => void
+  toolResults: { id: string; response: Record<string, unknown> }[]
   errorInputs: string[]
   inputs: number
   outputs: number
@@ -94,6 +95,7 @@ Given('a synthetic Live audio provider', () => {
     connections: 0,
     handles: [],
     errorInputs: [],
+    toolResults: [],
   }
   cy.intercept('POST', '**/api/v1/live/token', {
     token: 'auth_tokens/synthetic',
@@ -132,7 +134,9 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools).to.equal(undefined)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(7)
+          for (const declaration of message.setup.tools[0].functionDeclarations)
+            expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
           this.deliver({ setupComplete: {} })
           if (hasCheckpoints)
@@ -143,6 +147,8 @@ Given('a synthetic Live audio provider', () => {
               },
             })
         }
+        if (message.toolResponse)
+          evidence.toolResults.push(...message.toolResponse.functionResponses)
         if (message.realtimeInput?.text)
           evidence.errorInputs.push(message.realtimeInput.text)
         if (message.realtimeInput?.audio) {
@@ -360,3 +366,23 @@ Then('Live continues without delayed narration', () => {
     expect(evidence.errorInputs).to.have.length(0)
   })
 })
+
+When('Live calls {string} with ID {string}', (name: string, id: string) => {
+  cy.then(() =>
+    evidence.deliver?.({
+      toolCall: { functionCalls: [{ id, name, args: {} }] },
+    }),
+  )
+})
+
+Then(
+  'tool {string} reports {string} as {string}',
+  (id: string, field: string, value: string) => {
+    cy.wrap(null).should(() => {
+      const result = evidence.toolResults.find((call) => call.id === id)
+        ?.response as Record<string, unknown>
+      const valueSource = (result?.result ?? result) as Record<string, unknown>
+      expect(String(valueSource?.[field])).to.equal(value)
+    })
+  },
+)

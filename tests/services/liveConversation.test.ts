@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LiveConnectParameters, LiveServerMessage } from '@google/genai'
+import { createLiveQueries } from '../../src/services/liveQueries'
+import { createLiveTools } from '../../src/services/liveTools'
+import { createAppStore } from '../../src/store/store'
 import { createLiveConversation } from '../../src/services/liveConversation'
 
 const { connect } = vi.hoisted(() => ({ connect: vi.fn() }))
@@ -17,6 +20,7 @@ vi.mock('@google/genai', () => ({
     live = { connect }
   },
   Modality: { AUDIO: 'AUDIO' },
+  Behavior: { BLOCKING: 'BLOCKING' },
 }))
 
 afterEach(() => {
@@ -258,21 +262,36 @@ describe('Live conversation', () => {
     },
   )
 
-  it('streams audio and clears queued speech on interruption and Stop', async () => {
+  it('streams audio during a query and clears speech and pending replies on Stop', async () => {
     const media = createMedia()
-    const session = { close: vi.fn(), sendRealtimeInput: vi.fn() }
+    const session = {
+      close: vi.fn(),
+      sendRealtimeInput: vi.fn(),
+      sendToolResponse: vi.fn(),
+    }
+    const queries = createLiveQueries(createAppStore().getState)
+    const pending = Promise.withResolvers<never>()
+    vi.spyOn(queries, 'getBookDownloadState').mockReturnValue(pending.promise)
     let callbacks!: LiveConnectParameters['callbacks']
     connect.mockImplementation(async (options: LiveConnectParameters) => {
       callbacks = options.callbacks
       deliverMessage(callbacks, { setupComplete: {} })
       return session
     })
-    const live = createLiveConversation(async () => ({
-      token: 'temporary',
-      model: 'model',
-    }))
+    const live = createLiveConversation(
+      async () => ({ token: 'temporary', model: 'model' }),
+      createLiveTools(queries, vi.fn()),
+    )
 
     await live.start()
+    deliverMessage(callbacks, {
+      toolCall: {
+        functionCalls: [
+          { id: 'slow', name: 'getBookDownloadState', args: { bookId: 7 } },
+        ],
+      },
+    })
+    await Promise.resolve()
     media.capture.port.onmessage!({ data: new Int16Array([10, 20]).buffer })
     const output = {
       serverContent: {
@@ -323,6 +342,11 @@ describe('Live conversation', () => {
     expect(media.context.close).toHaveBeenCalledOnce()
     expect(session.close).toHaveBeenCalledOnce()
     expect(live.getSnapshot().status).toBe('idle')
+
+    pending.resolve({} as never)
+    await new Promise((done) => setTimeout(done, 0))
+
+    expect(session.sendToolResponse).not.toHaveBeenCalled()
   })
 
   it('releases a microphone granted after Stop', async () => {

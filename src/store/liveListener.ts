@@ -1,4 +1,7 @@
 import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
+import { createLiveQueries } from '../services/liveQueries'
+import { createLiveTools } from '../services/liveTools'
+import { endLiveSession } from '../services/liveCommands'
 import { createLiveConversation } from '../services/liveConversation'
 import { closeReader, getReaderScope, openReader } from './readerSlice'
 import {
@@ -27,7 +30,12 @@ export function createLiveListener() {
     matcher: isAnyOf(initializeLiveSession, requestLiveSession),
     effect(action, api) {
       if (!conversation) {
-        conversation = createLiveConversation()
+        conversation = createLiveConversation(
+          undefined,
+          createLiveTools(createLiveQueries(api.getState), () =>
+            endLiveSession(api.dispatch),
+          ),
+        )
         const connectedConversation = conversation
         function publish() {
           api.dispatch(reportLiveSession(connectedConversation.getSnapshot()))
