@@ -165,36 +165,38 @@ describe('Live reader integration', () => {
     { metaKey: true },
     { shiftKey: true },
     { isComposing: true },
-  ])('ignores modified or composing Live keys %j', (flags) => {
+  ])('handles Live keys regardless of modifier flags %j', (flags) => {
     const { events } = renderIntegration()
 
     fireEvent.keyDown(window, { key: 'MediaPlay', ...flags })
 
-    expect(events).toEqual([])
+    expect(events).toEqual(['start live'])
   })
 
   it.each(['button', 'input', 'textarea', 'select', 'a', 'summary'])(
-    'preserves Live input on %s',
+    'handles Live keys with focus on %s',
     (tag) => {
       const { events } = renderIntegration()
       const element = document.createElement(tag)
       document.body.append(element)
+      element.tabIndex = 0
+      element.focus()
 
       fireEvent.keyDown(element, { key: 'MediaPlay' })
       element.remove()
 
-      expect(events).toEqual([])
+      expect(events).toEqual(['start live'])
     },
   )
 
-  it('preserves native selection and leaves reader keys to the reader', () => {
+  it('handles Live with selected text and leaves other keys alone', () => {
     const { events } = renderIntegration()
     vi.spyOn(document, 'getSelection').mockReturnValue({
       isCollapsed: false,
     } as Selection)
 
-    expect(fireEvent.keyDown(window, { key: 'MediaPlay' })).toBe(true)
-    expect(events).toEqual([])
+    expect(fireEvent.keyDown(window, { key: 'MediaPlay' })).toBe(false)
+    expect(events).toEqual(['start live'])
 
     vi.mocked(document.getSelection).mockRestore()
 

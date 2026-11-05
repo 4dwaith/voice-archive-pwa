@@ -193,16 +193,16 @@ describe('ReaderControls', () => {
       expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
     })
 
-    it('toggles narration and mode once without revealing controls', () => {
+    it('handles window media keys once without revealing controls', () => {
       const { context } = renderControls(false, 'text', false)
 
       for (const key of ['MediaTrackPrevious', 'MediaTrackNext']) {
-        fireEvent.keyDown(screen.getByText('Book content'), { key })
-        fireEvent.keyDown(screen.getByText('Book content'), {
+        fireEvent.keyDown(window, { key })
+        fireEvent.keyDown(window, {
           key,
           repeat: true,
         })
-        fireEvent.keyUp(screen.getByText('Book content'), { key })
+        fireEvent.keyUp(window, { key })
       }
 
       expect(context.reader.audio?.togglePlayback).toHaveBeenCalledTimes(1)
@@ -252,19 +252,38 @@ describe('ReaderControls', () => {
       expect(context.reader.pdf?.setViewMode).not.toHaveBeenCalled()
     })
 
-    it('preserves focused controls and composing input', () => {
-      const { context } = renderControls(true, 'text', false)
+    it('handles media keys from an unrelated input regardless of selection or flags', () => {
+      const { context } = renderControls(
+        true,
+        'text',
+        false,
+        createPortal(<input aria-label="Outside reader" />, document.body),
+      )
+      const target = screen.getByRole('textbox', { name: 'Outside reader' })
+      target.focus()
+      window
+        .getSelection()!
+        .selectAllChildren(screen.getByRole('button', { name: 'Home' }))
 
-      fireEvent.keyDown(screen.getByRole('button', { name: 'Home' }), {
-        key: 'MediaTrackPrevious',
-      })
-      fireEvent.keyDown(screen.getByText('Book content'), {
-        key: 'MediaTrackNext',
-        isComposing: true,
-      })
+      for (const key of ['MediaTrackPrevious', 'MediaTrackNext']) {
+        const event = new KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          cancelable: true,
+          altKey: true,
+          ctrlKey: true,
+          metaKey: true,
+          shiftKey: true,
+          isComposing: true,
+        })
+        event.preventDefault()
+        fireEvent(target, event)
+      }
 
-      expect(context.reader.audio?.togglePlayback).not.toHaveBeenCalled()
-      expect(context.reader.pdf?.setViewMode).not.toHaveBeenCalled()
+      expect(context.reader.audio?.togglePlayback).toHaveBeenCalledOnce()
+      expect(context.reader.pdf?.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'pdf',
+      )
     })
   })
 

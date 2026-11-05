@@ -22,7 +22,10 @@ export function AppLayout() {
           <Header />
         </div>
       )}
-      <main className={isBookPage ? 'h-dvh overflow-hidden' : undefined}>
+      <main
+        tabIndex={-1}
+        className={isBookPage ? 'h-dvh overflow-hidden' : undefined}
+      >
         <Outlet />
       </main>
     </div>

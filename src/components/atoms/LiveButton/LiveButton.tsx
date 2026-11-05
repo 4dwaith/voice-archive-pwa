@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { useContext, type MouseEvent } from 'react'
 import { LiveContext } from '../../../contexts/LiveContext'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { getLiveSession, requestLiveSession } from '../../../store/liveSlice'
@@ -16,6 +16,31 @@ function ConnectedLiveButton() {
     : canContinue
       ? 'Continue Live'
       : 'Start Live'
+  function discardConversationAndRestoreFocus(
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    const button = event.currentTarget
+    const focusTarget =
+      button.closest<HTMLElement>('[role="dialog"]') ??
+      button.ownerDocument.querySelector<HTMLElement>(
+        '[data-reader-surface]',
+      ) ??
+      button.ownerDocument.querySelector<HTMLElement>('main')
+
+    button.blur()
+    dispatch(requestLiveSession({ kind: 'discard' }))
+    // Restore focus after the click finishes and React removes the button.
+    requestAnimationFrame(() => {
+      if (!focusTarget?.isConnected) return
+      focusTarget.setAttribute('data-reader-restoring-focus', '')
+      try {
+        focusTarget.focus({ preventScroll: true })
+      } finally {
+        focusTarget.removeAttribute('data-reader-restoring-focus')
+      }
+    })
+  }
+
   return (
     <div
       className="relative flex shrink-0 items-center gap-2"
@@ -60,7 +85,7 @@ function ConnectedLiveButton() {
           aria-label="Discard Live conversation"
           title="Discard Live conversation"
           className="inline-flex min-h-12 min-w-12 items-center justify-center border-2 border-ink bg-page p-2 text-ink focus-visible:outline-4 focus-visible:outline-accent"
-          onClick={() => dispatch(requestLiveSession({ kind: 'discard' }))}
+          onClick={discardConversationAndRestoreFocus}
         >
           <svg
             aria-hidden="true"

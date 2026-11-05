@@ -17,20 +17,21 @@ Feature: Live voice conversation
     And a synthetic Live audio provider
     When I open the synchronization book from the library
     And I wait for book synchronization to finish
-    And I focus the text and hide the controls
+    And I focus the Live control
     And I press the turner "MediaPlay" key
     Then Live exchanges browser audio
-    When I press the turner "MediaTrackPrevious" key
+    When I focus the Live control
+    And I press the turner "MediaTrackPrevious" key
     Then Live has released the microphone
     And turner narration is playing
     When I press the turner "MediaTrackPrevious" key
     Then turner narration is paused
-    When I focus the text and hide the controls
+    When I focus the Live control
     And I press the turner "MediaTrackPrevious" key
     Then turner narration is playing
     When I press the turner "MediaPlay" key
     Then narration stops and the modal closes
-    When I focus the text and hide the controls
+    When I focus the Live control
     And I press the turner "MediaTrackNext" key
     Then only the PDF surface is open
     When I press the turner "MediaTrackPrevious" key
@@ -56,6 +57,36 @@ Feature: Live voice conversation
     When I stop Live
     And I discard the Live conversation
     Then Live offers a fresh conversation
+    When I press the turner "MediaPlay" key
+    Then Live exchanges browser audio
+    When I press the turner "MediaPlay" key
+    Then Live has released the microphone
+
+  Scenario: Discard returns focus so every turner gesture still works
+    Given a synchronization book with narration after untimed text
+    And its narrated text spans pages
+    And a synthetic Live audio provider
+    And Live provides resumable checkpoints
+    When I start Live from the library
+    Then Live exchanges browser audio
+    When I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I stop Live
+    And I tap Discard on the touchscreen
+    Then Live offers a fresh conversation
+    And the reader has keyboard focus
+    And the reader controls are hidden
+    When I press the turner "MediaPlay" key
+    Then Live exchanges browser audio
+    When I press the turner "MediaPlay" key
+    Then Live has released the microphone
+    When I press the turner "MediaTrackNext" key
+    Then only the PDF surface is open
+    When I press the turner "MediaTrackNext" key
+    Then the turner restores Text mode
+    When I press the turner "MediaTrackPrevious" key
+    Then turner narration is playing
 
   Scenario: A non-resumable checkpoint explains the fresh start
     Given a synchronization book with a nested destination

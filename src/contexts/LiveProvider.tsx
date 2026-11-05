@@ -20,27 +20,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function handleLiveKey(event: KeyboardEvent) {
-      const selection = document.getSelection()
-      if (
-        event.key !== livePageTurnerBinding.key ||
-        event.defaultPrevented ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        event.isComposing ||
-        event
-          .composedPath()
-          .some(
-            (target) =>
-              target instanceof Element &&
-              target.matches(
-                'button, a, input, select, textarea, summary, [role="button"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
-              ),
-          ) ||
-        (selection && !selection.isCollapsed)
-      )
-        return
+      if (event.key !== livePageTurnerBinding.key) return
 
       event.preventDefault()
       event.stopPropagation()

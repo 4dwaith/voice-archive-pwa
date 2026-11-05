@@ -386,3 +386,45 @@ Then(
     })
   },
 )
+
+Then('the reader has keyboard focus', () => {
+  cy.get('[data-reader-surface]').should('be.focused')
+})
+
+When('I tap Discard on the touchscreen', () => {
+  cy.findByRole('button', { name: 'Discard Live conversation' }).then(
+    async ($button) => {
+      const bounds = $button[0].getBoundingClientRect()
+      let x = bounds.x + bounds.width / 2
+      let y = bounds.y + bounds.height / 2
+      let view: Window = $button[0].ownerDocument.defaultView!
+      // CDP coordinates include Cypress's containing iframe and its scale.
+      while (view !== view.top) {
+        const frame = (view.frameElement ??
+          [...view.parent.document.querySelectorAll('iframe')].find(
+            (frame) => frame.contentWindow === view,
+          )) as HTMLElement
+        const frameBounds = frame.getBoundingClientRect()
+        const scale = frameBounds.width / frame.offsetWidth
+        x = frameBounds.x + x * scale
+        y = frameBounds.y + y * scale
+        view = view.parent
+      }
+      await Cypress.automation('remote:debugger:protocol', {
+        command: 'Input.dispatchTouchEvent',
+        params: {
+          type: 'touchStart',
+          touchPoints: [{ x, y }],
+        },
+      })
+      await Cypress.automation('remote:debugger:protocol', {
+        command: 'Input.dispatchTouchEvent',
+        params: { type: 'touchEnd', touchPoints: [] },
+      })
+    },
+  )
+})
+
+When('I focus the Live control', () => {
+  cy.findByRole('button', { name: /^(Start|Continue|Stop) Live$/ }).focus()
+})

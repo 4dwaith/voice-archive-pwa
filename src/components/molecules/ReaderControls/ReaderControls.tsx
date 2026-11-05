@@ -187,6 +187,28 @@ export function ReaderControls({
     },
   )
 
+  useEffect(() => {
+    function handleReaderMediaKey(event: globalThis.KeyboardEvent) {
+      if (
+        !readerPageTurnerBindings.some((binding) => binding.key === event.key)
+      )
+        return
+
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.repeat) return
+
+      if (event.key === readerPageTurnerBindings[0].key) {
+        if (!isPdf && (audio?.canPlay || audio?.isPlaying))
+          audio.togglePlayback()
+      } else setViewMode?.(isPdf ? 'text' : 'pdf')
+    }
+
+    window.addEventListener('keydown', handleReaderMediaKey, true)
+    return () =>
+      window.removeEventListener('keydown', handleReaderMediaKey, true)
+  }, [audio, isPdf, setViewMode])
+
   const previousMode = useRef(isPdf)
   useEffect(() => {
     if (previousMode.current !== isPdf) {
@@ -239,6 +261,7 @@ export function ReaderControls({
     event: React.FocusEvent<HTMLDivElement>,
   ) {
     if (!event.currentTarget.contains(event.target as Node)) return
+    if (event.currentTarget.hasAttribute('data-reader-restoring-focus')) return
     if ((event.target as Element).closest('[data-reader-audio-control]')) return
     if (!isPdf && !isPointerFocus.current && !isReturningFocus.current)
       setControlsVisible(true)
@@ -257,17 +280,14 @@ export function ReaderControls({
         ? -1
         : null
     const selection = event.currentTarget.ownerDocument.getSelection()
-    const isMediaKey = readerPageTurnerBindings.some(
-      (binding) => binding.key === event.key,
-    )
-    // PDF owns its native navigation keys; mode/narration bindings stay shared.
-    if (isPdf && !isMediaKey) return
+    // PDF owns its native navigation keys.
+    if (isPdf) return
     if (target.closest('[data-reader-audio-control]')) return
     isPointerFocus.current = false
 
     // Reading keys must leave overlay controls and native text selection alone.
     if (
-      (delta !== null || isMediaKey) &&
+      delta !== null &&
       !event.altKey &&
       !event.ctrlKey &&
       !event.metaKey &&
@@ -279,25 +299,18 @@ export function ReaderControls({
     ) {
       event.preventDefault()
       if (!event.repeat) {
-        if (event.key === readerPageTurnerBindings[0].key) {
-          if (!isPdf && (audio?.canPlay || audio?.isPlaying))
-            audio.togglePlayback()
-        } else if (event.key === readerPageTurnerBindings[1].key) {
-          setViewMode?.(isPdf ? 'text' : 'pdf')
-        } else if (delta !== null) {
-          if (!isNarration) {
-            // Page changes can replace focused text; keep later keys on the reader.
-            isReturningFocus.current = true
-            surface.current?.focus({ preventScroll: true })
-            isReturningFocus.current = false
-          }
-          requestReaderMove(delta)
+        if (!isNarration) {
+          // Page changes can replace focused text; keep later keys on the reader.
+          isReturningFocus.current = true
+          surface.current?.focus({ preventScroll: true })
+          isReturningFocus.current = false
         }
+        requestReaderMove(delta)
       }
       return
     }
 
-    if (isNarration || isMediaKey) return
+    if (isNarration) return
 
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -384,6 +397,7 @@ export function ReaderControls({
   return (
     <div
       ref={surface}
+      data-reader-surface
       role="region"
       aria-label="Reader"
       tabIndex={0}
