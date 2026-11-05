@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useSyncExternalStore,
-} from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { database } from '../data/database'
 import { readFileNarration, readNarrationTarget } from '../data/readerNarration'
@@ -12,16 +6,14 @@ import {
   createReaderAudioController,
   idleReaderAudioSnapshot,
 } from '../services/readerAudioController'
-import { useAppDispatch } from '../store/hooks'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setReaderAnchor } from '../store/readerSlice'
 import {
   setReaderAudioPlayback,
   seekReaderAudioBySeconds,
+  getReaderAudioObservation,
 } from '../store/readerAudioSlice'
 import { useReaderAudioControl } from './useReaderAudioControl'
-
-const subscribeToNothing = () => () => {}
-const readIdleSnapshot = () => idleReaderAudioSnapshot
 
 export function useReaderAudio(
   bookId: number | undefined,
@@ -85,10 +77,13 @@ export function useReaderAudio(
     void player?.refreshContent()
   }, [player, content?.count, content?.complete])
 
-  const playback = useSyncExternalStore(
-    player?.subscribe ?? subscribeToNothing,
-    player?.getSnapshot ?? readIdleSnapshot,
-  )
+  const observation = useAppSelector(getReaderAudioObservation)
+  const playback =
+    observation &&
+    observation.bookId === bookId &&
+    observation.contentVersion === contentVersion
+      ? observation
+      : idleReaderAudioSnapshot
 
   useReaderAudioControl(
     player,

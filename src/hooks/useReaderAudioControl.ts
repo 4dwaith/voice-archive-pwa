@@ -3,6 +3,7 @@ import {
   addListener,
   removeListener,
   isAnyOf,
+  nanoid,
   type UnknownAction,
 } from '@reduxjs/toolkit'
 import { useAppDispatch, useAppSelector, useAppStore } from '../store/hooks'
@@ -16,6 +17,9 @@ import {
   getReaderAudioPlaybackRequest,
   setReaderAudioPlayback,
   seekReaderAudioBySeconds,
+  registerReaderAudioController,
+  reportReaderAudio,
+  clearReaderAudioObservation,
 } from '../store/readerAudioSlice'
 import type { createReaderAudioController } from '../services/readerAudioController'
 import type { ReaderScope } from '../models/reader'
@@ -24,6 +28,7 @@ import { useLiveConversation } from '../contexts/LiveContext'
 type Player = Pick<
   ReturnType<typeof createReaderAudioController>,
   | 'getSnapshot'
+  | 'subscribe'
   | 'playFromSegment'
   | 'pausePlayback'
   | 'seekBySeconds'
@@ -42,6 +47,39 @@ export function useReaderAudioControl(
   const conversation = useLiveConversation()
   const playbackRequest = useAppSelector(getReaderAudioPlaybackRequest)
   const applied = useRef<{ player: Player; requestId: string } | null>(null)
+  const publishObservation = useRef(() => {})
+
+  useEffect(() => {
+    if (!player || bookId === undefined || !contentVersion) return
+    const readerScope = getReaderScope(store.getState())
+    if (
+      readerScope?.bookId !== bookId ||
+      readerScope.contentVersion !== contentVersion
+    )
+      return
+    const connectedPlayer = player
+    const scope = { bookId, contentVersion, controllerId: nanoid() }
+    function createObservation() {
+      return {
+        ...scope,
+        ...connectedPlayer.getSnapshot(),
+        requestId:
+          applied.current?.player === player ? applied.current.requestId : null,
+      }
+    }
+
+    dispatch(registerReaderAudioController(createObservation()))
+    function publish() {
+      dispatch(reportReaderAudio(createObservation()))
+    }
+    publishObservation.current = publish
+    const unsubscribe = player.subscribe(publish)
+    return () => {
+      unsubscribe()
+      publishObservation.current = () => {}
+      dispatch(clearReaderAudioObservation(scope))
+    }
+  }, [player, bookId, contentVersion, dispatch, store])
 
   useEffect(() => {
     if (!player) return
@@ -97,6 +135,9 @@ export function useReaderAudioControl(
         connectedPlayer.playFromSegment(request.segmentId)
       } else if (!snapshot.isPlaying)
         connectedPlayer.playFromSegment(segmentId!, anchor)
+      // An already-playing request can change identity without a transition.
+      if (connectedPlayer.getSnapshot() === snapshot)
+        publishObservation.current()
     }
 
     function handleAudioAction(action: UnknownAction) {

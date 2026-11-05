@@ -42,6 +42,7 @@ function renderIntegration() {
   vi.mocked(createLiveConversation).mockReturnValue(live)
   let playback = idleReaderAudioSnapshot
   const player = {
+    subscribe: () => () => {},
     getSnapshot: () => playback,
     playFromSegment: vi.fn(() => {
       playback = {
