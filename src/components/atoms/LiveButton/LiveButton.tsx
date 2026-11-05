@@ -13,15 +13,19 @@ function ConnectedLiveButton({
 }: {
   conversation: NonNullable<ReturnType<typeof useLiveConversation>>
 }) {
-  const { status, error } = useSyncExternalStore(
+  const { status, error, canContinue } = useSyncExternalStore(
     conversation.subscribe,
     conversation.getSnapshot,
   )
   const isActive = status === 'connecting' || status === 'connected'
-  const label = isActive ? 'Stop Live' : 'Start Live'
+  const label = isActive
+    ? 'Stop Live'
+    : canContinue
+      ? 'Continue Live'
+      : 'Start Live'
   return (
     <div
-      className="relative shrink-0"
+      className="relative flex shrink-0 items-center gap-2"
       data-live-control
       data-live-state={status}
       data-reader-overlay
@@ -57,17 +61,37 @@ function ConnectedLiveButton({
           )}
         </svg>
       </button>
-      <span aria-live="polite" className="sr-only">
-        Live {status}
-      </span>
-      {error && (
-        <p
-          role="alert"
-          className="absolute left-0 top-full z-50 w-64 border-2 border-ink bg-page p-2 text-base text-ink"
+      {!isActive && canContinue && (
+        <button
+          type="button"
+          aria-label="Discard Live conversation"
+          title="Discard Live conversation"
+          className="inline-flex min-h-12 min-w-12 items-center justify-center border-2 border-ink bg-page p-2 text-ink focus-visible:outline-4 focus-visible:outline-accent"
+          onClick={() => conversation.discard()}
         >
-          {error}
-        </p>
+          <svg
+            aria-hidden="true"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
+          </svg>
+        </button>
       )}
+      <div className="absolute left-0 top-full z-50 w-64 bg-page text-ink">
+        <span aria-live="polite" className="sr-only">
+          Live {status}
+        </span>
+        {error && (
+          <p role="alert" className="border-2 border-ink p-2 text-base">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

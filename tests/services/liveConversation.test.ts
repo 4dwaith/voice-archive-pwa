@@ -20,10 +20,32 @@ vi.mock('@google/genai', () => ({
 }))
 
 afterEach(() => {
+  sessionStorage.clear()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   vi.useRealTimers()
   connect.mockReset()
 })
+
+async function createResumableConversation() {
+  const media = createMedia()
+  connect.mockImplementation(async ({ callbacks }: LiveConnectParameters) => {
+    deliverMessage(callbacks, { setupComplete: {} })
+    return { close: vi.fn() }
+  })
+  const readToken = vi.fn(async () => ({
+    token: 'fresh-credential',
+    model: 'model',
+  }))
+  const live = createLiveConversation(readToken)
+  await live.start()
+  const callbacks = connect.mock.calls[0][0]
+    .callbacks as LiveConnectParameters['callbacks']
+  deliverMessage(callbacks, {
+    sessionResumptionUpdate: { resumable: true, newHandle: 'checkpoint' },
+  })
+  return { live, readToken, callbacks, media }
+}
 
 function createMedia() {
   const track = { stop: vi.fn(), addEventListener: vi.fn() }
@@ -79,6 +101,139 @@ function createMedia() {
 }
 
 describe('Live conversation', () => {
+  it.each(['stop', 'onclose', 'onerror', 'goAway'] as const)(
+    'retains a checkpoint after %s until explicit Continue',
+    async (reason) => {
+      const { live, callbacks, readToken, media } =
+        await createResumableConversation()
+
+      if (reason === 'stop') live.stop()
+      else if (reason === 'goAway')
+        deliverMessage(callbacks, { goAway: { timeLeft: '10s' } })
+      else callbacks[reason]?.({} as CloseEvent & ErrorEvent)
+
+      expect(media.track.stop).toHaveBeenCalledOnce()
+      expect(live.getSnapshot().canContinue).toBe(true)
+      expect(connect).toHaveBeenCalledOnce()
+      expect(live.getSnapshot().status).not.toBe('connected')
+
+      await live.start()
+
+      expect(readToken).toHaveBeenCalledTimes(2)
+      expect(connect.mock.calls[1][0].config).toMatchObject({
+        sessionResumption: { handle: 'checkpoint' },
+        contextWindowCompression: { slidingWindow: {} },
+      })
+      live.stop()
+    },
+  )
+
+  it('restores only checkpoint metadata after reload and supports discard', async () => {
+    const { live, readToken } = await createResumableConversation()
+    live.stop()
+
+    const restored = createLiveConversation(readToken)
+
+    expect(restored.getSnapshot().canContinue).toBe(true)
+    expect(
+      sessionStorage.getItem('voice-archive-live-checkpoint'),
+    ).not.toContain('fresh-credential')
+
+    restored.discard()
+    await restored.start()
+
+    expect(connect.mock.calls[1][0].config.sessionResumption).toEqual({})
+    expect(sessionStorage.getItem('voice-archive-live-checkpoint')).toBeNull()
+    restored.stop()
+  })
+
+  it('rejects expired checkpoints before requesting microphone access', async () => {
+    const { live, media } = await createResumableConversation()
+    live.stop()
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 2 * 60 * 60 * 1000)
+
+    await live.start()
+
+    expect(media.getUserMedia).toHaveBeenCalledOnce()
+    expect(live.getSnapshot()).toMatchObject({
+      canContinue: false,
+      error: expect.stringContaining('expired'),
+    })
+    expect(createLiveConversation(vi.fn()).getSnapshot().canContinue).toBe(
+      false,
+    )
+  })
+
+  it('does not offer an older checkpoint at a non-resumable boundary', async () => {
+    const { live, callbacks } = await createResumableConversation()
+
+    deliverMessage(callbacks, { sessionResumptionUpdate: { resumable: false } })
+    live.stop()
+
+    expect(live.getSnapshot()).toMatchObject({
+      canContinue: false,
+      error: expect.stringContaining('No resumable checkpoint'),
+    })
+    expect(sessionStorage.getItem('voice-archive-live-checkpoint')).toBeNull()
+  })
+
+  it('preserves a checkpoint if credential provisioning fails', async () => {
+    const { live, readToken } = await createResumableConversation()
+    live.stop()
+    readToken.mockRejectedValueOnce(new Error('credential expired'))
+
+    await live.start()
+
+    expect(live.getSnapshot()).toMatchObject({
+      status: 'failed',
+      canContinue: true,
+    })
+    expect(connect).toHaveBeenCalledOnce()
+  })
+
+  it('offers a fresh start when the provider refuses continuation', async () => {
+    const { live } = await createResumableConversation()
+    live.stop()
+    connect.mockRejectedValueOnce(new Error('invalid handle'))
+
+    await live.start()
+
+    expect(live.getSnapshot()).toMatchObject({
+      canContinue: false,
+      error: expect.stringContaining('could not continue'),
+    })
+
+    await live.start()
+
+    expect(connect.mock.calls[2][0].config.sessionResumption).toEqual({})
+    live.stop()
+  })
+
+  it('ignores old socket callbacks and Stop cancels a pending continuation', async () => {
+    const { live, callbacks } = await createResumableConversation()
+    live.stop()
+    const pending = Promise.withResolvers<{ close: ReturnType<typeof vi.fn> }>()
+    connect.mockReturnValueOnce(pending.promise)
+    const continuing = live.start()
+    await vi.waitFor(() => expect(connect).toHaveBeenCalledTimes(2))
+
+    callbacks.onclose?.({} as CloseEvent)
+    deliverMessage(callbacks, { sessionResumptionUpdate: { resumable: false } })
+
+    expect(live.getSnapshot()).toMatchObject({
+      status: 'connecting',
+      canContinue: true,
+    })
+
+    live.stop()
+    const session = { close: vi.fn() }
+    pending.resolve(session)
+    await continuing
+
+    expect(session.close).toHaveBeenCalledOnce()
+    expect(live.getSnapshot().status).toBe('idle')
+  })
+
   it.each(['onerror', 'onclose'] as const)(
     'releases media after provider %s',
     async (eventName) => {

@@ -1,8 +1,18 @@
 import { GoogleGenAI, Modality, type Session } from '@google/genai'
+import { z } from 'zod'
+
+const checkpointSchema = z.object({
+  handle: z.string().min(1),
+  model: z.string().min(1),
+  expiresAt: z.number().finite(),
+})
+const checkpointKey = 'voice-archive-live-checkpoint'
+const resumptionWindow = 2 * 60 * 60 * 1000
 
 type LiveSnapshot = {
   status: 'idle' | 'connecting' | 'connected' | 'failed'
   error: string | null
+  canContinue: boolean
 }
 
 type LiveAttempt = {
@@ -18,13 +28,38 @@ type LiveAttempt = {
 export function createLiveConversation(
   readToken: (signal: AbortSignal) => Promise<{ token: string; model: string }>,
 ) {
-  let snapshot: LiveSnapshot = { status: 'idle', error: null }
+  let checkpoint: z.infer<typeof checkpointSchema> | null = null
+  try {
+    const saved = checkpointSchema.safeParse(
+      JSON.parse(sessionStorage.getItem(checkpointKey) ?? 'null'),
+    )
+    if (saved.success && saved.data.expiresAt > Date.now())
+      checkpoint = saved.data
+    else sessionStorage.removeItem(checkpointKey)
+  } catch {
+    /* Storage may be unavailable; in-memory continuation still works. */
+  }
+  let snapshot: LiveSnapshot = {
+    status: 'idle',
+    error: null,
+    canContinue: !!checkpoint,
+  }
   const listeners = new Set<() => void>()
   let current: LiveAttempt | null = null
 
-  function publish(next: LiveSnapshot) {
-    snapshot = next
+  function publish(next: Omit<LiveSnapshot, 'canContinue'>) {
+    snapshot = { ...next, canContinue: !!checkpoint }
     listeners.forEach((notify) => notify())
+  }
+
+  function saveCheckpoint() {
+    try {
+      if (checkpoint)
+        sessionStorage.setItem(checkpointKey, JSON.stringify(checkpoint))
+      else sessionStorage.removeItem(checkpointKey)
+    } catch {
+      /* Do not interrupt audio when storage is blocked or full. */
+    }
   }
 
   function stopOutput(attempt: NonNullable<typeof current>) {
@@ -37,6 +72,10 @@ export function createLiveConversation(
     const attempt = current
     current = null
     if (attempt) {
+      if (checkpoint && snapshot.status === 'connected') {
+        checkpoint.expiresAt = Date.now() + resumptionWindow
+        saveCheckpoint()
+      }
       attempt.abort.abort()
       attempt.stream?.getTracks().forEach((track) => track.stop())
       if (attempt.capture) {
@@ -48,13 +87,37 @@ export function createLiveConversation(
       void attempt.context.close().catch(() => {})
       attempt.session?.close()
     }
+    publish({
+      status: 'idle',
+      error:
+        attempt && !checkpoint
+          ? 'No resumable checkpoint is available. Start Live for a new conversation.'
+          : null,
+    })
+  }
+
+  function discard() {
+    stop()
+    checkpoint = null
+    saveCheckpoint()
     publish({ status: 'idle', error: null })
   }
 
   async function start() {
     if (current) return
+    if (checkpoint && checkpoint.expiresAt <= Date.now()) {
+      discard()
+      publish({
+        status: 'failed',
+        error:
+          'The Live checkpoint expired. Start Live for a new conversation.',
+      })
+      return
+    }
+    const previous = checkpoint
     publish({ status: 'connecting', error: null })
     let attempt: LiveAttempt | undefined
+    let requestedConnection = false
     function fail(message: string) {
       if (!attempt || current === attempt) {
         stop()
@@ -114,18 +177,48 @@ export function createLiveConversation(
       capture.connect(context.destination) // Processor outputs silence, never microphone feedback.
       const { token, model } = await readToken(active.abort.signal)
       if (current !== active) return
+      if (previous && previous.model !== model) {
+        checkpoint = null
+        saveCheckpoint()
+        fail('The Live model changed. Start Live for a new conversation.')
+        return
+      }
       const client = new GoogleGenAI({
         apiKey: token,
         httpOptions: { apiVersion: 'v1beta' },
       })
+      requestedConnection = true
       const session = await client.live.connect({
         model,
-        config: { responseModalities: [Modality.AUDIO] },
+        config: {
+          responseModalities: [Modality.AUDIO],
+          sessionResumption: previous ? { handle: previous.handle } : {},
+          contextWindowCompression: { slidingWindow: {} },
+        },
         callbacks: {
           onmessage(message) {
             if (current !== active) return
             if (message.setupComplete)
               publish({ status: 'connected', error: null })
+            if (message.sessionResumptionUpdate) {
+              const update = message.sessionResumptionUpdate
+              checkpoint =
+                update.resumable && update.newHandle
+                  ? {
+                      handle: update.newHandle,
+                      model,
+                      expiresAt: Date.now() + resumptionWindow,
+                    }
+                  : null
+              saveCheckpoint()
+              publish({ status: snapshot.status, error: snapshot.error })
+            }
+            if (message.goAway) {
+              fail(
+                'Google is closing the Live connection. Choose Continue Live if available; otherwise start a new conversation.',
+              )
+              return
+            }
             if (message.serverContent?.interrupted) stopOutput(active)
             try {
               for (const part of message.serverContent?.modelTurn?.parts ??
@@ -160,14 +253,24 @@ export function createLiveConversation(
               fail('Live audio could not be played. Start Live again.')
             }
           },
-          onerror: () =>
-            fail(
-              'Live connection failed. Check your connection and try again.',
-            ),
-          onclose: () =>
-            fail('Live disconnected. Start Live for a new conversation.'),
+          onerror: () => handleDisconnect(),
+          onclose: () => handleDisconnect(),
         },
       })
+      function handleDisconnect() {
+        if (current !== active) return
+        if (previous && snapshot.status === 'connecting') {
+          checkpoint = null
+          saveCheckpoint()
+          fail(
+            'Live could not continue; the checkpoint may have expired or become unavailable. Start Live for a new conversation.',
+          )
+        } else {
+          fail(
+            'Live disconnected. Check your connection. Choose Continue Live if available; otherwise start a new conversation.',
+          )
+        }
+      }
       if (current !== active) {
         session.close()
         return
@@ -188,6 +291,14 @@ export function createLiveConversation(
         }
       }
     } catch (error) {
+      if (current === attempt && previous && requestedConnection) {
+        checkpoint = null
+        saveCheckpoint()
+        fail(
+          'Live could not continue; the checkpoint may have expired or become unavailable. Start Live for a new conversation.',
+        )
+        return
+      }
       fail(
         error instanceof DOMException &&
           ['NotAllowedError', 'NotFoundError', 'NotReadableError'].includes(
@@ -204,6 +315,7 @@ export function createLiveConversation(
   return {
     start,
     stop,
+    discard,
     getSnapshot: () => snapshot,
     subscribe(notify: () => void) {
       listeners.add(notify)

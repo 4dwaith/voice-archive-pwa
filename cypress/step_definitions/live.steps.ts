@@ -7,8 +7,15 @@ type AudioEvidence = {
   inputs: number
   outputs: number
   connections: number
+  handles: (string | undefined)[]
+  deliver?: (message: unknown) => void
 }
 let evidence: AudioEvidence
+let hasCheckpoints = false
+
+Given('Live provides resumable checkpoints', () => {
+  hasCheckpoints = true
+})
 
 Given('its narrated text spans pages', () => {
   const text = 'Narrated text across several pages. '.repeat(200)
@@ -25,7 +32,8 @@ Given('its narrated text spans pages', () => {
 })
 
 Given('a synthetic Live audio provider', () => {
-  evidence = { inputs: 0, outputs: 0, connections: 0 }
+  hasCheckpoints = false
+  evidence = { inputs: 0, outputs: 0, connections: 0, handles: [] }
   cy.intercept('POST', '**/api/v1/live/token', {
     token: 'auth_tokens/synthetic',
     model: 'gemini-3.8-live',
@@ -57,6 +65,7 @@ Given('a synthetic Live audio provider', () => {
         if (!String(url).includes('generativelanguage.googleapis.com'))
           return new NativeSocket(url) as unknown as ProviderSocket
         evidence.connections++
+        evidence.deliver = (message) => this.deliver(message)
         queueMicrotask(() => this.onopen?.())
       }
       send(raw: string) {
@@ -64,7 +73,15 @@ Given('a synthetic Live audio provider', () => {
         if (message.setup) {
           expect(message.setup.tools).to.equal(undefined)
           expect(message.setup.systemInstruction).to.equal(undefined)
+          evidence.handles.push(message.setup.sessionResumption?.handle)
           this.deliver({ setupComplete: {} })
+          if (hasCheckpoints)
+            this.deliver({
+              sessionResumptionUpdate: {
+                resumable: true,
+                newHandle: 'synthetic-checkpoint',
+              },
+            })
         }
         if (message.realtimeInput) {
           evidence.inputs++
@@ -147,7 +164,9 @@ Then('the corner Live control remains reachable', () => {
 
 When('I start Live from the narration modal', () => {
   cy.findByRole('dialog', { name: 'Narration' }).within(() => {
-    cy.findByRole('button', { name: 'Start Live' }).focus().click()
+    cy.findByRole('button', { name: /^(Start|Continue) Live$/ })
+      .focus()
+      .click()
   })
 })
 
@@ -167,7 +186,9 @@ When('I retry Live', () =>
 )
 
 Then('Live has released the microphone', () => {
-  cy.findByRole('button', { name: 'Start Live' }).should('be.visible')
+  cy.findByRole('button', { name: /^(Start|Continue) Live$/ }).should(
+    'be.visible',
+  )
   cy.wrap(null).should(() =>
     expect(
       evidence.stream
@@ -175,6 +196,39 @@ Then('Live has released the microphone', () => {
         .every((track) => track.readyState === 'ended'),
     ).to.equal(true),
   )
+})
+
+When('I continue Live', () =>
+  cy.findByRole('button', { name: 'Continue Live' }).click(),
+)
+
+When('I reload the Live app', () => cy.reload())
+
+When('I discard the Live conversation', () =>
+  cy.findByRole('button', { name: 'Discard Live conversation' }).click(),
+)
+
+When('the Live checkpoint becomes unavailable', () => {
+  cy.then(() =>
+    evidence.deliver?.({ sessionResumptionUpdate: { resumable: false } }),
+  )
+})
+
+Then('Live resumes the same conversation', () => {
+  cy.get('[data-live-state="connected"]').should('be.visible')
+  cy.wrap(null).should(() =>
+    expect(evidence.handles.at(-1)).to.equal('synthetic-checkpoint'),
+  )
+})
+
+Then('Live waits for explicit continuation', () => {
+  cy.findByRole('button', { name: 'Continue Live' }).should('be.visible')
+  cy.wrap(null).should(() => expect(evidence.connections).to.equal(1))
+})
+
+Then('Live offers a fresh conversation', () => {
+  cy.findByRole('button', { name: 'Start Live' }).should('be.visible')
+  cy.findByRole('button', { name: 'Continue Live' }).should('not.exist')
 })
 
 Then('Live reports failure and releases the microphone', () => {

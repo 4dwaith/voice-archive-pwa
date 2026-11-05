@@ -32,10 +32,11 @@ function renderIntegration() {
     stop: vi.fn(() => {
       events.push('stop live')
     }),
+    discard: vi.fn(),
     getSnapshot: () => snapshot,
     subscribe: () => () => {},
   }
-  const snapshot = { status: 'idle' as const, error: null }
+  const snapshot = { status: 'idle' as const, error: null, canContinue: false }
   vi.mocked(createLiveConversation).mockReturnValue(live)
   let playback = idleReaderAudioSnapshot
   const player = {

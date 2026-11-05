@@ -40,7 +40,7 @@ export function Reader({
                 <Suspense
                   fallback={
                     <div className="h-full bg-page">
-                      <header className="border-b-2 border-ink p-2 pl-16">
+                      <header className="border-b-2 border-ink p-2 pl-30">
                         <ReaderModeSwitch />
                       </header>
                       <p role="status" className="p-4">

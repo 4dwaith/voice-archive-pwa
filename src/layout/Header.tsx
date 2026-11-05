@@ -31,7 +31,7 @@ export function Header({
 
   return (
     <header className="max-h-[50dvh] overflow-y-auto border-b-2 border-ink/10 bg-white">
-      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 py-2 pl-16 pr-3 sm:pr-8">
+      <div className="mx-auto flex flex-wrap items-center justify-between gap-2 py-2 pl-30 pr-3 sm:pr-8">
         {location.pathname === '/' ? (
           <h1 className="text-xl font-bold">Your library</h1>
         ) : (
