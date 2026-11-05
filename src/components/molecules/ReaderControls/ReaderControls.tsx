@@ -9,24 +9,10 @@ import {
 import { useGesture } from '@use-gesture/react'
 import { SEGMENT_DOUBLE_TAP_INTERVAL_MS } from '../../atoms/ReaderSegmentContent/ReaderSegmentContent'
 import { useReaderContext } from '../../../contexts/ReaderContext'
+import { readerPageTurnerBindings } from '../../../services/pageTurnerBindings'
 
 const INTERACTIVE_TARGETS =
   'button, a, input, select, textarea, summary, [role="button"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
-
-export const readerPageTurnerBindings = [
-  {
-    key: 'MediaTrackPrevious',
-    gesture: 'Left double tap',
-    action: 'Play/pause narration',
-    scope: 'ready Text reader',
-  },
-  {
-    key: 'MediaTrackNext',
-    gesture: 'Right double tap',
-    action: 'Switch Text/PDF',
-    scope: 'reader',
-  },
-] as const
 
 export function ReaderControls({
   children,
@@ -293,10 +279,10 @@ export function ReaderControls({
     ) {
       event.preventDefault()
       if (!event.repeat) {
-        if (event.key === 'MediaTrackPrevious') {
+        if (event.key === readerPageTurnerBindings[0].key) {
           if (!isPdf && (audio?.canPlay || audio?.isPlaying))
             audio.togglePlayback()
-        } else if (event.key === 'MediaTrackNext') {
+        } else if (event.key === readerPageTurnerBindings[1].key) {
           setViewMode?.(isPdf ? 'text' : 'pdf')
         } else if (delta !== null) {
           if (!isNarration) {

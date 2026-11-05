@@ -6,13 +6,7 @@ import { useAppStore } from '../store/hooks'
 import { getReaderScope } from '../store/readerSlice'
 import { setReaderAudioPlayback } from '../store/readerAudioSlice'
 import { LiveContext } from './LiveContext'
-
-export const livePageTurnerBinding = {
-  key: 'MediaPlay',
-  gesture: 'Right hold',
-  action: 'Start/stop Live',
-  scope: 'app',
-} as const
+import { livePageTurnerBinding } from '../services/pageTurnerBindings'
 
 export function LiveProvider({ children }: { children: ReactNode }) {
   // Fetch the store rather than the scope so that the value will always fetch the latest scope

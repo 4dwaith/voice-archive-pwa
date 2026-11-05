@@ -1,5 +1,6 @@
 import { GoogleGenAI, Modality, type Session } from '@google/genai'
 import { z } from 'zod'
+import { createLiveGuidance } from './liveGuidance'
 
 const checkpointSchema = z.object({
   handle: z.string().min(1),
@@ -192,6 +193,8 @@ export function createLiveConversation(
         model,
         config: {
           responseModalities: [Modality.AUDIO],
+          // Explicit Start/Continue is the boundary for refreshing static help.
+          systemInstruction: createLiveGuidance(),
           sessionResumption: previous ? { handle: previous.handle } : {},
           contextWindowCompression: { slidingWindow: {} },
         },

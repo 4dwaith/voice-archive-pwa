@@ -124,7 +124,6 @@ Given('a synthetic Live audio provider', () => {
         const message = JSON.parse(raw)
         if (message.setup) {
           expect(message.setup.tools).to.equal(undefined)
-          expect(message.setup.systemInstruction).to.equal(undefined)
           evidence.handles.push(message.setup.sessionResumption?.handle)
           this.deliver({ setupComplete: {} })
           if (hasCheckpoints)
