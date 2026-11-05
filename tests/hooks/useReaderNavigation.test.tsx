@@ -15,6 +15,7 @@ import {
   closeReader,
   setReaderAnchor,
   reportLayoutKey,
+  requestPageNavigation,
 } from '../../src/store/readerSlice'
 
 beforeEach(async () => {
@@ -243,7 +244,7 @@ describe('Reader anchor navigation', () => {
       result.current.setCurrentPage(2)
     })
 
-    expect(store.getState().reader.anchor?.offset).toBe(1)
+    await waitFor(() => expect(store.getState().reader.anchor?.offset).toBe(1))
 
     act(() => {
       store.dispatch(reportLayoutKey('unmeasured'))
@@ -254,10 +255,23 @@ describe('Reader anchor navigation', () => {
     expect(result.current.pageCount).toBeNull()
   })
 
+  // These resolution cases run against the store and committed Dexie data alone.
+  function createNavigationStore() {
+    const store = createAppStore()
+    store.dispatch(openReader({ bookId: 7, contentVersion: 'version' }))
+    store.dispatch(
+      setReaderAnchor({
+        bookId: 7,
+        contentVersion: 'version',
+        anchor: { segmentId: 1, offset: 0 },
+      }),
+    )
+    return store
+  }
+
   it('retries a pending global destination after layout readiness changes', async () => {
     await seedContent()
-    const { result, store } = renderNavigation()
-    await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
+    const store = createNavigationStore()
     act(() => {
       store.dispatch(reportLayoutKey('layout'))
     })
@@ -267,17 +281,19 @@ describe('Reader anchor navigation', () => {
         createMeasurement(),
       ])
     })
-    await waitFor(() => expect(result.current.globalPage).toBe(1))
 
     act(() => {
-      result.current.requestNavigation({
-        scope: 'global',
-        kind: 'relative',
-        delta: 25,
-      })
+      store.dispatch(
+        requestPageNavigation({
+          scope: 'global',
+          kind: 'relative',
+          delta: 25,
+          currentPage: 1,
+          pageCount: 1,
+        }),
+      )
       store.dispatch(reportLayoutKey('new-layout'))
     })
-    await waitFor(() => expect(result.current.currentPage).toBeNull())
 
     expect(store.getState().reader.pageNavigationIntent).not.toBeNull()
 
@@ -297,8 +313,7 @@ describe('Reader anchor navigation', () => {
 
   it('reports an unmappable page without moving the anchor', async () => {
     await seedContent()
-    const { result, store } = renderNavigation()
-    await waitFor(() => expect(result.current.currentChapterId).toBe('10'))
+    const store = createNavigationStore()
     act(() => {
       store.dispatch(reportLayoutKey('layout'))
     })
@@ -311,14 +326,17 @@ describe('Reader anchor navigation', () => {
         ],
       })
     })
-    await waitFor(() => expect(result.current.pageCount).toBe(2))
 
     act(() => {
-      result.current.requestNavigation({
-        scope: 'local',
-        kind: 'absolute',
-        pageNumber: 2,
-      })
+      store.dispatch(
+        requestPageNavigation({
+          scope: 'local',
+          kind: 'absolute',
+          pageNumber: 2,
+          currentPage: 1,
+          pageCount: 2,
+        }),
+      )
     })
     await waitFor(() =>
       expect(store.getState().reader.pageNavigationError).toContain(

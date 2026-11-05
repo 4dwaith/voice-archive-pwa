@@ -14,6 +14,7 @@ import readerAudioReducer from './readerAudioSlice'
 import liveReducer from './liveSlice'
 import { createLiveListener } from './liveListener'
 import { createBookDownloadsListener } from './bookDownloadsListener'
+import { createReaderNavigationListener } from './readerNavigationListener'
 import { createReaderTocListener } from './readerTocListener'
 import { createReaderSearchListener } from './readerSearchListener'
 import { createReaderMeasurementsListener } from './readerMeasurementsListener'
@@ -39,6 +40,7 @@ export function createAppStore() {
   const readerPreferencesListener = createReaderPreferencesListener(preferences)
   const bookDownloadsListener = createBookDownloadsListener()
   const readerMeasurementsListener = createReaderMeasurementsListener()
+  const readerNavigationListener = createReaderNavigationListener()
   const readerTocListener = createReaderTocListener()
   const readerSearchListener = createReaderSearchListener()
   return configureStore({
@@ -59,6 +61,7 @@ export function createAppStore() {
           readerPreferencesListener.middleware,
           bookDownloadsListener.middleware,
           readerTocListener.middleware,
+          readerNavigationListener.middleware,
           readerSearchListener.middleware,
           readerMeasurementsListener.middleware,
         )

@@ -22,21 +22,12 @@ import {
   openReader,
   closeReader,
   reconcileReaderAnchor,
-  setReaderAnchor,
   getReaderAnchor,
   getReaderScope,
   getLayoutKey,
-  getSelectedSectionId,
-  getPageNavigationIntent,
   requestPageNavigation,
-  completePageNavigation,
 } from '../store/readerSlice'
-import { resolvePageNumber } from '../components/atoms/ReaderProgressNavigation/resolvePageNumber'
-import {
-  resolveAnchorPage,
-  resolvePageStart,
-  resolvePageSectionSelection,
-} from './resolveAnchorPage'
+import { resolveAnchorPage } from './resolveAnchorPage'
 import {
   deriveGlobalPage,
   deriveTocSections,
@@ -90,8 +81,6 @@ export function useReaderNavigation(
         : undefined
     return position?.version === contentVersion ? position : undefined
   }, [bookId, contentVersion, restorePosition])
-  const selectedSectionId = useAppSelector(getSelectedSectionId)
-  const intent = useAppSelector(getPageNavigationIntent)
   const layoutKey = useAppSelector(getLayoutKey)
 
   const isActive =
@@ -247,7 +236,7 @@ export function useReaderNavigation(
   // Book/version/layout changes must never reuse that presentation.
   const displayedData =
     isActive && snapshot?.scopeKey === scopeKey ? snapshot : undefined
-  // Effects and navigation resolution still require the latest query result.
+  // Anchor reconciliation requires the latest query result.
   const data = displayedData?.queryKey === queryKey ? displayedData : undefined
 
   // Initialize a missing anchor, or clear it when this content version disappears.
@@ -275,31 +264,10 @@ export function useReaderNavigation(
   const chapterInfo = displayedData?.chapterInfo
   const chapterId = displayedData?.currentChapterId
   const globalPage = deriveGlobalPage(currentPage, chapterId, chapterInfo)
-  const sections = chapterInfo?.sections ?? []
   const tocSections = deriveTocSections(chapterInfo)
 
   function setCurrentPage(pageNumber: number) {
-    const anchor = resolvePageStart(
-      pageNumber,
-      data?.segments ?? [],
-      data?.measurement,
-    )
-
-    if (anchor && bookId !== undefined && contentVersion)
-      dispatch(
-        setReaderAnchor({
-          bookId,
-          contentVersion,
-          anchor,
-          sectionId: resolvePageSectionSelection(
-            anchor,
-            data?.segments ?? [],
-            sections,
-            selectedSectionId,
-            chapterId === 'before' ? 0 : Number(chapterId),
-          ),
-        }),
-      )
+    requestNavigation({ scope: 'local', kind: 'absolute', pageNumber })
   }
 
   // Supply current bounds; the reducer orders and accumulates navigation requests.
@@ -315,132 +283,6 @@ export function useReaderNavigation(
       }),
     )
   }
-
-  useEffect(
-    function resolvePendingPageNavigation() {
-      if (
-        !intent ||
-        !data ||
-        !layoutKey ||
-        bookId === undefined ||
-        !contentVersion
-      )
-        return
-
-      // Capture the request identity so Redux can reject a stale completion.
-      const request = intent
-      const snapshot = data
-      const targetScope = {
-        bookId,
-        contentVersion,
-        layoutKey,
-        requestId: request.requestId,
-      }
-      let isCancelled = false
-
-      async function resolveDestination() {
-        try {
-          const ready = snapshot.chapterInfo
-
-          // Retain the desired page while matching committed data is preparing.
-          if (
-            ready &&
-            (request.scope === 'local'
-              ? !snapshot.measurement
-              : ready.indexedPageCount === 0 && ready.totalPageCount === null)
-          )
-            return
-
-          // Flatten only the requested scope, retaining each page's chapter identity.
-          const chapters =
-            request.scope === 'local'
-              ? [chapterId ?? '']
-              : (ready?.indexedChapterIds ?? [])
-          const pages = chapters.flatMap((id) =>
-            (ready?.measurementsByChapter.get(id)?.pages ?? []).map((page) => ({
-              chapterId: id,
-              page,
-            })),
-          )
-
-          const pageNumber = resolvePageNumber(request.pageNumber, pages.length)
-          const destination =
-            pageNumber === null ? undefined : pages[pageNumber - 1]
-          const destinationChapter = destination?.chapterId
-          const measurement = destinationChapter
-            ? ready?.measurementsByChapter.get(destinationChapter)
-            : undefined
-
-          // Cross-chapter jumps need the destination text to validate its page start.
-          const segments =
-            destinationChapter === chapterId
-              ? snapshot.segments
-              : destinationChapter
-                ? await readChapterSegments(
-                    targetScope.bookId,
-                    targetScope.contentVersion,
-                    destinationChapter,
-                  )
-                : []
-
-          const anchor = destination
-            ? resolvePageStart(
-                destination.page.localPage,
-                segments ?? [],
-                measurement,
-              )
-            : null
-
-          if (!isCancelled)
-            dispatch(
-              completePageNavigation({
-                ...targetScope,
-                anchor,
-                sectionId: anchor
-                  ? resolvePageSectionSelection(
-                      anchor,
-                      segments ?? [],
-                      ready?.sections ?? [],
-                      selectedSectionId,
-                      destinationChapter === 'before'
-                        ? 0
-                        : Number(destinationChapter),
-                    )
-                  : null,
-              }),
-            )
-        } catch {
-          // A failed lookup completes with no anchor, preserving the reading position.
-          if (!isCancelled)
-            dispatch(
-              completePageNavigation({
-                ...targetScope,
-                anchor: null,
-                sectionId: null,
-              }),
-            )
-        }
-      }
-
-      void resolveDestination()
-
-      // Dependency changes abandon this lookup; the next effect uses fresh data.
-      return () => {
-        isCancelled = true
-      }
-    },
-    [
-      intent,
-      selectedSectionId,
-      data,
-      layoutKey,
-      bookId,
-      contentVersion,
-      chapterId,
-      chapterInfo,
-      dispatch,
-    ],
-  )
 
   return {
     chapterInfo,
