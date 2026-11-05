@@ -36,7 +36,9 @@ function renderIntegration() {
     getSnapshot: () => snapshot,
     subscribe: () => () => {},
   }
-  const snapshot = { status: 'idle' as const, error: null, canContinue: false }
+  const snapshot: ReturnType<
+    ReturnType<typeof createLiveConversation>['getSnapshot']
+  > = { status: 'idle', error: null, canContinue: false }
   vi.mocked(createLiveConversation).mockReturnValue(live)
   let playback = idleReaderAudioSnapshot
   const player = {
@@ -70,7 +72,7 @@ function renderIntegration() {
     )
   }
 
-  render(
+  const view = render(
     <Provider store={store}>
       <MemoryRouter>
         <LiveProvider>
@@ -93,10 +95,87 @@ function renderIntegration() {
       </MemoryRouter>
     </Provider>,
   )
-  return { events, live }
+  return { events, live, snapshot, unmount: view.unmount }
 }
 
 describe('Live reader integration', () => {
+  it('starts Live once per media key press and removes the listener on exit', () => {
+    const { events, unmount } = renderIntegration()
+
+    fireEvent.keyDown(window, { key: 'MediaPlay' })
+    fireEvent.keyDown(window, { key: 'MediaPlay', repeat: true })
+    fireEvent.keyUp(window, { key: 'MediaPlay' })
+
+    expect(events).toEqual(['start live'])
+
+    unmount()
+    events.length = 0
+    fireEvent.keyDown(window, { key: 'MediaPlay' })
+
+    expect(events).toEqual([])
+  })
+
+  it.each(['connecting', 'connected'] as const)(
+    'stops Live while %s',
+    (status) => {
+      const { events, snapshot } = renderIntegration()
+      snapshot.status = status
+
+      fireEvent.keyDown(window, { key: 'MediaPlay' })
+
+      expect(events).toEqual(['stop live'])
+    },
+  )
+
+  it.each([
+    { altKey: true },
+    { ctrlKey: true },
+    { metaKey: true },
+    { shiftKey: true },
+    { isComposing: true },
+  ])('ignores modified or composing Live keys %j', (flags) => {
+    const { events } = renderIntegration()
+
+    fireEvent.keyDown(window, { key: 'MediaPlay', ...flags })
+
+    expect(events).toEqual([])
+  })
+
+  it.each(['button', 'input', 'textarea', 'select', 'a', 'summary'])(
+    'preserves Live input on %s',
+    (tag) => {
+      const { events } = renderIntegration()
+      const element = document.createElement(tag)
+      document.body.append(element)
+
+      fireEvent.keyDown(element, { key: 'MediaPlay' })
+      element.remove()
+
+      expect(events).toEqual([])
+    },
+  )
+
+  it('preserves native selection and leaves reader keys to the reader', () => {
+    const { events } = renderIntegration()
+    vi.spyOn(document, 'getSelection').mockReturnValue({
+      isCollapsed: false,
+    } as Selection)
+
+    expect(fireEvent.keyDown(window, { key: 'MediaPlay' })).toBe(true)
+    expect(events).toEqual([])
+
+    vi.mocked(document.getSelection).mockRestore()
+
+    for (const key of [
+      'PageUp',
+      'PageDown',
+      'Unidentified',
+      'MediaTrackPrevious',
+      'MediaTrackNext',
+    ])
+      expect(fireEvent.keyDown(window, { key })).toBe(true)
+  })
+
   it('retains Live across route changes and stops it before narration', () => {
     const { events, live } = renderIntegration()
 

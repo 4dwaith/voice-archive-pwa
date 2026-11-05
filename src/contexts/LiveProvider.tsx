@@ -7,6 +7,13 @@ import { getReaderScope } from '../store/readerSlice'
 import { setReaderAudioPlayback } from '../store/readerAudioSlice'
 import { LiveContext } from './LiveContext'
 
+export const livePageTurnerBinding = {
+  key: 'MediaPlay',
+  gesture: 'Right hold',
+  action: 'Start/stop Live',
+  scope: 'app',
+} as const
+
 export function LiveProvider({ children }: { children: ReactNode }) {
   // Fetch the store rather than the scope so that the value will always fetch the latest scope
   // Otherwise, the value would have to be recalculated on scope change, causing further renders.
@@ -33,6 +40,43 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     },
   }))
   useEffect(() => () => conversation.stop(), [conversation])
+
+  useEffect(() => {
+    function handleLiveKey(event: KeyboardEvent) {
+      const selection = document.getSelection()
+      if (
+        event.key !== livePageTurnerBinding.key ||
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.isComposing ||
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof Element &&
+              target.matches(
+                'button, a, input, select, textarea, summary, [role="button"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
+              ),
+          ) ||
+        (selection && !selection.isCollapsed)
+      )
+        return
+
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.repeat) return
+
+      const status = value.getSnapshot().status
+      if (status === 'connecting' || status === 'connected') value.stop()
+      else void value.start()
+    }
+
+    window.addEventListener('keydown', handleLiveKey, true)
+    return () => window.removeEventListener('keydown', handleLiveKey, true)
+  }, [value])
 
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>
 }

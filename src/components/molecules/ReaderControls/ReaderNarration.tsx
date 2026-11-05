@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type KeyboardEvent } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useGesture } from '@use-gesture/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useReaderContext } from '../../../contexts/ReaderContext'
@@ -107,28 +107,6 @@ export function ReaderNarration() {
   const title = useRef<HTMLHeadingElement>(null)
   const isOpen = !!(audio?.isPlaying && audio.isSegmentSplit && audio.segment)
 
-  function seekWithNarrationKey(event: KeyboardEvent<HTMLDivElement>) {
-    if (
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
-      event.shiftKey ||
-      event.nativeEvent.isComposing ||
-      (event.target as Element).closest(
-        'button, a, input, select, textarea, [role="slider"], [contenteditable="true"]',
-      )
-    )
-      return
-    const seconds = ['PageDown', 'ArrowRight', 'ArrowDown'].includes(event.key)
-      ? 5
-      : ['PageUp', 'ArrowLeft', 'ArrowUp'].includes(event.key)
-        ? -5
-        : null
-    if (seconds === null) return
-    event.preventDefault()
-    if (!event.repeat) audio?.seekBySeconds(seconds)
-  }
-
   if (!audio) return null
   if (!isOpen)
     return !areControlsVisible ? (
@@ -153,7 +131,7 @@ export function ReaderNarration() {
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
         <Dialog.Content
           aria-describedby={undefined}
-          onKeyDown={seekWithNarrationKey}
+          data-reader-narration
           onOpenAutoFocus={(event) => {
             event.preventDefault()
             title.current?.focus()

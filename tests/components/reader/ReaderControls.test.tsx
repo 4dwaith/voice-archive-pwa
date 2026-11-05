@@ -2,6 +2,8 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import userEvent from '@testing-library/user-event'
+import { createPortal } from 'react-dom'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ReaderContext,
@@ -56,6 +58,7 @@ function renderControls(
   isVisible = true,
   mode?: 'text' | 'pdf',
   isPlaying?: boolean,
+  content?: ReactNode,
 ) {
   const context = createContextValue()
   context.reader.areControlsVisible = isVisible
@@ -82,14 +85,18 @@ function renderControls(
   const show = () => (
     <ReaderContext value={context}>
       <ReaderControls controls={<button>Home</button>}>
-        <p tabIndex={0}>Book content</p>
-        <button>Content action</button>
+        {content ?? (
+          <>
+            <p tabIndex={0}>Book content</p>
+            <button>Content action</button>
+          </>
+        )}
       </ReaderControls>
     </ReaderContext>
   )
   const view = render(show())
 
-  return { context, update: () => view.rerender(show()) }
+  return { context, update: () => view.rerender(show()), unmount: view.unmount }
 }
 
 function dispatchPointer(
@@ -152,6 +159,115 @@ function dispatchTouches(
 }
 
 describe('ReaderControls', () => {
+  describe('page-turner media keys', () => {
+    it('handles navigation and toggles from the narration portal once', () => {
+      const { context } = renderControls(
+        false,
+        'text',
+        true,
+        createPortal(
+          <div data-reader-narration>Modal text</div>,
+          document.body,
+        ),
+      )
+      const target = screen.getByText('Modal text')
+
+      for (const key of [
+        'PageDown',
+        'PageUp',
+        'MediaTrackPrevious',
+        'MediaTrackNext',
+      ]) {
+        fireEvent.keyDown(target, { key })
+        fireEvent.keyDown(target, { key, repeat: true })
+        fireEvent.keyUp(target, { key })
+      }
+
+      expect(context.reader.audio?.seekBySeconds).toHaveBeenNthCalledWith(1, 5)
+      expect(context.reader.audio?.seekBySeconds).toHaveBeenNthCalledWith(2, -5)
+      expect(context.reader.audio?.seekBySeconds).toHaveBeenCalledTimes(2)
+      expect(context.reader.audio?.togglePlayback).toHaveBeenCalledTimes(1)
+      expect(context.reader.pdf?.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'pdf',
+      )
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+    })
+
+    it('toggles narration and mode once without revealing controls', () => {
+      const { context } = renderControls(false, 'text', false)
+
+      for (const key of ['MediaTrackPrevious', 'MediaTrackNext']) {
+        fireEvent.keyDown(screen.getByText('Book content'), { key })
+        fireEvent.keyDown(screen.getByText('Book content'), {
+          key,
+          repeat: true,
+        })
+        fireEvent.keyUp(screen.getByText('Book content'), { key })
+      }
+
+      expect(context.reader.audio?.togglePlayback).toHaveBeenCalledTimes(1)
+      expect(context.reader.pdf?.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'pdf',
+      )
+      expect(context.reader.setControlsVisible).not.toHaveBeenCalled()
+    })
+
+    it('leaves PDF narration unavailable and switches back to Text', () => {
+      const { context } = renderControls(true, 'pdf', false)
+
+      fireEvent.keyDown(screen.getByText('Book content'), {
+        key: 'MediaTrackPrevious',
+      })
+      fireEvent.keyDown(screen.getByText('Book content'), {
+        key: 'MediaTrackNext',
+      })
+
+      expect(context.reader.audio?.togglePlayback).not.toHaveBeenCalled()
+      expect(context.reader.pdf?.setViewMode).toHaveBeenCalledExactlyOnceWith(
+        'text',
+      )
+    })
+
+    it('does not start unavailable narration', () => {
+      const { context } = renderControls(true, 'text', false)
+      context.reader.audio!.canPlay = false
+
+      fireEvent.keyDown(screen.getByText('Book content'), {
+        key: 'MediaTrackPrevious',
+      })
+
+      expect(context.reader.audio?.togglePlayback).not.toHaveBeenCalled()
+    })
+
+    it('releases the reader keys on exit', () => {
+      const { context, unmount } = renderControls(true, 'text', false)
+
+      unmount()
+      expect(fireEvent.keyDown(window, { key: 'MediaTrackPrevious' })).toBe(
+        true,
+      )
+      expect(fireEvent.keyDown(window, { key: 'MediaTrackNext' })).toBe(true)
+
+      expect(context.reader.audio?.togglePlayback).not.toHaveBeenCalled()
+      expect(context.reader.pdf?.setViewMode).not.toHaveBeenCalled()
+    })
+
+    it('preserves focused controls and composing input', () => {
+      const { context } = renderControls(true, 'text', false)
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Home' }), {
+        key: 'MediaTrackPrevious',
+      })
+      fireEvent.keyDown(screen.getByText('Book content'), {
+        key: 'MediaTrackNext',
+        isComposing: true,
+      })
+
+      expect(context.reader.audio?.togglePlayback).not.toHaveBeenCalled()
+      expect(context.reader.pdf?.setViewMode).not.toHaveBeenCalled()
+    })
+  })
+
   it.each([true, false])(
     'preserves controls at %s when returning focus from PDF',
     (isVisible) => {

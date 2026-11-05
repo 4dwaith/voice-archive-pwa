@@ -13,6 +13,58 @@ type AudioEvidence = {
 let evidence: AudioEvidence
 let hasCheckpoints = false
 
+When('I open the turner test library', () => {
+  cy.visit('/')
+  cy.window()
+    .its('contentTestHarness')
+    .then((harness) => (harness as typeof contentTestHarness).remove(7))
+})
+
+When('I press the turner {string} key', (key: string) => {
+  const keyCodes: Record<string, number> = {
+    MediaPlay: 179,
+    MediaTrackPrevious: 177,
+    MediaTrackNext: 176,
+  }
+  cy.window().then((win) => {
+    const target = win.document.activeElement ?? win.document.body
+    for (const [type, repeat] of [
+      ['keydown', false],
+      ['keydown', true],
+      ['keyup', false],
+    ] as const)
+      target.dispatchEvent(
+        new win.KeyboardEvent(type, {
+          key,
+          keyCode: keyCodes[key],
+          which: keyCodes[key],
+          repeat,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+  })
+})
+
+Then('turner narration is playing', () => {
+  cy.findByRole('dialog', { name: 'Narration' }).should('be.visible')
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(false),
+  )
+})
+
+Then('turner narration is paused', () => {
+  cy.findByRole('dialog', { name: 'Narration' }).should('not.exist')
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+  )
+})
+
+Then('the turner restores Text mode', () => {
+  cy.findByRole('article', { name: 'Book text' }).should('be.visible')
+  cy.findByRole('region', { name: 'Source PDF' }).should('not.exist')
+})
+
 Given('Live provides resumable checkpoints', () => {
   hasCheckpoints = true
 })

@@ -1,4 +1,46 @@
 Feature: Live voice conversation
+  Scenario: The turner starts and stops Live from the library
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I open the turner test library
+    And I press the turner "MediaTrackPrevious" key
+    And I press the turner "MediaTrackNext" key
+    Then Live offers a fresh conversation
+    When I press the turner "MediaPlay" key
+    Then Live exchanges browser audio
+    When I press the turner "MediaPlay" key
+    Then Live has released the microphone
+
+  Scenario: Turner controls coordinate narration, Live and PDF
+    Given a synchronization book with narration after untimed text
+    And its narrated text spans pages
+    And a synthetic Live audio provider
+    When I open the synchronization book from the library
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I press the turner "MediaPlay" key
+    Then Live exchanges browser audio
+    When I press the turner "MediaTrackPrevious" key
+    Then Live has released the microphone
+    And turner narration is playing
+    When I press the turner "MediaTrackPrevious" key
+    Then turner narration is paused
+    When I focus the text and hide the controls
+    And I press the turner "MediaTrackPrevious" key
+    Then turner narration is playing
+    When I press the turner "MediaPlay" key
+    Then narration stops and the modal closes
+    When I focus the text and hide the controls
+    And I press the turner "MediaTrackNext" key
+    Then only the PDF surface is open
+    When I press the turner "MediaTrackPrevious" key
+    Then Live exchanges browser audio
+    And turner narration is paused
+    When I press the turner "MediaPlay" key
+    Then Live has released the microphone
+    When I press the turner "MediaTrackNext" key
+    Then the turner restores Text mode
+
   Scenario: Stop and reload preserve the conversation until discard
     Given a synchronization book with a nested destination
     And a synthetic Live audio provider

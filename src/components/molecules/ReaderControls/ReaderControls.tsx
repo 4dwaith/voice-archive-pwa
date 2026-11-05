@@ -13,6 +13,21 @@ import { useReaderContext } from '../../../contexts/ReaderContext'
 const INTERACTIVE_TARGETS =
   'button, a, input, select, textarea, summary, [role="button"], [role="slider"], [contenteditable]:not([contenteditable="false"])'
 
+export const readerPageTurnerBindings = [
+  {
+    key: 'MediaTrackPrevious',
+    gesture: 'Left double tap',
+    action: 'Play/pause narration',
+    scope: 'ready Text reader',
+  },
+  {
+    key: 'MediaTrackNext',
+    gesture: 'Right double tap',
+    action: 'Switch Text/PDF',
+    scope: 'reader',
+  },
+] as const
+
 export function ReaderControls({
   children,
   controls,
@@ -244,11 +259,11 @@ export function ReaderControls({
   }
 
   function handleReaderKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    // React portals bubble through this component, but modal keys belong to the modal.
-    if (!event.currentTarget.contains(event.target as Node)) return
-    if ((event.target as Element).closest('[data-reader-audio-control]')) return
-    if (isPdf) return
-    isPointerFocus.current = false
+    const target = event.target as Element
+    // Narration's portal belongs to this reader; other modals retain their keys.
+    const isNarration = !!target.closest('[data-reader-narration]')
+    if (!event.currentTarget.contains(target) && !isNarration) return
+    if (event.defaultPrevented) return
 
     const delta = ['PageDown', 'ArrowRight', 'ArrowDown'].includes(event.key)
       ? 1
@@ -256,29 +271,47 @@ export function ReaderControls({
         ? -1
         : null
     const selection = event.currentTarget.ownerDocument.getSelection()
+    const isMediaKey = readerPageTurnerBindings.some(
+      (binding) => binding.key === event.key,
+    )
+    // PDF owns its native navigation keys; mode/narration bindings stay shared.
+    if (isPdf && !isMediaKey) return
+    if (target.closest('[data-reader-audio-control]')) return
+    isPointerFocus.current = false
 
     // Reading keys must leave overlay controls and native text selection alone.
     if (
-      delta !== null &&
+      (delta !== null || isMediaKey) &&
       !event.altKey &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing &&
       !overlay.current?.contains(event.target as Node) &&
-      !(event.target as Element).closest(INTERACTIVE_TARGETS) &&
+      !target.closest(INTERACTIVE_TARGETS) &&
       (!selection || selection.isCollapsed)
     ) {
       event.preventDefault()
       if (!event.repeat) {
-        // Page changes can replace focused text; keep later keys on the reader.
-        isReturningFocus.current = true
-        surface.current?.focus({ preventScroll: true })
-        isReturningFocus.current = false
-        requestReaderMove(delta)
+        if (event.key === 'MediaTrackPrevious') {
+          if (!isPdf && (audio?.canPlay || audio?.isPlaying))
+            audio.togglePlayback()
+        } else if (event.key === 'MediaTrackNext') {
+          setViewMode?.(isPdf ? 'text' : 'pdf')
+        } else if (delta !== null) {
+          if (!isNarration) {
+            // Page changes can replace focused text; keep later keys on the reader.
+            isReturningFocus.current = true
+            surface.current?.focus({ preventScroll: true })
+            isReturningFocus.current = false
+          }
+          requestReaderMove(delta)
+        }
       }
       return
     }
+
+    if (isNarration || isMediaKey) return
 
     if (event.key === 'Escape') {
       event.preventDefault()
