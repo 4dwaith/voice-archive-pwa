@@ -1,22 +1,15 @@
-import { useSyncExternalStore } from 'react'
-import { useLiveConversation } from '../../../contexts/LiveContext'
+import { useContext } from 'react'
+import { LiveContext } from '../../../contexts/LiveContext'
+import { useAppDispatch, useAppSelector } from '../../../store/hooks'
+import { getLiveSession, requestLiveSession } from '../../../store/liveSlice'
 
 export function LiveButton() {
-  const conversation = useLiveConversation()
-  return conversation ? (
-    <ConnectedLiveButton conversation={conversation} />
-  ) : null
+  return useContext(LiveContext) ? <ConnectedLiveButton /> : null
 }
 
-function ConnectedLiveButton({
-  conversation,
-}: {
-  conversation: NonNullable<ReturnType<typeof useLiveConversation>>
-}) {
-  const { status, error, canContinue } = useSyncExternalStore(
-    conversation.subscribe,
-    conversation.getSnapshot,
-  )
+function ConnectedLiveButton() {
+  const dispatch = useAppDispatch()
+  const { status, error, canContinue } = useAppSelector(getLiveSession)
   const isActive = status === 'connecting' || status === 'connected'
   const label = isActive
     ? 'Stop Live'
@@ -37,7 +30,7 @@ function ConnectedLiveButton({
         title={status === 'connecting' ? 'Connecting — Stop Live' : label}
         className={`inline-flex min-h-12 min-w-12 items-center justify-center border-2 border-ink p-2 focus-visible:outline-4 focus-visible:outline-accent ${isActive ? 'bg-ink text-page' : 'bg-page text-ink'}`}
         onClick={() =>
-          isActive ? conversation.stop() : void conversation.start()
+          dispatch(requestLiveSession({ kind: isActive ? 'stop' : 'start' }))
         }
       >
         <svg
@@ -67,7 +60,7 @@ function ConnectedLiveButton({
           aria-label="Discard Live conversation"
           title="Discard Live conversation"
           className="inline-flex min-h-12 min-w-12 items-center justify-center border-2 border-ink bg-page p-2 text-ink focus-visible:outline-4 focus-visible:outline-accent"
-          onClick={() => conversation.discard()}
+          onClick={() => dispatch(requestLiveSession({ kind: 'discard' }))}
         >
           <svg
             aria-hidden="true"

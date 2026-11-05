@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Provider } from 'react-redux'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
@@ -25,16 +25,27 @@ const scope = { bookId: 7, contentVersion: 'version' }
 function renderIntegration() {
   const store = createAppStore()
   const events: string[] = []
+  let notifyLive = () => {}
+  let notifyAudio = () => {}
   const live = {
     start: vi.fn(async () => {
       events.push('start live')
+      snapshot.status = 'connected'
+      notifyLive()
     }),
     stop: vi.fn(() => {
       events.push('stop live')
+      snapshot.status = 'idle'
+      notifyLive()
     }),
     discard: vi.fn(),
+    quiesceAudio: vi.fn(() => events.push('mute live')),
+    resumeAudio: vi.fn(),
     getSnapshot: () => snapshot,
-    subscribe: () => () => {},
+    subscribe: (notify: () => void) => {
+      notifyLive = notify
+      return () => {}
+    },
   }
   const snapshot: ReturnType<
     ReturnType<typeof createLiveConversation>['getSnapshot']
@@ -42,7 +53,10 @@ function renderIntegration() {
   vi.mocked(createLiveConversation).mockReturnValue(live)
   let playback = idleReaderAudioSnapshot
   const player = {
-    subscribe: () => () => {},
+    subscribe: (notify: () => void) => {
+      notifyAudio = notify
+      return () => {}
+    },
     getSnapshot: () => playback,
     playFromSegment: vi.fn(() => {
       playback = {
@@ -96,7 +110,23 @@ function renderIntegration() {
       </MemoryRouter>
     </Provider>,
   )
-  return { events, live, snapshot, unmount: view.unmount }
+  return {
+    events,
+    live,
+    snapshot,
+    notifyLive: () => act(notifyLive),
+    reportAudio: (status: 'playing' | 'error') =>
+      act(() => {
+        playback = {
+          ...playback,
+          status,
+          isPlaying: status === 'playing',
+          error: status === 'error' ? 'Media rejected' : null,
+        }
+        notifyAudio()
+      }),
+    unmount: view.unmount,
+  }
 }
 
 describe('Live reader integration', () => {
@@ -119,8 +149,9 @@ describe('Live reader integration', () => {
   it.each(['connecting', 'connected'] as const)(
     'stops Live while %s',
     (status) => {
-      const { events, snapshot } = renderIntegration()
+      const { events, snapshot, notifyLive } = renderIntegration()
       snapshot.status = status
+      notifyLive()
 
       fireEvent.keyDown(window, { key: 'MediaPlay' })
 
@@ -177,8 +208,8 @@ describe('Live reader integration', () => {
       expect(fireEvent.keyDown(window, { key })).toBe(true)
   })
 
-  it('retains Live across route changes and stops it before narration', () => {
-    const { events, live } = renderIntegration()
+  it('retains Live while preparing and closes quietly on playing', () => {
+    const { events, live, reportAudio } = renderIntegration()
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Live' }))
 
@@ -189,8 +220,35 @@ describe('Live reader integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }))
 
-    expect(events).toEqual(['start live', 'stop live', 'play narration'])
+    expect(events).toEqual(['start live', 'mute live', 'play narration'])
+    expect(live.stop).not.toHaveBeenCalled()
+
+    reportAudio('playing')
+
+    expect(live.stop).toHaveBeenCalledOnce()
   })
+
+  it.each([false, true])(
+    'forwards a new failure once unless explicitly stopped (%s)',
+    (isStopped) => {
+      const { live, reportAudio } = renderIntegration()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Start Live' }))
+      fireEvent.click(screen.getByRole('link', { name: 'Open book' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+
+      if (isStopped) {
+        fireEvent.click(screen.getByRole('button', { name: 'Stop Live' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Start Live' }))
+      }
+      reportAudio('error')
+      reportAudio('error')
+
+      expect(live.resumeAudio.mock.calls).toEqual(
+        isStopped ? [] : [['Media rejected']],
+      )
+    },
+  )
 
   it('cancels narration before starting capture', () => {
     const { events } = renderIntegration()

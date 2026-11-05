@@ -20,10 +20,11 @@ import {
   registerReaderAudioController,
   reportReaderAudio,
   clearReaderAudioObservation,
+  getReaderAudioObservation,
 } from '../store/readerAudioSlice'
 import type { createReaderAudioController } from '../services/readerAudioController'
 import type { ReaderScope } from '../models/reader'
-import { useLiveConversation } from '../contexts/LiveContext'
+import { quiesceLiveForPlayback } from '../store/liveSlice'
 
 type Player = Pick<
   ReturnType<typeof createReaderAudioController>,
@@ -44,7 +45,6 @@ export function useReaderAudioControl(
 ) {
   const dispatch = useAppDispatch()
   const store = useAppStore()
-  const conversation = useLiveConversation()
   const playbackRequest = useAppSelector(getReaderAudioPlaybackRequest)
   const applied = useRef<{ player: Player; requestId: string } | null>(null)
   const publishObservation = useRef(() => {})
@@ -123,7 +123,14 @@ export function useReaderAudioControl(
         player: connectedPlayer,
         requestId: request.requestId,
       }
-      if (request.isPlaying) conversation?.stop()
+      const observation = getReaderAudioObservation(store.getState())
+      if (request.isPlaying && observation)
+        dispatch(
+          quiesceLiveForPlayback({
+            requestId: request.requestId,
+            controllerId: observation.controllerId,
+          }),
+        )
       const anchor = getReaderAnchor(store.getState())
 
       if (!request.isPlaying) {
@@ -179,6 +186,5 @@ export function useReaderAudioControl(
     targetId,
     isNavigationPending,
     playbackRequest,
-    conversation,
   ])
 }

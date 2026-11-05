@@ -68,7 +68,7 @@ Feature: Live voice conversation
     Then Live offers a fresh conversation
     And Live has released the microphone
 
-  Scenario: Live stays available while reading and stops before narration
+  Scenario: Live stays available while reading and closes quietly on narration
     Given a synchronization book with narration after untimed text
     And its narrated text spans pages
     And a synthetic Live audio provider
@@ -95,3 +95,29 @@ Feature: Live voice conversation
     Then Live exchanges browser audio
     When I stop Live
     Then Live has released the microphone
+
+  Rule: Playback handoff keeps Live available until narration starts
+    Background:
+      Given a synchronization book with narration after untimed text
+      And a synthetic Live audio provider
+      And its narrated text spans pages
+      And narration Play is delayed
+      When I start Live from the library
+      Then Live exchanges browser audio
+      When I enter the synchronization reader during Live
+      And I wait for book synchronization to finish
+      And I play the page narration
+      Then Live waits silently for narration
+
+    Scenario: Slow Play closes Live only after actual playback
+      When delayed narration "plays"
+      Then Live has released the microphone
+      And turner narration is playing
+
+    Scenario: Rejected Play explains the error on the existing connection
+      When delayed narration "fails"
+      Then Live receives the playback failure once
+
+    Scenario: Pause cancels delayed Play without restarting Live
+      When I cancel delayed narration
+      Then Live continues without delayed narration

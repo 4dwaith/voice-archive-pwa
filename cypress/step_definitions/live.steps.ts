@@ -4,6 +4,9 @@ import type { SegmentReadOutput } from '../../src/api-client/generated/schemas'
 
 type AudioEvidence = {
   stream?: MediaStream
+  resolvePlay?: () => void
+  rejectPlay?: () => void
+  errorInputs: string[]
   inputs: number
   outputs: number
   connections: number
@@ -85,7 +88,13 @@ Given('its narrated text spans pages', () => {
 
 Given('a synthetic Live audio provider', () => {
   hasCheckpoints = false
-  evidence = { inputs: 0, outputs: 0, connections: 0, handles: [] }
+  evidence = {
+    inputs: 0,
+    outputs: 0,
+    connections: 0,
+    handles: [],
+    errorInputs: [],
+  }
   cy.intercept('POST', '**/api/v1/live/token', {
     token: 'auth_tokens/synthetic',
     model: 'gemini-3.8-live',
@@ -134,7 +143,9 @@ Given('a synthetic Live audio provider', () => {
               },
             })
         }
-        if (message.realtimeInput) {
+        if (message.realtimeInput?.text)
+          evidence.errorInputs.push(message.realtimeInput.text)
+        if (message.realtimeInput?.audio) {
           evidence.inputs++
           // One second of PCM output through the real browser playback path.
           if (evidence.inputs === 1)
@@ -287,4 +298,65 @@ Then('Live reports failure and releases the microphone', () => {
   cy.wrap(null).should(() =>
     expect(evidence.stream?.getTracks()[0].readyState).to.equal('ended'),
   )
+})
+
+Given('narration Play is delayed', () => {
+  cy.on('window:before:load', (win) => {
+    const play = win.HTMLMediaElement.prototype.play
+    cy.stub(win.HTMLMediaElement.prototype, 'play').callsFake(function (
+      this: HTMLMediaElement,
+    ) {
+      if (!this.matches('[data-reader-audio]')) return play.call(this)
+      return new Promise<void>((resolve, reject) => {
+        evidence.resolvePlay = () => {
+          void play.call(this).then(resolve, reject)
+        }
+        evidence.rejectPlay = () =>
+          reject(new win.Error('Synthetic playback rejection'))
+      })
+    })
+  })
+})
+
+Then('Live waits silently for narration', () => {
+  cy.wrap(null).should(() => {
+    expect(evidence.resolvePlay).to.be.a('function')
+    expect(evidence.stream?.getTracks()[0].enabled).to.equal(false)
+  })
+  cy.get('[data-live-state="connected"]').should('exist')
+})
+
+When('delayed narration {string}', (outcome: string) => {
+  cy.then(() =>
+    outcome === 'fails' ? evidence.rejectPlay?.() : evidence.resolvePlay?.(),
+  )
+})
+
+Then('Live receives the playback failure once', () => {
+  cy.wrap(null).should(() => {
+    expect(evidence.errorInputs).to.have.length(1)
+    expect(evidence.errorInputs[0]).to.contain('Synthetic playback rejection')
+    expect(evidence.stream?.getTracks()[0].enabled).to.equal(true)
+    expect(evidence.connections).to.equal(1)
+  })
+  cy.get('[data-live-state="connected"]').should('exist')
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+  )
+})
+
+When('I cancel delayed narration', () => {
+  cy.findByRole('button', { name: 'Pause' }).click()
+  cy.then(() => evidence.resolvePlay?.())
+})
+
+Then('Live continues without delayed narration', () => {
+  cy.get('[data-live-state="connected"]').should('exist')
+  cy.get('[data-reader-audio]').should(($audio) =>
+    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+  )
+  cy.wrap(null).should(() => {
+    expect(evidence.stream?.getTracks()[0].enabled).to.equal(true)
+    expect(evidence.errorInputs).to.have.length(0)
+  })
 })

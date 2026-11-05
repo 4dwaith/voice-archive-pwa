@@ -116,6 +116,7 @@ export function createReaderAudioController(
   function reportFailure(error: unknown) {
     const loaded = readLoadedNarration()
     operation.abort()
+    media.pause()
     transition({
       kind: 'error',
       loaded,
@@ -124,7 +125,6 @@ export function createReaderAudioController(
           ? error.message
           : 'The audio could not be played. Try Play again.',
     })
-    media.pause()
   }
 
   async function startMedia(signal: AbortSignal) {

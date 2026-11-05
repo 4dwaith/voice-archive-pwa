@@ -16,10 +16,16 @@ import App from '../../src/App'
 import { archiveApi } from '../../src/api-client/archiveApi'
 import textSize from '../../src/store/textSizeSlice'
 import reader from '../../src/store/readerSlice'
+import live from '../../src/store/liveSlice'
 import { book } from '../api-client/fixtures/book'
 
 const store = configureStore({
-  reducer: { reader, textSize, [archiveApi.reducerPath]: archiveApi.reducer },
+  reducer: {
+    reader,
+    live,
+    textSize,
+    [archiveApi.reducerPath]: archiveApi.reducer,
+  },
   middleware: (defaults) => defaults().concat(archiveApi.middleware),
 })
 

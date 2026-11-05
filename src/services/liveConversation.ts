@@ -1,5 +1,7 @@
 import { GoogleGenAI, Modality, type Session } from '@google/genai'
 import { z } from 'zod'
+import { apiBaseUrl } from '../api-client/baseApi'
+import { LiveTokenResponse } from '../api-client/generated/schemas'
 import { createLiveGuidance } from './liveGuidance'
 
 const checkpointSchema = z.object({
@@ -24,10 +26,24 @@ type LiveAttempt = {
   session?: Session
   sources: Set<AudioBufferSourceNode>
   nextTime: number
+  isQuiesced: boolean
+}
+
+async function readLiveToken(signal: AbortSignal) {
+  // Credentials never enter Redux, query caches, storage or persisted history.
+  const response = await fetch(new URL('/api/v1/live/token', apiBaseUrl), {
+    method: 'POST',
+    cache: 'no-store',
+    signal,
+  })
+  if (!response.ok) throw new Error('Live provisioning failed')
+  return LiveTokenResponse.parse(await response.json())
 }
 
 export function createLiveConversation(
-  readToken: (signal: AbortSignal) => Promise<{ token: string; model: string }>,
+  readToken: (
+    signal: AbortSignal,
+  ) => Promise<{ token: string; model: string }> = readLiveToken,
 ) {
   let checkpoint: z.infer<typeof checkpointSchema> | null = null
   try {
@@ -90,10 +106,7 @@ export function createLiveConversation(
     }
     publish({
       status: 'idle',
-      error:
-        attempt && !checkpoint
-          ? 'No resumable checkpoint is available. Start Live for a new conversation.'
-          : null,
+      error: null,
     })
   }
 
@@ -137,6 +150,7 @@ export function createLiveConversation(
         context,
         sources: new Set(),
         nextTime: 0,
+        isQuiesced: false,
       }
       current = attempt
       const active = attempt
@@ -223,6 +237,7 @@ export function createLiveConversation(
               return
             }
             if (message.serverContent?.interrupted) stopOutput(active)
+            if (active.isQuiesced) return
             try {
               for (const part of message.serverContent?.modelTurn?.parts ??
                 []) {
@@ -280,7 +295,12 @@ export function createLiveConversation(
       }
       active.session = session
       capture.port.onmessage = ({ data }: MessageEvent<ArrayBuffer>) => {
-        if (current !== active || snapshot.status !== 'connected') return
+        if (
+          current !== active ||
+          active.isQuiesced ||
+          snapshot.status !== 'connected'
+        )
+          return
         try {
           const encoded = btoa(String.fromCharCode(...new Uint8Array(data)))
           session.sendRealtimeInput({
@@ -319,6 +339,35 @@ export function createLiveConversation(
     start,
     stop,
     discard,
+    quiesceAudio() {
+      if (!current) return
+      current.isQuiesced = true
+      current.stream?.getTracks().forEach((track) => {
+        track.enabled = false
+      })
+      stopOutput(current)
+    },
+    resumeAudio(error?: string) {
+      if (!current || snapshot.status !== 'connected') return
+      current.isQuiesced = false
+      current.stream?.getTracks().forEach((track) => {
+        track.enabled = true
+      })
+      if (error) {
+        try {
+          current.session?.sendRealtimeInput({
+            text: `Narration failed: ${error}. Explain this failure to the user.`,
+          })
+        } catch {
+          stop()
+          publish({
+            status: 'failed',
+            error:
+              'Live could not receive the narration error. Start Live again.',
+          })
+        }
+      }
+    },
     getSnapshot: () => snapshot,
     subscribe(notify: () => void) {
       listeners.add(notify)

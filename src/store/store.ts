@@ -11,6 +11,8 @@ import bookDownloadsReducer from './bookDownloadsSlice'
 import readerReducer from './readerSlice'
 import readerSearchReducer from './readerSearchSlice'
 import readerAudioReducer from './readerAudioSlice'
+import liveReducer from './liveSlice'
+import { createLiveListener } from './liveListener'
 import { createBookDownloadsListener } from './bookDownloadsListener'
 import { createReaderTocListener } from './readerTocListener'
 import { createReaderSearchListener } from './readerSearchListener'
@@ -23,6 +25,7 @@ const rootReducer = combineReducers({
   reader: readerReducer,
   readerSearch: readerSearchReducer,
   readerAudio: readerAudioReducer,
+  live: liveReducer,
   [archiveApi.reducerPath]: archiveApi.reducer,
 })
 export type RootState = ReturnType<typeof rootReducer>
@@ -31,6 +34,7 @@ export type AppDispatch = ThunkDispatch<RootState, undefined, UnknownAction>
 // Each store owns its listener instances, including isolated integration tests.
 export function createAppStore() {
   const readerAudioListener = createListenerMiddleware()
+  const liveListener = createLiveListener()
   const preferences = readReaderPreferences()
   const readerPreferencesListener = createReaderPreferencesListener(preferences)
   const bookDownloadsListener = createBookDownloadsListener()
@@ -49,6 +53,8 @@ export function createAppStore() {
     middleware: (defaults) =>
       defaults()
         .prepend(
+          // Observe after the audio adapter's synchronous effects, especially Pause.
+          liveListener.middleware,
           readerAudioListener.middleware,
           readerPreferencesListener.middleware,
           bookDownloadsListener.middleware,

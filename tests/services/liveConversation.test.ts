@@ -172,7 +172,7 @@ describe('Live conversation', () => {
 
     expect(live.getSnapshot()).toMatchObject({
       canContinue: false,
-      error: expect.stringContaining('No resumable checkpoint'),
+      error: null,
     })
     expect(sessionStorage.getItem('voice-archive-live-checkpoint')).toBeNull()
   })
@@ -274,7 +274,7 @@ describe('Live conversation', () => {
 
     await live.start()
     media.capture.port.onmessage!({ data: new Int16Array([10, 20]).buffer })
-    deliverMessage(callbacks, {
+    const output = {
       serverContent: {
         modelTurn: {
           parts: [
@@ -287,7 +287,8 @@ describe('Live conversation', () => {
           ],
         },
       },
-    })
+    }
+    deliverMessage(callbacks, output)
 
     expect(live.getSnapshot().status).toBe('connected')
     expect(session.sendRealtimeInput).toHaveBeenCalledWith({
@@ -298,6 +299,21 @@ describe('Live conversation', () => {
     deliverMessage(callbacks, { serverContent: { interrupted: true } })
 
     expect(media.source.stop).toHaveBeenCalledOnce()
+
+    deliverMessage(callbacks, output)
+    live.quiesceAudio()
+    deliverMessage(callbacks, output)
+    media.capture.port.onmessage!({ data: new Int16Array([10, 20]).buffer })
+
+    expect(media.source.stop).toHaveBeenCalledTimes(2)
+    expect(media.source.start).toHaveBeenCalledTimes(2)
+    expect(session.sendRealtimeInput).toHaveBeenCalledTimes(1)
+
+    live.resumeAudio('Media rejected')
+
+    expect(session.sendRealtimeInput).toHaveBeenLastCalledWith({
+      text: expect.stringContaining('Media rejected'),
+    })
 
     live.stop()
     callbacks.onclose?.({} as CloseEvent)
