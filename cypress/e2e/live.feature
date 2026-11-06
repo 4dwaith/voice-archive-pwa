@@ -161,6 +161,37 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live reports missing local content without downloading
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    And book content requests are observed
+    When I start Live from the library
+    And Live calls "listAvailableBooks" with ID "catalog"
+    Then tool "catalog" reports "total" as "1"
+    When Live calls "getBookInfo" with ID "info" and arguments '{"bookId":7}'
+    Then tool "info" reports "identitySource" as "unavailable"
+    When Live calls "getBookToc" with ID "toc" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc"}'
+    Then tool "toc" reports "status" as "unavailable"
+    And Live has not opened or downloaded the book
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: Live reads nearby Text without navigating
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    And Live calls "getTextPage" with ID "absent" and arguments '{"offset":0}'
+    Then tool "absent" reports "status" as "unavailable"
+    When I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    Then I see its first reader page
+    When Live calls "getReadingPosition" with ID "before"
+    And Live calls "getTextPage" with ID "adjacent" and arguments '{"offset":1}'
+    Then tool "adjacent" reports "status" as "ready"
+    And I see its first reader page
+    When I stop Live
+    Then Live has released the microphone
+
   Rule: Playback handoff keeps Live available until narration starts
     Background:
       Given a synchronization book with narration after untimed text

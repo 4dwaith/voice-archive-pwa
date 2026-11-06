@@ -72,6 +72,50 @@ export function resolvePageStart(
     : null
 }
 
+export function clipPageText(
+  segments: ReaderSegment[],
+  page: ReaderLayoutMeasurement['pages'][number],
+  unmappableIds: number[],
+) {
+  const startIndex = segments.findIndex(
+    (segment) =>
+      segment.id === page.start?.segmentId &&
+      segment.source_key === page.start.sourceKey,
+  )
+  const endIndex = segments.findIndex(
+    (segment) =>
+      segment.id === page.end?.segmentId &&
+      segment.source_key === page.end.sourceKey,
+  )
+  if (startIndex < 0 || endIndex < startIndex) return null
+
+  const fragments = []
+  for (const segment of segments.slice(startIndex, endIndex + 1)) {
+    const points = Array.from(segment.text_content)
+    const start = segment.id === page.start!.segmentId ? page.start!.offset : 0
+    const end =
+      segment.id === page.end!.segmentId ? page.end!.offset : points.length
+    if (start === end) continue
+    const boundaries = getGraphemeBoundaries(segment.text_content)
+    if (
+      unmappableIds.includes(segment.id) ||
+      start > end ||
+      ![start, end].every((offset) =>
+        boundaries.some((boundary) => boundary.codePoint === offset),
+      )
+    )
+      return null
+    fragments.push({
+      segmentId: segment.id,
+      sourceKey: segment.source_key,
+      start,
+      end,
+      text: points.slice(start, end).join(''),
+    })
+  }
+  return fragments.length ? fragments : null
+}
+
 export function resolvePageSectionSelection(
   anchor: ReaderAnchor,
   segments: Pick<CachedSegment, 'id' | 'section_id'>[],

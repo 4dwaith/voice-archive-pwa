@@ -8,6 +8,8 @@ import { z } from 'zod'
 import { type createLiveQueries } from './liveQueries'
 
 const noArguments = z.strictObject({})
+const bookId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
+const versionedBook = { bookId, contentVersion: z.uuid() }
 const schemas = {
   getAppHelp: z.strictObject({
     topic: z.enum(['overview', 'reader', 'live', 'turner']),
@@ -16,9 +18,26 @@ const schemas = {
   getReaderSettings: noArguments,
   getReadingPosition: noArguments,
   getBookDownloadState: z.strictObject({
-    bookId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    bookId,
   }),
   getNarrationState: noArguments,
+  listAvailableBooks: z.strictObject({
+    offset: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(Number.MAX_SAFE_INTEGER)
+      .optional(),
+  }),
+  getBookInfo: z.strictObject({ bookId }),
+  getBookToc: z.strictObject(versionedBook),
+  getSegments: z.strictObject({
+    ...versionedBook,
+    segmentIds: z.array(bookId).min(1),
+  }),
+  getTextPage: z.strictObject({
+    offset: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
+  }),
   endLiveSession: noArguments,
 }
 const descriptions = [
@@ -28,6 +47,11 @@ const descriptions = [
   'Get canonical anchor and separate selections.',
   'Get text download progress and committed completeness for a book.',
   'Get requested and reported narration state, cue and error.',
+  'List saved book metadata in pages; follow nextOffset. A partial saved catalog does not establish that other books do not exist.',
+  'Read saved book metadata and cached content identity. Missing downloaded content is unavailable; this query never downloads.',
+  'Read cached ordered flat sections with parent IDs and first-segment source keys. Reports partial, stale or unavailable local content; never downloads or opens a book.',
+  'Read exact cached segment IDs only. Partial results report missingIds and cache completeness without downloading text.',
+  'Read exact current (0), previous (-1) or next (1) reflowed Text page in a currently open book. This never moves the reader. Edge, preparing, stale and unavailable are distinct.',
   'End Live immediately, preserving continuation. No farewell required.',
 ]
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(

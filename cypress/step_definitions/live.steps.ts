@@ -130,7 +130,7 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(7)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(12)
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
@@ -421,3 +421,26 @@ When('I tap Discard on the touchscreen', () => {
 When('I focus the Live control', () => {
   cy.findByRole('button', { name: /^(Start|Continue|Stop) Live$/ }).focus()
 })
+
+When(
+  'Live calls {string} with ID {string} and arguments {string}',
+  (name: string, id: string, args: string) => {
+    cy.then(() =>
+      evidence.deliver?.({
+        toolCall: { functionCalls: [{ id, name, args: JSON.parse(args) }] },
+      }),
+    )
+  },
+)
+
+Then('Live has not opened or downloaded the book', () => {
+  cy.location('pathname').should('equal', '/')
+  cy.get('[data-reader-surface]').should('not.exist')
+  cy.get('@contentReads.all').should('have.length', 0)
+})
+
+Given('book content requests are observed', () =>
+  cy
+    .intercept('GET', /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/)
+    .as('contentReads'),
+)
