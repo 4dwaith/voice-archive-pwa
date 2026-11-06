@@ -269,7 +269,8 @@ describe('Live conversation', () => {
       sendRealtimeInput: vi.fn(),
       sendToolResponse: vi.fn(),
     }
-    const queries = createLiveQueries(createAppStore().getState)
+    const store = createAppStore()
+    const queries = createLiveQueries(store.getState, store.dispatch)
     const pending = Promise.withResolvers<never>()
     vi.spyOn(queries, 'getBookDownloadState').mockReturnValue(pending.promise)
     let callbacks!: LiveConnectParameters['callbacks']

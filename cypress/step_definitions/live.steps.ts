@@ -1,5 +1,8 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
-import type { SegmentReadOutput } from '../../src/api-client/generated/schemas'
+import type {
+  AskResult,
+  SegmentReadOutput,
+} from '../../src/api-client/generated/schemas'
 
 type AudioEvidence = {
   stream?: MediaStream
@@ -130,7 +133,7 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(26)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(27)
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
@@ -444,6 +447,134 @@ Given('book content requests are observed', () =>
     .intercept('GET', /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/)
     .as('contentReads'),
 )
+
+Given('the book answer is {string}', (outcome: string) => {
+  const result: AskResult = {
+    status: outcome === 'unavailable' ? 'unavailable' : 'answered',
+    answer:
+      outcome === 'unavailable'
+        ? ''
+        : 'The passage describes the nested destination.',
+    limitations:
+      outcome === 'unavailable'
+        ? ['An answer is unavailable; please retry later.']
+        : [],
+    references:
+      outcome === 'unavailable'
+        ? []
+        : [
+            {
+              book_id: 7,
+              content_version:
+                outcome === 'outdated'
+                  ? '1ac04088-bfcb-44e0-bcdf-ff025c93dcac'
+                  : 'a3027b66-924c-4c9a-aad5-660ba7a733bc',
+              segment_id: 2,
+              section_id: 2,
+              path: ['Sync book', 'Chapter', 'Nested destination'],
+              sequence: 1,
+              text: 'Nested destination text.',
+              relevance: 'Describes the requested destination.',
+            },
+          ],
+  }
+
+  cy.intercept('POST', '**/api/v1/library/ask', (request) => {
+    expect(request.body).to.deep.equal({
+      book_id: 7,
+      query: 'What does Sync book say about the nested destination?',
+      effort: 'medium',
+    })
+    request.reply(result)
+  }).as('bookAnswer')
+})
+
+When('I ask Live about the nested destination', () => {
+  cy.then(() =>
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          {
+            id: 'book-question',
+            name: 'ask_library',
+            args: {
+              book_id: 7,
+              query: 'What does Sync book say about the nested destination?',
+              effort: 'medium',
+            },
+          },
+        ],
+      },
+    }),
+  )
+  cy.wait('@bookAnswer')
+})
+
+Then('Live receives the grounded answer and supporting passage', () => {
+  cy.wrap(null).should(() => {
+    const result = evidence.toolResults.find(({ id }) => id === 'book-question')
+      ?.response.result as AskResult
+
+    expect(result.status).to.equal('answered')
+    expect(result.answer).to.equal(
+      'The passage describes the nested destination.',
+    )
+    expect(result.references?.[0]).to.include({
+      segment_id: 2,
+      text: 'Nested destination text.',
+      relevance: 'Describes the requested destination.',
+    })
+  })
+})
+
+When('I ask Live to open the supporting passage', () => {
+  cy.then(() => {
+    const result = evidence.toolResults.find(({ id }) => id === 'book-question')
+      ?.response.result as AskResult
+    const reference = result.references![0]
+
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          {
+            id: 'open-reference',
+            name: 'navigateToSegment',
+            args: {
+              bookId: reference.book_id,
+              contentVersion: reference.content_version,
+              segmentId: reference.segment_id,
+            },
+          },
+        ],
+      },
+    })
+  })
+})
+
+Then('Live explains that the supporting version is unavailable', () => {
+  cy.wrap(null).should(() => {
+    expect(evidence.errorInputs).to.have.length(1)
+    expect(evidence.errorInputs[0]).to.contain(
+      'requested book version is unavailable',
+    )
+  })
+  cy.location('pathname').should('equal', '/')
+})
+
+Then('Live receives the answer unavailability and its limitation', () => {
+  cy.wrap(null).should(() => {
+    const result = evidence.toolResults.find(({ id }) => id === 'book-question')
+      ?.response.result as AskResult
+
+    expect(result).to.deep.equal({
+      status: 'unavailable',
+      answer: '',
+      limitations: ['An answer is unavailable; please retry later.'],
+      references: [],
+    })
+  })
+  cy.location('pathname').should('equal', '/')
+})
 
 Then('Live receives one command failure', () => {
   cy.wrap(null).should(() => {

@@ -191,6 +191,16 @@ const injectedRtkApi = api.injectEndpoints({
     >({
       query: () => ({ url: `/api/v1/live/token`, method: 'POST' }),
     }),
+    askApiV1Library: build.mutation<
+      AskApiV1LibraryApiResponse,
+      AskApiV1LibraryApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/library/ask`,
+        method: 'POST',
+        body: queryArg.askRequest,
+      }),
+    }),
     getApiV1Health: build.query<
       GetApiV1HealthApiResponse,
       GetApiV1HealthApiArg
@@ -308,6 +318,11 @@ export type DeleteApiV1FileApiArg = {
 export type CreateApiV1LiveTokenApiResponse =
   /** status 200 Successful Response */ LiveTokenResponse
 export type CreateApiV1LiveTokenApiArg = void
+export type AskApiV1LibraryApiResponse =
+  /** status 200 Successful Response */ AskResult
+export type AskApiV1LibraryApiArg = {
+  askRequest: AskRequest
+}
 export type GetApiV1HealthApiResponse =
   /** status 200 Successful Response */ HealthResponse
 export type GetApiV1HealthApiArg = void
@@ -659,6 +674,28 @@ export type ErrorDetailLiteralLiveUnavailable = {
 export type LiveErrorResponse = {
   error: ErrorDetailLiteralLiveUnavailable
 }
+export type AnswerReference = {
+  segment_id: number
+  section_id: number | null
+  path: string[]
+  sequence: number
+  text: string
+  book_id: number
+  content_version: string
+  relevance: string
+}
+export type AskResult = {
+  status:
+    'answered' | 'insufficient_evidence' | 'unavailable' | 'oversize' | 'stale'
+  answer: string
+  limitations: string[]
+  references?: AnswerReference[]
+}
+export type AskRequest = {
+  query: string
+  book_id: number
+  effort?: 'low' | 'medium' | 'high'
+}
 export type HealthResponse = {
   status: 'ok'
   api_version: 'v1'
@@ -687,6 +724,7 @@ export const {
   useCreateApiV1FileMutation,
   useDeleteApiV1FileMutation,
   useCreateApiV1LiveTokenMutation,
+  useAskApiV1LibraryMutation,
   useGetApiV1HealthQuery,
   useGetApiV1ReadyQuery,
 } = injectedRtkApi

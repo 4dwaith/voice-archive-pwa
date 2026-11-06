@@ -1,4 +1,46 @@
 Feature: Live voice conversation
+  Scenario: A book answer leads to its supporting passage
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    And the book answer is "available"
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I use the header Home button
+    And I ask Live about the nested destination
+    Then Live receives the grounded answer and supporting passage
+    When I ask Live to open the supporting passage
+    Then I see the nested section text
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: An outdated answer reference cannot open another version
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    And the book answer is "outdated"
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I use the header Home button
+    And I ask Live about the nested destination
+    Then Live receives the grounded answer and supporting passage
+    When I ask Live to open the supporting passage
+    Then Live explains that the supporting version is unavailable
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: An unavailable book answer keeps its qualification
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    And the book answer is "unavailable"
+    And book content requests are observed
+    When I start Live from the library
+    And I ask Live about the nested destination
+    Then Live receives the answer unavailability and its limitation
+    And Live has not opened or downloaded the book
+    When I stop Live
+    Then Live has released the microphone
+
   Scenario: The turner starts and stops Live from the library
     Given a synchronization book with a nested destination
     And a synthetic Live audio provider

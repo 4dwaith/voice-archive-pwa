@@ -23,7 +23,7 @@ function createQueries(anchorOffset = 0) {
   store.dispatch(reportLayoutKey('layout'))
   return {
     store,
-    queries: createLiveQueries(store.getState, getPath),
+    queries: createLiveQueries(store.getState, store.dispatch, getPath),
   }
 }
 

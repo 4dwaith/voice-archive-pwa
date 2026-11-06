@@ -1,4 +1,6 @@
 import { database } from '../data/database'
+import { archiveApi } from '../api-client/archiveApi'
+import type { AskRequest } from '../api-client/generated/schemas'
 import { getContentSections } from '../data/contentRepository'
 import {
   readChapterSegments,
@@ -24,7 +26,7 @@ import {
 } from '../store/readerSlice'
 import { selectPlaybackSpeed } from '../store/playbackSpeedSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
-import type { RootState } from '../store/store'
+import type { AppDispatch, RootState } from '../store/store'
 import {
   livePageTurnerBinding,
   readerPageTurnerBindings,
@@ -43,9 +45,28 @@ export const appHelp = {
 
 export function createLiveQueries(
   getState: () => RootState,
+  dispatch: AppDispatch,
   getPath = () => window.location.pathname,
 ) {
   return {
+    async ask_library(args: AskRequest, signal: AbortSignal) {
+      signal.throwIfAborted()
+      const request = dispatch(
+        archiveApi.endpoints.askApiV1Library.initiate(
+          { askRequest: args },
+          { track: false },
+        ),
+      )
+      const abort = () => request.abort()
+      signal.addEventListener('abort', abort, { once: true })
+      if (signal.aborted) abort()
+      try {
+        return await request.unwrap()
+      } finally {
+        signal.removeEventListener('abort', abort)
+        request.reset()
+      }
+    },
     async listAvailableBooks({ offset = 0 }: { offset?: number }) {
       const { books, catalog } = await readSavedLibrary()
       const items = books.slice(offset, offset + 24)

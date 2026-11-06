@@ -5,6 +5,7 @@ import {
   type FunctionResponse,
 } from '@google/genai'
 import { z } from 'zod'
+import { AskRequest } from '../api-client/generated/schemas'
 import {
   TEXT_SIZE_BASE,
   TEXT_SIZE_INCREMENT,
@@ -32,6 +33,7 @@ const segmentTarget = {
     .optional(),
 }
 const schemas = {
+  ask_library: AskRequest.extend({ book_id: integerId.positive() }).strict(),
   getAppHelp: z.strictObject({
     topic: z.enum(['overview', 'reader', 'live', 'turner']),
   }),
@@ -100,6 +102,7 @@ const schemas = {
   moveTextPage: z.strictObject({ direction: z.enum(['previous', 'next']) }),
 }
 const descriptions = [
+  'Answer a self-contained question from one complete book through the backend. Use a known book_id; no download or open reader is required. Optional effort is low (default), medium or high. Returns grounded answer, limitations and versioned segment references; it does not navigate or start narration.',
   'Get manual help for overview, reader, live or turner.',
   'Get current route and reader availability.',
   'Get current text size, narration speed, Text/PDF setting and reader control visibility.',
@@ -163,9 +166,20 @@ export function createLiveTools(
       send: (response: FunctionResponse) => void,
     ) {
       const cancelled = new Set<string>()
+      const requests = new Map<string, AbortController>()
+      signal.addEventListener(
+        'abort',
+        () => {
+          requests.forEach((request) => request.abort())
+        },
+        { once: true },
+      )
       return {
         cancel(ids: string[]) {
-          ids.forEach((id) => cancelled.add(id))
+          ids.forEach((id) => {
+            cancelled.add(id)
+            requests.get(id)?.abort()
+          })
           if (commandId && ids.includes(commandId)) cancelCommands()
         },
         async invoke(call: FunctionCall) {
@@ -227,21 +241,27 @@ export function createLiveTools(
                     'Information unavailable; use the manual controls or retry.',
                 }
                 let result: ToolResult
+                const request = new AbortController()
+                requests.set(id, request)
                 try {
                   const query = queries[name as keyof typeof queries] as (
                     args: unknown,
+                    signal: AbortSignal,
                   ) => unknown
-                  const value = query(parsed.data)
+                  const value = query(parsed.data, request.signal)
                   result =
                     value instanceof Promise
-                      ? value.then(
-                          (result) => ({ result }),
-                          () => failure,
-                        )
+                      ? value
+                          .then(
+                            (result) => ({ result }),
+                            () => failure,
+                          )
+                          .finally(() => requests.delete(id))
                       : { result: value }
                 } catch {
                   result = failure
                 }
+                if (!(result instanceof Promise)) requests.delete(id)
                 calls.set(id, { signature, result })
                 response = result instanceof Promise ? await result : result
               }

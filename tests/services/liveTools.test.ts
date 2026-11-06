@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createLiveTools,
   type LiveEffectReceipts,
@@ -7,8 +7,11 @@ import {
 import { createLiveQueries } from '../../src/services/liveQueries'
 import { createAppStore } from '../../src/store/store'
 
+afterEach(() => vi.unstubAllGlobals())
+
 function createToolConnection() {
-  const queries = createLiveQueries(createAppStore().getState)
+  const store = createAppStore()
+  const queries = createLiveQueries(store.getState, store.dispatch)
   const stop = vi.fn()
   const tools = createLiveTools(queries, stop)
   const abort = new AbortController()
@@ -21,6 +24,10 @@ function createToolConnection() {
 describe('Live tools', () => {
   it.each([
     { name: 'missing' },
+    { name: 'ask_library', args: { book_id: 0, query: 'Why?' } },
+    { name: 'ask_library', args: { book_id: 7, query: ' ' } },
+    { name: 'ask_library', args: { book_id: 7, query: 'Why?', effort: 'max' } },
+    { name: 'ask_library', args: { book_id: 7, query: 'Why?', extra: true } },
     { name: 'setPlaybackSpeed', args: { rate: 0.7 } },
     { name: 'setPlaybackSpeed', args: { rate: 2.05 } },
     { name: 'setPlaybackSpeed', args: { rate: 1.03 } },
@@ -43,7 +50,7 @@ describe('Live tools', () => {
     const store = createAppStore()
     const request = vi.fn()
     const tools = createLiveTools(
-      createLiveQueries(store.getState),
+      createLiveQueries(store.getState, store.dispatch),
       vi.fn(),
       request,
     )
@@ -91,6 +98,53 @@ describe('Live tools', () => {
     expect(send.mock.calls[0][0]).toEqual(send.mock.calls[1][0])
     expect(send.mock.calls[2][0].response.error).toContain('Conflicting')
   })
+
+  it.each(['tool cancellation', 'session stop'])(
+    'aborts the pending answer HTTP request on %s',
+    async (reason) => {
+      const started = Promise.withResolvers<Request>()
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((request: Request) => {
+          started.resolve(request)
+          return new Promise<Response>((_resolve, reject) => {
+            request.signal.addEventListener(
+              'abort',
+              () => {
+                reject(new DOMException('Aborted', 'AbortError'))
+              },
+              { once: true },
+            )
+          })
+        }),
+      )
+      const { connection, abort, send } = createToolConnection()
+      const pending = connection.invoke({
+        id: 'answer',
+        name: 'ask_library',
+        args: {
+          book_id: 7,
+          query: 'Why did the traveller return?',
+          effort: 'medium',
+        },
+      })
+      const request = await started.promise
+
+      expect(request.url).toContain('/api/v1/library/ask')
+      expect(await request.json()).toEqual({
+        book_id: 7,
+        query: 'Why did the traveller return?',
+        effort: 'medium',
+      })
+
+      if (reason === 'tool cancellation') connection.cancel(['answer'])
+      else abort.abort()
+      await pending
+
+      expect(request.signal.aborted).toBe(true)
+      expect(send).not.toHaveBeenCalled()
+    },
+  )
 
   it('suppresses a cancelled delayed read', async () => {
     const { queries, connection, send } = createToolConnection()

@@ -44,7 +44,7 @@ export function createLiveListener() {
         conversation = createLiveConversation(
           undefined,
           createLiveTools(
-            createLiveQueries(api.getState),
+            createLiveQueries(api.getState, api.dispatch),
             commands.endLiveSession,
             commands.request,
             commands.cancel,

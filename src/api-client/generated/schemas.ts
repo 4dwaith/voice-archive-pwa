@@ -6,6 +6,52 @@
  * OpenAPI spec version: 0.1.0
  */
 import * as zod from 'zod'
+export const AnswerReference = zod.object({
+  segment_id: zod.int(),
+  section_id: zod.union([zod.int(), zod.null()]),
+  path: zod.array(zod.string()),
+  sequence: zod.int(),
+  text: zod.string(),
+  book_id: zod.int(),
+  content_version: zod.uuid(),
+  relevance: zod.string(),
+})
+export type AnswerReference = zod.input<typeof AnswerReference>
+export type AnswerReferenceOutput = zod.output<typeof AnswerReference>
+export const askRequestQueryMax = 8000
+export const askRequestQueryRegExp = new RegExp('\\S')
+export const askRequestBookIdExclusiveMin = 0
+export const askRequestBookIdMax = 9223372036854776000
+export const askRequestEffortDefault = `low`
+export const AskRequest = zod.object({
+  query: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= askRequestQueryMax, {
+      error: 'String has too many Unicode code points',
+    })
+    .regex(askRequestQueryRegExp),
+  book_id: zod.int().gt(askRequestBookIdExclusiveMin).max(askRequestBookIdMax),
+  effort: zod.enum(['low', 'medium', 'high']).default(askRequestEffortDefault),
+})
+export type AskRequest = zod.input<typeof AskRequest>
+export type AskRequestOutput = zod.output<typeof AskRequest>
+export const AskResult = zod.object({
+  status: zod.enum([
+    'answered',
+    'insufficient_evidence',
+    'unavailable',
+    'oversize',
+    'stale',
+  ]),
+  answer: zod.string(),
+  limitations: zod.array(zod.string()),
+  references: zod.array(AnswerReference).optional(),
+})
+export type AskResult = zod.input<typeof AskResult>
+export type AskResultOutput = zod.output<typeof AskResult>
 export const audioMetadataDurationMsExclusiveMin = 0
 export const audioMetadataDurationMsMax = 9223372036854776000
 export const audioMetadataSampleRateExclusiveMin = 0
@@ -2302,6 +2348,47 @@ export type CreateApiV1LiveToken503Response = zod.input<
 >
 export type CreateApiV1LiveToken503ResponseOutput = zod.output<
   typeof CreateApiV1LiveToken503Response
+>
+/**
+ * @summary Ask Library
+ */
+export const AskApiV1LibraryBody = AskRequest
+export type AskApiV1LibraryBody = zod.input<typeof AskApiV1LibraryBody>
+export type AskApiV1LibraryBodyOutput = zod.output<typeof AskApiV1LibraryBody>
+export const AskApiV1Library200Response = AskResult
+export type AskApiV1Library200Response = zod.input<
+  typeof AskApiV1Library200Response
+>
+export type AskApiV1Library200ResponseOutput = zod.output<
+  typeof AskApiV1Library200Response
+>
+export const AskApiV1Library404Response = BookErrorResponse
+export type AskApiV1Library404Response = zod.input<
+  typeof AskApiV1Library404Response
+>
+export type AskApiV1Library404ResponseOutput = zod.output<
+  typeof AskApiV1Library404Response
+>
+export const AskApiV1Library405Response = HttpErrorResponse
+export type AskApiV1Library405Response = zod.input<
+  typeof AskApiV1Library405Response
+>
+export type AskApiV1Library405ResponseOutput = zod.output<
+  typeof AskApiV1Library405Response
+>
+export const AskApiV1Library422Response = ValidationErrorResponse
+export type AskApiV1Library422Response = zod.input<
+  typeof AskApiV1Library422Response
+>
+export type AskApiV1Library422ResponseOutput = zod.output<
+  typeof AskApiV1Library422Response
+>
+export const AskApiV1Library500Response = InternalErrorResponse
+export type AskApiV1Library500Response = zod.input<
+  typeof AskApiV1Library500Response
+>
+export type AskApiV1Library500ResponseOutput = zod.output<
+  typeof AskApiV1Library500Response
 >
 /**
  * @summary Check API liveness

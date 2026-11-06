@@ -31,6 +31,7 @@ export const endpointEnhancements = {
   createApiV1LiveToken: {
     responseSchema: schemas.CreateApiV1LiveToken200Response,
   },
+  askApiV1Library: { responseSchema: schemas.AskApiV1Library200Response },
   getApiV1Health: { responseSchema: schemas.GetApiV1Health200Response },
   getApiV1Ready: { responseSchema: schemas.GetApiV1Ready200Response },
 }
@@ -157,6 +158,12 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
     '405': schemas.CreateApiV1LiveToken405Response,
     '500': schemas.CreateApiV1LiveToken500Response,
     '503': schemas.CreateApiV1LiveToken503Response,
+  },
+  askApiV1Library: {
+    '404': schemas.AskApiV1Library404Response,
+    '405': schemas.AskApiV1Library405Response,
+    '422': schemas.AskApiV1Library422Response,
+    '500': schemas.AskApiV1Library500Response,
   },
   getApiV1Health: {
     '405': schemas.GetApiV1Health405Response,
