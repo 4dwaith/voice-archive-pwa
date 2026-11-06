@@ -8,6 +8,13 @@ export const endpointEnhancements = {
   createApiV1Book: { responseSchema: schemas.CreateApiV1Book201Response },
   getApiV1Book: { responseSchema: schemas.GetApiV1Book200Response },
   patchApiV1Book: { responseSchema: schemas.PatchApiV1Book200Response },
+  listApiV1Series: { responseSchema: schemas.ListApiV1Series200Response },
+  createApiV1Series: { responseSchema: schemas.CreateApiV1Series201Response },
+  getApiV1Series: { responseSchema: schemas.GetApiV1Series200Response },
+  patchApiV1Series: { responseSchema: schemas.PatchApiV1Series200Response },
+  replaceApiV1SeriesBooks: {
+    responseSchema: schemas.ReplaceApiV1SeriesBooks200Response,
+  },
   importApiV1BookContent: {
     responseSchema: schemas.ImportApiV1BookContent200Response,
   },
@@ -56,8 +63,44 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
   deleteApiV1Book: {
     '404': schemas.DeleteApiV1Book404Response,
     '405': schemas.DeleteApiV1Book405Response,
+    '409': schemas.DeleteApiV1Book409Response,
     '422': schemas.DeleteApiV1Book422Response,
     '500': schemas.DeleteApiV1Book500Response,
+  },
+  listApiV1Series: {
+    '405': schemas.ListApiV1Series405Response,
+    '422': schemas.ListApiV1Series422Response,
+    '500': schemas.ListApiV1Series500Response,
+  },
+  createApiV1Series: {
+    '405': schemas.CreateApiV1Series405Response,
+    '422': schemas.CreateApiV1Series422Response,
+    '500': schemas.CreateApiV1Series500Response,
+  },
+  getApiV1Series: {
+    '404': schemas.GetApiV1Series404Response,
+    '405': schemas.GetApiV1Series405Response,
+    '422': schemas.GetApiV1Series422Response,
+    '500': schemas.GetApiV1Series500Response,
+  },
+  patchApiV1Series: {
+    '404': schemas.PatchApiV1Series404Response,
+    '405': schemas.PatchApiV1Series405Response,
+    '422': schemas.PatchApiV1Series422Response,
+    '500': schemas.PatchApiV1Series500Response,
+  },
+  deleteApiV1Series: {
+    '404': schemas.DeleteApiV1Series404Response,
+    '405': schemas.DeleteApiV1Series405Response,
+    '422': schemas.DeleteApiV1Series422Response,
+    '500': schemas.DeleteApiV1Series500Response,
+  },
+  replaceApiV1SeriesBooks: {
+    '404': schemas.ReplaceApiV1SeriesBooks404Response,
+    '405': schemas.ReplaceApiV1SeriesBooks405Response,
+    '409': schemas.ReplaceApiV1SeriesBooks409Response,
+    '422': schemas.ReplaceApiV1SeriesBooks422Response,
+    '500': schemas.ReplaceApiV1SeriesBooks500Response,
   },
   importApiV1BookContent: {
     '404': schemas.ImportApiV1BookContent404Response,

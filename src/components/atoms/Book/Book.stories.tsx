@@ -52,6 +52,16 @@ type Story = StoryObj<typeof meta>
 
 export const WithCover: Story = {}
 
+export const InSeries: Story = {
+  args: {
+    book: makeBookFixture({
+      series_id: 1,
+      series_title: 'The Library Collection',
+      series_index: 2,
+    }),
+  },
+}
+
 export const WithoutCover: Story = {
   args: {
     book: makeBookFixture({

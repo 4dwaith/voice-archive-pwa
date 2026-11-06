@@ -53,6 +53,10 @@ export const bookCreateCoverFileIdOneExclusiveMin = 0
 export const bookCreateCoverFileIdOneMax = 9223372036854776000
 export const bookCreateSourcePdfFileIdOneExclusiveMin = 0
 export const bookCreateSourcePdfFileIdOneMax = 9223372036854776000
+export const bookCreateSeriesIdOneExclusiveMin = 0
+export const bookCreateSeriesIdOneMax = 9223372036854776000
+export const bookCreateSeriesIndexOneExclusiveMin = 0
+export const bookCreateSeriesIndexOneMax = 2147483647
 export const BookCreate = zod.object({
   title: zod
     .string()
@@ -109,6 +113,24 @@ export const BookCreate = zod.object({
       zod.null(),
     ])
     .optional(),
+  series_id: zod
+    .union([
+      zod
+        .int()
+        .gt(bookCreateSeriesIdOneExclusiveMin)
+        .max(bookCreateSeriesIdOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  series_index: zod
+    .union([
+      zod
+        .int()
+        .gt(bookCreateSeriesIndexOneExclusiveMin)
+        .max(bookCreateSeriesIndexOneMax),
+      zod.null(),
+    ])
+    .optional(),
 })
 export type BookCreate = zod.input<typeof BookCreate>
 export type BookCreateOutput = zod.output<typeof BookCreate>
@@ -145,6 +167,11 @@ export const bookResponseCoverFileIdOneExclusiveMin = 0
 export const bookResponseCoverFileIdOneMax = 9223372036854776000
 export const bookResponseSourcePdfFileIdOneExclusiveMin = 0
 export const bookResponseSourcePdfFileIdOneMax = 9223372036854776000
+export const bookResponseSeriesIdOneExclusiveMin = 0
+export const bookResponseSeriesIdOneMax = 9223372036854776000
+export const bookResponseSeriesTitleOneMax = 750
+export const bookResponseSeriesIndexOneExclusiveMin = 0
+export const bookResponseSeriesIndexOneMax = 2147483647
 export const BookResponse = zod.object({
   id: zod.int().gt(bookResponseIdExclusiveMin),
   title: zod
@@ -194,6 +221,32 @@ export const BookResponse = zod.object({
       .max(bookResponseSourcePdfFileIdOneMax),
     zod.null(),
   ]),
+  series_id: zod.union([
+    zod
+      .int()
+      .gt(bookResponseSeriesIdOneExclusiveMin)
+      .max(bookResponseSeriesIdOneMax),
+    zod.null(),
+  ]),
+  series_title: zod.union([
+    zod
+      .string()
+      .refine((value) => Array.from(value).length >= 1, {
+        error: 'String has too few Unicode code points',
+      })
+      .refine(
+        (value) => Array.from(value).length <= bookResponseSeriesTitleOneMax,
+        { error: 'String has too many Unicode code points' },
+      ),
+    zod.null(),
+  ]),
+  series_index: zod.union([
+    zod
+      .int()
+      .gt(bookResponseSeriesIndexOneExclusiveMin)
+      .max(bookResponseSeriesIndexOneMax),
+    zod.null(),
+  ]),
   created_at: zod.iso.datetime({ offset: true }),
   updated_at: zod.iso.datetime({ offset: true }),
   cover_url: zod
@@ -222,6 +275,10 @@ export const bookPatchCoverFileIdOneExclusiveMin = 0
 export const bookPatchCoverFileIdOneMax = 9223372036854776000
 export const bookPatchSourcePdfFileIdOneExclusiveMin = 0
 export const bookPatchSourcePdfFileIdOneMax = 9223372036854776000
+export const bookPatchSeriesIdOneExclusiveMin = 0
+export const bookPatchSeriesIdOneMax = 9223372036854776000
+export const bookPatchSeriesIndexOneExclusiveMin = 0
+export const bookPatchSeriesIndexOneMax = 2147483647
 export const BookPatch = zod
   .object({
     title: zod
@@ -279,6 +336,24 @@ export const BookPatch = zod
           .int()
           .gt(bookPatchSourcePdfFileIdOneExclusiveMin)
           .max(bookPatchSourcePdfFileIdOneMax),
+        zod.null(),
+      ])
+      .optional(),
+    series_id: zod
+      .union([
+        zod
+          .int()
+          .gt(bookPatchSeriesIdOneExclusiveMin)
+          .max(bookPatchSeriesIdOneMax),
+        zod.null(),
+      ])
+      .optional(),
+    series_index: zod
+      .union([
+        zod
+          .int()
+          .gt(bookPatchSeriesIndexOneExclusiveMin)
+          .max(bookPatchSeriesIndexOneMax),
         zod.null(),
       ])
       .optional(),
@@ -677,6 +752,15 @@ export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError =
   zod.input<typeof ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError>
 export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpErrorOutput =
   zod.output<typeof ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError>
+export const ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict = zod.object({
+  code: zod.enum(['series_not_found', 'series_order_conflict']),
+  message: zod.string(),
+})
+export type ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict = zod.input<
+  typeof ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict
+>
+export type ErrorDetailLiteralSeriesNotFoundSeriesOrderConflictOutput =
+  zod.output<typeof ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict>
 export const ErrorDetailLiteralValidationError = zod.object({
   code: zod.literal('validation_error').meta({ title: 'Code' }),
   message: zod.string(),
@@ -838,6 +922,69 @@ export const SegmentPage = zod.object({
 })
 export type SegmentPage = zod.input<typeof SegmentPage>
 export type SegmentPageOutput = zod.output<typeof SegmentPage>
+export const seriesCreateTitleMax = 750
+export const SeriesCreate = zod.object({
+  title: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= seriesCreateTitleMax, {
+      error: 'String has too many Unicode code points',
+    }),
+})
+export type SeriesCreate = zod.input<typeof SeriesCreate>
+export type SeriesCreateOutput = zod.output<typeof SeriesCreate>
+export const seriesDetailIdExclusiveMin = 0
+export const seriesDetailTitleRegExp = new RegExp('^[^\\x00]*$')
+export const SeriesDetail = zod.object({
+  id: zod.int().gt(seriesDetailIdExclusiveMin),
+  title: zod.string().regex(seriesDetailTitleRegExp),
+  created_at: zod.iso.datetime({ offset: true }),
+  updated_at: zod.iso.datetime({ offset: true }),
+  book_ids: zod.array(zod.int()),
+})
+export type SeriesDetail = zod.input<typeof SeriesDetail>
+export type SeriesDetailOutput = zod.output<typeof SeriesDetail>
+export const SeriesErrorResponse = zod
+  .object({
+    error: ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict,
+  })
+  .describe('HTTP error envelope for series operations.')
+export type SeriesErrorResponse = zod.input<typeof SeriesErrorResponse>
+export type SeriesErrorResponseOutput = zod.output<typeof SeriesErrorResponse>
+export const seriesResponseIdExclusiveMin = 0
+export const seriesResponseTitleRegExp = new RegExp('^[^\\x00]*$')
+export const SeriesResponse = zod.object({
+  id: zod.int().gt(seriesResponseIdExclusiveMin),
+  title: zod.string().regex(seriesResponseTitleRegExp),
+  created_at: zod.iso.datetime({ offset: true }),
+  updated_at: zod.iso.datetime({ offset: true }),
+})
+export type SeriesResponse = zod.input<typeof SeriesResponse>
+export type SeriesResponseOutput = zod.output<typeof SeriesResponse>
+export const SeriesList = zod.object({
+  items: zod.array(SeriesResponse),
+  limit: zod.int(),
+  offset: zod.int(),
+  total: zod.int(),
+})
+export type SeriesList = zod.input<typeof SeriesList>
+export type SeriesListOutput = zod.output<typeof SeriesList>
+export const seriesPatchTitleMax = 750
+export const SeriesPatch = zod.object({
+  title: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= seriesPatchTitleMax, {
+      error: 'String has too many Unicode code points',
+    })
+    .optional(),
+})
+export type SeriesPatch = zod.input<typeof SeriesPatch>
+export type SeriesPatchOutput = zod.output<typeof SeriesPatch>
 export const ValidationIssue = zod.object({
   location: zod.array(zod.union([zod.string(), zod.int()])),
   code: zod.string(),
@@ -867,7 +1014,10 @@ export type CreateApiV1Book201Response = zod.input<
 export type CreateApiV1Book201ResponseOutput = zod.output<
   typeof CreateApiV1Book201Response
 >
-export const CreateApiV1Book404Response = FileErrorResponse
+export const CreateApiV1Book404Response = zod.union([
+  FileErrorResponse,
+  SeriesErrorResponse,
+])
 export type CreateApiV1Book404Response = zod.input<
   typeof CreateApiV1Book404Response
 >
@@ -881,7 +1031,10 @@ export type CreateApiV1Book405Response = zod.input<
 export type CreateApiV1Book405ResponseOutput = zod.output<
   typeof CreateApiV1Book405Response
 >
-export const CreateApiV1Book409Response = BookErrorResponse
+export const CreateApiV1Book409Response = zod.union([
+  BookErrorResponse,
+  SeriesErrorResponse,
+])
 export type CreateApiV1Book409Response = zod.input<
   typeof CreateApiV1Book409Response
 >
@@ -1028,6 +1181,7 @@ export type PatchApiV1Book200ResponseOutput = zod.output<
 export const PatchApiV1Book404Response = zod.union([
   BookErrorResponse,
   FileErrorResponse,
+  SeriesErrorResponse,
 ])
 export type PatchApiV1Book404Response = zod.input<
   typeof PatchApiV1Book404Response
@@ -1042,7 +1196,10 @@ export type PatchApiV1Book405Response = zod.input<
 export type PatchApiV1Book405ResponseOutput = zod.output<
   typeof PatchApiV1Book405Response
 >
-export const PatchApiV1Book409Response = BookErrorResponse
+export const PatchApiV1Book409Response = zod.union([
+  BookErrorResponse,
+  SeriesErrorResponse,
+])
 export type PatchApiV1Book409Response = zod.input<
   typeof PatchApiV1Book409Response
 >
@@ -1102,6 +1259,16 @@ export type DeleteApiV1Book405Response = zod.input<
 export type DeleteApiV1Book405ResponseOutput = zod.output<
   typeof DeleteApiV1Book405Response
 >
+export const DeleteApiV1Book409Response = zod.union([
+  BookErrorResponse,
+  SeriesErrorResponse,
+])
+export type DeleteApiV1Book409Response = zod.input<
+  typeof DeleteApiV1Book409Response
+>
+export type DeleteApiV1Book409ResponseOutput = zod.output<
+  typeof DeleteApiV1Book409Response
+>
 export const DeleteApiV1Book422Response = ValidationErrorResponse
 export type DeleteApiV1Book422Response = zod.input<
   typeof DeleteApiV1Book422Response
@@ -1115,6 +1282,327 @@ export type DeleteApiV1Book500Response = zod.input<
 >
 export type DeleteApiV1Book500ResponseOutput = zod.output<
   typeof DeleteApiV1Book500Response
+>
+/**
+ * @summary Create Series
+ */
+export const CreateApiV1SeriesBody = SeriesCreate
+export type CreateApiV1SeriesBody = zod.input<typeof CreateApiV1SeriesBody>
+export type CreateApiV1SeriesBodyOutput = zod.output<
+  typeof CreateApiV1SeriesBody
+>
+export const CreateApiV1Series201Response = SeriesResponse
+export type CreateApiV1Series201Response = zod.input<
+  typeof CreateApiV1Series201Response
+>
+export type CreateApiV1Series201ResponseOutput = zod.output<
+  typeof CreateApiV1Series201Response
+>
+export const CreateApiV1Series405Response = HttpErrorResponse
+export type CreateApiV1Series405Response = zod.input<
+  typeof CreateApiV1Series405Response
+>
+export type CreateApiV1Series405ResponseOutput = zod.output<
+  typeof CreateApiV1Series405Response
+>
+export const CreateApiV1Series422Response = ValidationErrorResponse
+export type CreateApiV1Series422Response = zod.input<
+  typeof CreateApiV1Series422Response
+>
+export type CreateApiV1Series422ResponseOutput = zod.output<
+  typeof CreateApiV1Series422Response
+>
+export const CreateApiV1Series500Response = InternalErrorResponse
+export type CreateApiV1Series500Response = zod.input<
+  typeof CreateApiV1Series500Response
+>
+export type CreateApiV1Series500ResponseOutput = zod.output<
+  typeof CreateApiV1Series500Response
+>
+/**
+ * @summary List Series
+ */
+export const listApiV1SeriesQueryLimitDefault = 50
+export const listApiV1SeriesQueryLimitMax = 100
+export const listApiV1SeriesQueryOffsetDefault = 0
+export const listApiV1SeriesQueryOffsetMin = 0
+export const listApiV1SeriesQueryOffsetMax = 9223372036854776000
+export const ListApiV1SeriesQueryParams = zod.object({
+  limit: zod
+    .int()
+    .min(1)
+    .max(listApiV1SeriesQueryLimitMax)
+    .default(listApiV1SeriesQueryLimitDefault),
+  offset: zod
+    .int()
+    .min(listApiV1SeriesQueryOffsetMin)
+    .max(listApiV1SeriesQueryOffsetMax)
+    .default(listApiV1SeriesQueryOffsetDefault),
+})
+export type ListApiV1SeriesQueryParams = zod.input<
+  typeof ListApiV1SeriesQueryParams
+>
+export type ListApiV1SeriesQueryParamsOutput = zod.output<
+  typeof ListApiV1SeriesQueryParams
+>
+export const ListApiV1Series200Response = SeriesList
+export type ListApiV1Series200Response = zod.input<
+  typeof ListApiV1Series200Response
+>
+export type ListApiV1Series200ResponseOutput = zod.output<
+  typeof ListApiV1Series200Response
+>
+export const ListApiV1Series405Response = HttpErrorResponse
+export type ListApiV1Series405Response = zod.input<
+  typeof ListApiV1Series405Response
+>
+export type ListApiV1Series405ResponseOutput = zod.output<
+  typeof ListApiV1Series405Response
+>
+export const ListApiV1Series422Response = ValidationErrorResponse
+export type ListApiV1Series422Response = zod.input<
+  typeof ListApiV1Series422Response
+>
+export type ListApiV1Series422ResponseOutput = zod.output<
+  typeof ListApiV1Series422Response
+>
+export const ListApiV1Series500Response = InternalErrorResponse
+export type ListApiV1Series500Response = zod.input<
+  typeof ListApiV1Series500Response
+>
+export type ListApiV1Series500ResponseOutput = zod.output<
+  typeof ListApiV1Series500Response
+>
+/**
+ * @summary Get Series
+ */
+export const getApiV1SeriesPathSeriesIdExclusiveMin = 0
+export const getApiV1SeriesPathSeriesIdMax = 9223372036854776000
+export const GetApiV1SeriesParams = zod.object({
+  series_id: zod
+    .int()
+    .gt(getApiV1SeriesPathSeriesIdExclusiveMin)
+    .max(getApiV1SeriesPathSeriesIdMax),
+})
+export type GetApiV1SeriesParams = zod.input<typeof GetApiV1SeriesParams>
+export type GetApiV1SeriesParamsOutput = zod.output<typeof GetApiV1SeriesParams>
+export const GetApiV1Series200Response = SeriesDetail
+export type GetApiV1Series200Response = zod.input<
+  typeof GetApiV1Series200Response
+>
+export type GetApiV1Series200ResponseOutput = zod.output<
+  typeof GetApiV1Series200Response
+>
+export const GetApiV1Series404Response = SeriesErrorResponse
+export type GetApiV1Series404Response = zod.input<
+  typeof GetApiV1Series404Response
+>
+export type GetApiV1Series404ResponseOutput = zod.output<
+  typeof GetApiV1Series404Response
+>
+export const GetApiV1Series405Response = HttpErrorResponse
+export type GetApiV1Series405Response = zod.input<
+  typeof GetApiV1Series405Response
+>
+export type GetApiV1Series405ResponseOutput = zod.output<
+  typeof GetApiV1Series405Response
+>
+export const GetApiV1Series422Response = ValidationErrorResponse
+export type GetApiV1Series422Response = zod.input<
+  typeof GetApiV1Series422Response
+>
+export type GetApiV1Series422ResponseOutput = zod.output<
+  typeof GetApiV1Series422Response
+>
+export const GetApiV1Series500Response = InternalErrorResponse
+export type GetApiV1Series500Response = zod.input<
+  typeof GetApiV1Series500Response
+>
+export type GetApiV1Series500ResponseOutput = zod.output<
+  typeof GetApiV1Series500Response
+>
+/**
+ * @summary Patch Series
+ */
+export const patchApiV1SeriesPathSeriesIdExclusiveMin = 0
+export const patchApiV1SeriesPathSeriesIdMax = 9223372036854776000
+export const PatchApiV1SeriesParams = zod.object({
+  series_id: zod
+    .int()
+    .gt(patchApiV1SeriesPathSeriesIdExclusiveMin)
+    .max(patchApiV1SeriesPathSeriesIdMax),
+})
+export type PatchApiV1SeriesParams = zod.input<typeof PatchApiV1SeriesParams>
+export type PatchApiV1SeriesParamsOutput = zod.output<
+  typeof PatchApiV1SeriesParams
+>
+export const PatchApiV1SeriesBody = SeriesPatch
+export type PatchApiV1SeriesBody = zod.input<typeof PatchApiV1SeriesBody>
+export type PatchApiV1SeriesBodyOutput = zod.output<typeof PatchApiV1SeriesBody>
+export const PatchApiV1Series200Response = SeriesResponse
+export type PatchApiV1Series200Response = zod.input<
+  typeof PatchApiV1Series200Response
+>
+export type PatchApiV1Series200ResponseOutput = zod.output<
+  typeof PatchApiV1Series200Response
+>
+export const PatchApiV1Series404Response = SeriesErrorResponse
+export type PatchApiV1Series404Response = zod.input<
+  typeof PatchApiV1Series404Response
+>
+export type PatchApiV1Series404ResponseOutput = zod.output<
+  typeof PatchApiV1Series404Response
+>
+export const PatchApiV1Series405Response = HttpErrorResponse
+export type PatchApiV1Series405Response = zod.input<
+  typeof PatchApiV1Series405Response
+>
+export type PatchApiV1Series405ResponseOutput = zod.output<
+  typeof PatchApiV1Series405Response
+>
+export const PatchApiV1Series422Response = ValidationErrorResponse
+export type PatchApiV1Series422Response = zod.input<
+  typeof PatchApiV1Series422Response
+>
+export type PatchApiV1Series422ResponseOutput = zod.output<
+  typeof PatchApiV1Series422Response
+>
+export const PatchApiV1Series500Response = InternalErrorResponse
+export type PatchApiV1Series500Response = zod.input<
+  typeof PatchApiV1Series500Response
+>
+export type PatchApiV1Series500ResponseOutput = zod.output<
+  typeof PatchApiV1Series500Response
+>
+/**
+ * @summary Delete Series
+ */
+export const deleteApiV1SeriesPathSeriesIdExclusiveMin = 0
+export const deleteApiV1SeriesPathSeriesIdMax = 9223372036854776000
+export const DeleteApiV1SeriesParams = zod.object({
+  series_id: zod
+    .int()
+    .gt(deleteApiV1SeriesPathSeriesIdExclusiveMin)
+    .max(deleteApiV1SeriesPathSeriesIdMax),
+})
+export type DeleteApiV1SeriesParams = zod.input<typeof DeleteApiV1SeriesParams>
+export type DeleteApiV1SeriesParamsOutput = zod.output<
+  typeof DeleteApiV1SeriesParams
+>
+export const DeleteApiV1Series204Response = zod.void()
+export type DeleteApiV1Series204Response = zod.input<
+  typeof DeleteApiV1Series204Response
+>
+export type DeleteApiV1Series204ResponseOutput = zod.output<
+  typeof DeleteApiV1Series204Response
+>
+export const DeleteApiV1Series404Response = SeriesErrorResponse
+export type DeleteApiV1Series404Response = zod.input<
+  typeof DeleteApiV1Series404Response
+>
+export type DeleteApiV1Series404ResponseOutput = zod.output<
+  typeof DeleteApiV1Series404Response
+>
+export const DeleteApiV1Series405Response = HttpErrorResponse
+export type DeleteApiV1Series405Response = zod.input<
+  typeof DeleteApiV1Series405Response
+>
+export type DeleteApiV1Series405ResponseOutput = zod.output<
+  typeof DeleteApiV1Series405Response
+>
+export const DeleteApiV1Series422Response = ValidationErrorResponse
+export type DeleteApiV1Series422Response = zod.input<
+  typeof DeleteApiV1Series422Response
+>
+export type DeleteApiV1Series422ResponseOutput = zod.output<
+  typeof DeleteApiV1Series422Response
+>
+export const DeleteApiV1Series500Response = InternalErrorResponse
+export type DeleteApiV1Series500Response = zod.input<
+  typeof DeleteApiV1Series500Response
+>
+export type DeleteApiV1Series500ResponseOutput = zod.output<
+  typeof DeleteApiV1Series500Response
+>
+/**
+ * @summary Replace Series Books
+ */
+export const replaceApiV1SeriesBooksPathSeriesIdExclusiveMin = 0
+export const replaceApiV1SeriesBooksPathSeriesIdMax = 9223372036854776000
+export const ReplaceApiV1SeriesBooksParams = zod.object({
+  series_id: zod
+    .int()
+    .gt(replaceApiV1SeriesBooksPathSeriesIdExclusiveMin)
+    .max(replaceApiV1SeriesBooksPathSeriesIdMax),
+})
+export type ReplaceApiV1SeriesBooksParams = zod.input<
+  typeof ReplaceApiV1SeriesBooksParams
+>
+export type ReplaceApiV1SeriesBooksParamsOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooksParams
+>
+export const replaceApiV1SeriesBooksBodyExclusiveMin = 0
+export const replaceApiV1SeriesBooksBodyMax = 9223372036854776000
+export const ReplaceApiV1SeriesBooksBodyItem = zod
+  .int()
+  .gt(replaceApiV1SeriesBooksBodyExclusiveMin)
+  .max(replaceApiV1SeriesBooksBodyMax)
+export type ReplaceApiV1SeriesBooksBodyItem = zod.input<
+  typeof ReplaceApiV1SeriesBooksBodyItem
+>
+export type ReplaceApiV1SeriesBooksBodyItemOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooksBodyItem
+>
+export const ReplaceApiV1SeriesBooksBody = zod.array(
+  ReplaceApiV1SeriesBooksBodyItem,
+)
+export type ReplaceApiV1SeriesBooksBody = zod.input<
+  typeof ReplaceApiV1SeriesBooksBody
+>
+export type ReplaceApiV1SeriesBooksBodyOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooksBody
+>
+export const ReplaceApiV1SeriesBooks200Response = SeriesDetail
+export type ReplaceApiV1SeriesBooks200Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks200Response
+>
+export type ReplaceApiV1SeriesBooks200ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks200Response
+>
+export const ReplaceApiV1SeriesBooks404Response = SeriesErrorResponse
+export type ReplaceApiV1SeriesBooks404Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks404Response
+>
+export type ReplaceApiV1SeriesBooks404ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks404Response
+>
+export const ReplaceApiV1SeriesBooks405Response = HttpErrorResponse
+export type ReplaceApiV1SeriesBooks405Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks405Response
+>
+export type ReplaceApiV1SeriesBooks405ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks405Response
+>
+export const ReplaceApiV1SeriesBooks409Response = SeriesErrorResponse
+export type ReplaceApiV1SeriesBooks409Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks409Response
+>
+export type ReplaceApiV1SeriesBooks409ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks409Response
+>
+export const ReplaceApiV1SeriesBooks422Response = ValidationErrorResponse
+export type ReplaceApiV1SeriesBooks422Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks422Response
+>
+export type ReplaceApiV1SeriesBooks422ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks422Response
+>
+export const ReplaceApiV1SeriesBooks500Response = InternalErrorResponse
+export type ReplaceApiV1SeriesBooks500Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks500Response
+>
+export type ReplaceApiV1SeriesBooks500ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks500Response
 >
 /**
  * Validate and publish once (200); dry-run checks the same preconditions without writes.

@@ -10,6 +10,35 @@ import { book } from '../api-client/fixtures/book'
 afterEach(cleanup)
 
 describe('Book', () => {
+  it('shows the series and its book number below the title', () => {
+    render(<Book book={book} isSelected={false} onSelect={vi.fn()} />)
+
+    const title = screen.getByRole('heading', { name: book.title })
+    expect(title.nextElementSibling).toHaveTextContent(
+      'Collected works · Book 2',
+    )
+    expect(title.nextElementSibling).toBeVisible()
+  })
+
+  it('shows the title without a series line for a standalone book', () => {
+    render(
+      <Book
+        book={{
+          ...book,
+          series_id: null,
+          series_title: null,
+          series_index: null,
+        }}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    )
+
+    const title = screen.getByRole('heading', { name: book.title })
+    expect(title).toBeVisible()
+    expect(title.nextElementSibling).toBeNull()
+  })
+
   it.each([
     ['ಗೀತಾಭಾವಧಾರೆ', 'ಗೀ'],
     ['ರುದ್ರ ಚಮಕ', 'ರುಚ'],

@@ -67,6 +67,12 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
       <h3 className="mt-5 text-xl font-bold leading-snug wrap-anywhere">
         {book.title}
       </h3>
+      {book.series_title && (
+        <p className="mt-1 text-base leading-snug text-ink wrap-anywhere">
+          {book.series_title}
+          {book.series_index != null && ` · Book ${book.series_index}`}
+        </p>
+      )}
     </article>
   )
 }

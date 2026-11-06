@@ -46,6 +46,63 @@ const injectedRtkApi = api.injectEndpoints({
         method: 'DELETE',
       }),
     }),
+    createApiV1Series: build.mutation<
+      CreateApiV1SeriesApiResponse,
+      CreateApiV1SeriesApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/series`,
+        method: 'POST',
+        body: queryArg.seriesCreate,
+      }),
+    }),
+    listApiV1Series: build.query<
+      ListApiV1SeriesApiResponse,
+      ListApiV1SeriesApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/series`,
+        params: {
+          limit: queryArg.limit,
+          offset: queryArg.offset,
+        },
+      }),
+    }),
+    getApiV1Series: build.query<
+      GetApiV1SeriesApiResponse,
+      GetApiV1SeriesApiArg
+    >({
+      query: (queryArg) => ({ url: `/api/v1/series/${queryArg.seriesId}` }),
+    }),
+    patchApiV1Series: build.mutation<
+      PatchApiV1SeriesApiResponse,
+      PatchApiV1SeriesApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/series/${queryArg.seriesId}`,
+        method: 'PATCH',
+        body: queryArg.seriesPatch,
+      }),
+    }),
+    deleteApiV1Series: build.mutation<
+      DeleteApiV1SeriesApiResponse,
+      DeleteApiV1SeriesApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/series/${queryArg.seriesId}`,
+        method: 'DELETE',
+      }),
+    }),
+    replaceApiV1SeriesBooks: build.mutation<
+      ReplaceApiV1SeriesBooksApiResponse,
+      ReplaceApiV1SeriesBooksApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/series/${queryArg.seriesId}/books`,
+        method: 'PUT',
+        body: queryArg.bookIds,
+      }),
+    }),
     importApiV1BookContent: build.mutation<
       ImportApiV1BookContentApiResponse,
       ImportApiV1BookContentApiArg
@@ -173,6 +230,38 @@ export type DeleteApiV1BookApiResponse = unknown
 export type DeleteApiV1BookApiArg = {
   bookId: number
 }
+export type CreateApiV1SeriesApiResponse =
+  /** status 201 Successful Response */ SeriesResponse
+export type CreateApiV1SeriesApiArg = {
+  seriesCreate: SeriesCreate
+}
+export type ListApiV1SeriesApiResponse =
+  /** status 200 Successful Response */ SeriesList
+export type ListApiV1SeriesApiArg = {
+  limit?: number
+  offset?: number
+}
+export type GetApiV1SeriesApiResponse =
+  /** status 200 Successful Response */ SeriesDetail
+export type GetApiV1SeriesApiArg = {
+  seriesId: number
+}
+export type PatchApiV1SeriesApiResponse =
+  /** status 200 Successful Response */ SeriesResponse
+export type PatchApiV1SeriesApiArg = {
+  seriesId: number
+  seriesPatch: SeriesPatch
+}
+export type DeleteApiV1SeriesApiResponse = unknown
+export type DeleteApiV1SeriesApiArg = {
+  seriesId: number
+}
+export type ReplaceApiV1SeriesBooksApiResponse =
+  /** status 200 Successful Response */ SeriesDetail
+export type ReplaceApiV1SeriesBooksApiArg = {
+  seriesId: number
+  bookIds: number[]
+}
 export type ImportApiV1BookContentApiResponse =
   /** status 200 Successful Response */ ImportResult
 export type ImportApiV1BookContentApiArg = {
@@ -234,6 +323,9 @@ export type BookResponse = {
   description: string | null
   cover_file_id: number | null
   source_pdf_file_id: number | null
+  series_id: number | null
+  series_title: string | null
+  series_index: number | null
   created_at: string
   updated_at: string
   /** API delivery URL for the linked cover, relative to this origin */
@@ -256,6 +348,13 @@ export type ErrorDetailFileErrorCode = {
 }
 export type FileErrorResponse = {
   error: ErrorDetailFileErrorCode
+}
+export type ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict = {
+  code: 'series_not_found' | 'series_order_conflict'
+  message: string
+}
+export type SeriesErrorResponse = {
+  error: ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict
 }
 export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError = {
   code: 'route_not_found' | 'method_not_allowed' | 'http_error'
@@ -304,6 +403,8 @@ export type BookCreate = {
   description?: string | null
   cover_file_id?: number | null
   source_pdf_file_id?: number | null
+  series_id?: number | null
+  series_index?: number | null
 }
 export type BookList = {
   items: BookResponse[]
@@ -319,6 +420,33 @@ export type BookPatch = {
   description?: string | null
   cover_file_id?: number | null
   source_pdf_file_id?: number | null
+  series_id?: number | null
+  series_index?: number | null
+}
+export type SeriesResponse = {
+  id: number
+  title: string
+  created_at: string
+  updated_at: string
+}
+export type SeriesCreate = {
+  title: string
+}
+export type SeriesList = {
+  items: SeriesResponse[]
+  limit: number
+  offset: number
+  total: number
+}
+export type SeriesDetail = {
+  id: number
+  title: string
+  created_at: string
+  updated_at: string
+  book_ids: number[]
+}
+export type SeriesPatch = {
+  title?: string
 }
 export type ImportResult = {
   dry_run: boolean
@@ -545,6 +673,12 @@ export const {
   useGetApiV1BookQuery,
   usePatchApiV1BookMutation,
   useDeleteApiV1BookMutation,
+  useCreateApiV1SeriesMutation,
+  useListApiV1SeriesQuery,
+  useGetApiV1SeriesQuery,
+  usePatchApiV1SeriesMutation,
+  useDeleteApiV1SeriesMutation,
+  useReplaceApiV1SeriesBooksMutation,
   useImportApiV1BookContentMutation,
   useGetApiV1BookContentQuery,
   usePurgeApiV1BookContentMutation,
