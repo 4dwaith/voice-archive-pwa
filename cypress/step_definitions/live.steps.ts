@@ -442,6 +442,36 @@ Then('Live has not opened or downloaded the book', () => {
   cy.get('@contentReads.all').should('have.length', 0)
 })
 
+When('I ask Live to play the selected passage', () => {
+  cy.then(() => {
+    const position = evidence.toolResults.find(
+      ({ id }) => id === 'selected-position',
+    )?.response.result as {
+      scope: { bookId: number; contentVersion: string }
+      selectedSegmentId: number
+    }
+
+    expect(position.selectedSegmentId).to.be.a('number')
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          {
+            id: 'play-selected',
+            name: 'startPlayback',
+            args: {
+              destination: {
+                ...position.scope,
+                target: 'segment',
+                segmentId: position.selectedSegmentId,
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+})
+
 Given('book content requests are observed', () =>
   cy
     .intercept('GET', /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/)

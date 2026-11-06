@@ -127,7 +127,7 @@ const descriptions = [
   'Open a known book directly by bookId, even without downloaded text or a known contentVersion. The normal reader shows loading and automatically displays text as it downloads; do not download separately first. Preserves normal reading-position restoration. Optional contentVersion requires a matching cached version.',
   'Open a resolved cached section, including nested sections, using IDs from ToC evidence.',
   'Open an exact cached segment at an optional canonical code-point/grapheme boundary offset.',
-  'Read aloud a resolved section/segment or the scoped current Text position. Requires cached root audio/timing. Acceptance is not playback; success closes Live quietly.',
+  'Read aloud a resolved destination. For a selected passage, first read getReadingPosition and use its selectedSegmentId and scope with target="segment". Use target="section" only for a requested whole section, or target="current" for the current Text position. Requires cached root audio/timing. Acceptance is not playback; success closes Live quietly.',
   'Move one previous or next reflowed Text page. Requires Text view; waits for committed layout. True edges do not move.',
 ]
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(

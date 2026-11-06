@@ -287,6 +287,22 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live plays the selected passage in the open book
+    Given a synchronization book with narration after untimed text
+    And a synthetic Live audio provider
+    And its narrated text spans pages
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I focus the text and hide the controls
+    And I select a text segment
+    Then the text segment is selected
+    When Live calls "getReadingPosition" with ID "selected-position"
+    Then tool "selected-position" reports "status" as "ready"
+    When I ask Live to play the selected passage
+    Then Live has released the microphone
+    And turner narration is playing
+
   Scenario: Live opens a cached narration destination and yields to playback
     Given a synchronization book with narration after untimed text
     And a synthetic Live audio provider
