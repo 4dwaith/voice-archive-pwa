@@ -72,7 +72,25 @@ export function createLiveQueries(
       const items = books.slice(offset, offset + 24)
       const nextOffset = offset + items.length
       return {
-        items,
+        items: items.map(
+          ({
+            id,
+            title,
+            author,
+            language,
+            series_id,
+            series_index,
+            series_title,
+          }) => ({
+            id,
+            title,
+            author,
+            language,
+            series_id,
+            series_index,
+            series_title,
+          }),
+        ),
         offset,
         cachedCount: books.length,
         total: catalog?.total ?? null,
@@ -108,7 +126,11 @@ export function createLiveQueries(
             status: complete ? 'ready' : 'partial',
             bookId,
             contentVersion,
-            sections,
+            sections: sections.map(({ id, parent_id, title }) => ({
+              id,
+              parent_id,
+              title,
+            })),
           }
         },
       )
@@ -137,7 +159,21 @@ export function createLiveQueries(
             status: missingIds.length ? 'partial' : 'ready',
             bookId,
             contentVersion,
-            segments,
+            segments: segments.map(
+              ({
+                id,
+                section_id,
+                text_content,
+                narration_start_ms,
+                narration_end_ms,
+              }) => ({
+                id,
+                section_id,
+                text_content,
+                narration_start_ms,
+                narration_end_ms,
+              }),
+            ),
             missingIds,
             complete: content.complete,
           }

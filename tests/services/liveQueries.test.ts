@@ -48,6 +48,15 @@ describe('Live book evidence', () => {
       cachedCount: 25,
       total: 40,
     })
+    expect(first.items[0]).toEqual({
+      id: 1,
+      title: book.title,
+      author: book.author,
+      language: book.language,
+      series_id: book.series_id,
+      series_index: book.series_index,
+      series_title: book.series_title,
+    })
     expect(next.items.map(({ id }) => id)).toEqual([25])
     expect(next.nextOffset).toBeNull()
   })
@@ -96,17 +105,32 @@ describe('Live book evidence', () => {
     })
 
     expect(result.status).toBe(status)
-    expect(
-      result.sections?.map(({ id, parent_id }) => [id, parent_id]),
-    ).toEqual(['missing', 'old'].includes(mode) ? undefined : [[10, null]])
+    expect(result.sections).toEqual(
+      ['missing', 'old'].includes(mode)
+        ? undefined
+        : [{ id: 10, parent_id: null, title: 'Root' }],
+    )
   })
 
   it.each([
-    ['version', 'partial', [1], [99]],
+    [
+      'version',
+      'partial',
+      [
+        {
+          id: 1,
+          section_id: 10,
+          text_content: 'abc',
+          narration_start_ms: null,
+          narration_end_ms: null,
+        },
+      ],
+      [99],
+    ],
     ['old', 'stale', undefined, undefined],
   ] as const)(
     'scopes exact cached IDs to the requested version: %s',
-    async (contentVersion, status, ids, missingIds) => {
+    async (contentVersion, status, segments, missingIds) => {
       await seedContent()
       await database.content.update(7, { complete: false })
       const other = (await database.segments.toArray())[0]
@@ -120,7 +144,7 @@ describe('Live book evidence', () => {
       })
 
       expect(result.status).toBe(status)
-      expect(result.segments?.map(({ id }) => id)).toEqual(ids)
+      expect(result.segments).toEqual(segments)
       expect(result.missingIds).toEqual(missingIds)
     },
   )

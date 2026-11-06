@@ -102,42 +102,46 @@ const schemas = {
   moveTextPage: z.strictObject({ direction: z.enum(['previous', 'next']) }),
 }
 const descriptions = [
-  'Answer a self-contained question from one complete book through the backend. Use a known book_id; no download or open reader is required. Optional effort is low (default), medium or high. Returns grounded answer, limitations and versioned segment references; it does not navigate or start narration.',
+  'Answer a self-contained question from a complete book. Returns answer, limitations and versioned references. No local download needed. Effort defaults to low.',
   'Get manual help for overview, reader, live or turner.',
   'Get current route and reader availability.',
-  'Get current text size, narration speed, Text/PDF setting and reader control visibility.',
+  'Get text size, narration speed, Text/PDF mode and control visibility.',
   'Get canonical anchor and separate selections.',
-  'Get text download progress and committed completeness for a book.',
-  'Get requested and reported narration state, cue and error.',
-  'List saved book metadata in pages; follow nextOffset. A partial saved catalog does not establish that other books do not exist.',
-  'Read saved book metadata and cached content identity. Missing downloaded content is unavailable; this query never downloads.',
-  'Read cached ordered flat sections with parent IDs and first-segment source keys. Reports partial, stale or unavailable local content; never downloads or opens a book.',
-  'Read exact cached segment IDs only. Partial results report missingIds and cache completeness without downloading text.',
-  'Read exact current (0), previous (-1) or next (1) reflowed Text page in a currently open book. This never moves the reader. Edge, preparing, stale and unavailable are distinct.',
+  'Get book download progress and completeness.',
+  'Get requested/observed narration state, cue and error.',
+  'List saved book identities; follow nextOffset. A partial catalog cannot establish absence. Use getBookInfo for details.',
+  'Get saved book metadata and cached content identity; never downloads.',
+  'Get cached ordered sections: id, parent_id and title. Reports ready/partial/stale/unavailable; never downloads or opens.',
+  'Get exact cached segments: id, section_id, plain text and narration times. Reports missingIds/completeness; never downloads.',
+  'Read current (0), previous (-1) or next (1) Text page without moving. Reports edge/preparing/stale/unavailable.',
   'End Live immediately, preserving continuation. No farewell required.',
   'Go to the library using app navigation.',
-  'Download book text in the background without opening it. Use openBook instead when the user wants to read it. Completion does not trigger another assistant turn; do not promise notification or a later action. Ask the user to ask again if further queries are needed after downloading.',
+  'Background text download only; use openBook to read. No follow-up turn on completion: do not promise later actions/notification.',
   'Refresh the shared library catalog.',
-  'Set text size from 100 to 500 percent in steps of 12.5, preserving the reading anchor.',
-  'Set the saved narration speed from 0.75 to 2 in steps of 0.05. Defaults to 1; preserves pitch and does not start playback.',
-  'Increase (faster) or decrease (slower) saved narration speed by 0.05, bounded to 0.75 through 2.',
-  'Toggle visibility of the open reader header and reading controls. Read getReaderSettings first when the user asks to show or hide them.',
-  'Set the open book view to text or pdf; PDF requires an available source file.',
-  'Select or clear an exact segment in the active book/version without navigation or playback.',
-  'Open a known book directly by bookId, even without downloaded text or a known contentVersion. The normal reader shows loading and automatically displays text as it downloads; do not download separately first. Preserves normal reading-position restoration. Optional contentVersion requires a matching cached version.',
-  'Open a resolved cached section, including nested sections, using IDs from ToC evidence.',
-  'Open an exact cached segment at an optional canonical code-point/grapheme boundary offset.',
-  'Read aloud a resolved destination. For a selected passage, first read getReadingPosition and use its selectedSegmentId and scope with target="segment". Use target="section" only for a requested whole section, or target="current" for the current Text position. Requires cached root audio/timing. Acceptance is not playback; success closes Live quietly.',
-  'Move one previous or next reflowed Text page. Requires Text view; waits for committed layout. True edges do not move.',
+  'Set text size: 100–500%, step 12.5; preserves position.',
+  'Set narration speed: 0.75–2, step 0.05, default 1. Preserves pitch; does not play.',
+  'Change narration speed by 0.05, bounded to 0.75–2.',
+  'Toggle reader controls. For show/hide requests, first read getReaderSettings.',
+  'Set Text/PDF mode; PDF requires a source file.',
+  'Select/clear a segment in the active book/version; does not move or play.',
+  'Open known bookId; automatically downloads missing text and restores position. Do not download separately. Optional contentVersion requires a cached match.',
+  'Open a cached section, including nested sections, using ToC IDs.',
+  'Open a cached segment at an optional code-point/grapheme boundary offset.',
+  'Read aloud: selected passage uses getReadingPosition.selectedSegmentId and scope with target="segment"; target="section" is a whole section; target="current" is the Text position. Requires cached audio/timing. Acceptance is not playback; success closes Live.',
+  'Move one Text page; waits for layout. Edges do not move.',
 ]
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(
   schemas,
-).map(([name, schema], index) => ({
-  name,
-  description: descriptions[index],
-  behavior: Behavior.BLOCKING,
-  parametersJsonSchema: z.toJSONSchema(schema),
-}))
+).map(([name, schema], index) => {
+  const parameters = z.toJSONSchema(schema)
+  delete parameters.$schema
+  return {
+    name,
+    description: descriptions[index],
+    behavior: Behavior.BLOCKING,
+    parametersJsonSchema: parameters,
+  }
+})
 
 export type LiveEffectReceipts = Record<string, string>
 type ToolResponse = Record<string, unknown>
