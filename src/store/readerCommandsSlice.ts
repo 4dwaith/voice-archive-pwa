@@ -1,29 +1,40 @@
 import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
-import type { ReaderScope } from '../models/reader'
 
-export type ReaderDestination = ReaderScope &
-  (
-    | { target: 'current' }
-    | { target: 'section'; sectionId: number }
-    | { target: 'segment'; segmentId: number; offset?: number }
-  )
+export type ReaderDestination = { bookId: number; contentVersion?: string } & (
+  | { target: 'current' }
+  | { target: 'section'; sectionId: number }
+  | { target: 'segment'; segmentId: number; offset?: number }
+)
 
 export type ReaderCommand =
   | { kind: 'goHome' | 'refreshLibrary' }
-  | { kind: 'downloadBook'; bookId: number }
-  | { kind: 'setPlaybackSpeed'; rate: number }
-  | { kind: 'adjustPlaybackSpeed'; direction: 'slower' | 'faster' }
-  | { kind: 'toggleReaderControls' }
-  | { kind: 'setTextSize'; percent: number }
-  | { kind: 'setViewMode'; mode: 'text' | 'pdf' }
-  | ({ kind: 'selectSegment'; segmentId: number | null } & ReaderScope)
+  | {
+      kind: 'updateReaderSettings'
+      textSize?: number
+      playbackSpeed?: number
+      controlsVisible?: boolean
+      viewMode?: 'text' | 'pdf'
+    }
+  | {
+      kind: 'selectSegment'
+      bookId: number
+      segmentId: number | null
+      contentVersion?: string
+    }
   | { kind: 'openBook'; bookId: number; contentVersion?: string }
-  | ({ kind: 'navigateToSection'; sectionId: number } & ReaderScope)
-  | ({
+  | {
+      kind: 'navigateToSection'
+      bookId: number
+      sectionId: number
+      contentVersion?: string
+    }
+  | {
       kind: 'navigateToSegment'
+      bookId: number
       segmentId: number
       offset?: number
-    } & ReaderScope)
+      contentVersion?: string
+    }
   | { kind: 'startPlayback'; destination: ReaderDestination }
   | { kind: 'moveTextPage'; direction: 'previous' | 'next' }
 

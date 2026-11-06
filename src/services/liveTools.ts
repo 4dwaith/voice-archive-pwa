@@ -5,7 +5,6 @@ import {
   type FunctionResponse,
 } from '@google/genai'
 import { z } from 'zod'
-import { AskRequest } from '../api-client/generated/schemas'
 import {
   TEXT_SIZE_BASE,
   TEXT_SIZE_INCREMENT,
@@ -17,45 +16,33 @@ import { type createLiveQueries } from './liveQueries'
 
 const noArguments = z.strictObject({})
 const integerId = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-const versionedBook = { bookId: integerId, contentVersion: z.uuid() }
 const sectionTarget = {
-  ...versionedBook,
+  bookId: integerId,
   sectionId: integerId,
 }
 const segmentTarget = {
-  ...versionedBook,
+  bookId: integerId,
   segmentId: integerId,
-  offset: z
-    .number()
-    .int()
-    .nonnegative()
-    .max(Number.MAX_SAFE_INTEGER)
-    .optional(),
+  offset: integerId.optional(),
 }
-const schemas = {
-  ask_library: AskRequest.extend({ book_id: integerId.positive() }).strict(),
+
+export const liveToolSchemas = {
+  ask_library: z.strictObject({
+    bookId: integerId.positive(),
+    query: z.string().trim().min(1),
+    effort: z.enum(['low', 'medium', 'high']).optional(),
+  }),
   getAppHelp: z.strictObject({
     topic: z.enum(['overview', 'reader', 'live', 'turner']),
   }),
-  getAppLocation: noArguments,
-  getReaderSettings: noArguments,
-  getReadingPosition: noArguments,
-  getBookDownloadState: z.strictObject({
-    bookId: integerId,
-  }),
-  getNarrationState: noArguments,
+  getAppState: noArguments,
   listAvailableBooks: z.strictObject({
-    offset: z
-      .number()
-      .int()
-      .nonnegative()
-      .max(Number.MAX_SAFE_INTEGER)
-      .optional(),
+    offset: integerId.optional(),
   }),
   getBookInfo: z.strictObject({ bookId: integerId }),
-  getBookToc: z.strictObject(versionedBook),
+  getBookToc: z.strictObject({ bookId: integerId }),
   getSegments: z.strictObject({
-    ...versionedBook,
+    bookId: integerId,
     segmentIds: z.array(integerId).min(1),
   }),
   getTextPage: z.strictObject({
@@ -63,77 +50,92 @@ const schemas = {
   }),
   endLiveSession: noArguments,
   goHome: noArguments,
-  downloadBook: z.strictObject({ bookId: integerId }),
   refreshLibrary: noArguments,
-  setTextSize: z.strictObject({
-    percent: z
-      .number()
-      .min(TEXT_SIZE_BASE)
-      .max(TEXT_SIZE_BASE + MAX_TEXT_SIZE_STEP * TEXT_SIZE_INCREMENT)
-      .refine((value) =>
-        Number.isInteger((value - TEXT_SIZE_BASE) / TEXT_SIZE_INCREMENT),
-      ),
-  }),
-  setPlaybackSpeed: z.strictObject({
-    rate: z.number().min(0.75).max(2).refine(isPlaybackSpeed),
-  }),
-  adjustPlaybackSpeed: z.strictObject({
-    direction: z.enum(['slower', 'faster']),
-  }),
-  toggleReaderControls: noArguments,
-  setViewMode: z.strictObject({ mode: z.enum(['text', 'pdf']) }),
+  updateReaderSettings: z
+    .strictObject({
+      textSize: z
+        .number()
+        .min(TEXT_SIZE_BASE)
+        .max(TEXT_SIZE_BASE + MAX_TEXT_SIZE_STEP * TEXT_SIZE_INCREMENT)
+        .refine((value) =>
+          Number.isInteger((value - TEXT_SIZE_BASE) / TEXT_SIZE_INCREMENT),
+        )
+        .optional(),
+      playbackSpeed: z
+        .number()
+        .min(0.75)
+        .max(2)
+        .refine(isPlaybackSpeed)
+        .optional(),
+      controlsVisible: z.boolean().optional(),
+      viewMode: z.enum(['text', 'pdf']).optional(),
+    })
+    .refine(
+      (data) => Object.values(data).some((val) => val !== undefined),
+      'At least one setting must be provided',
+    ),
   selectSegment: z.strictObject({
-    ...versionedBook,
+    bookId: integerId,
     segmentId: integerId.nullable(),
   }),
   openBook: z.strictObject({
     bookId: integerId,
-    contentVersion: z.uuid().optional(),
   }),
   navigateToSection: z.strictObject(sectionTarget),
   navigateToSegment: z.strictObject(segmentTarget),
   startPlayback: z.strictObject({
     destination: z.discriminatedUnion('target', [
-      z.strictObject({ ...versionedBook, target: z.literal('current') }),
+      z.strictObject({ bookId: integerId, target: z.literal('current') }),
       z.strictObject({ ...sectionTarget, target: z.literal('section') }),
       z.strictObject({ ...segmentTarget, target: z.literal('segment') }),
     ]),
   }),
   moveTextPage: z.strictObject({ direction: z.enum(['previous', 'next']) }),
 }
+
 const descriptions = [
-  'Answer a self-contained question from a complete book. Returns answer, limitations and versioned references. No local download needed. Effort defaults to low.',
+  'Answer a self-contained question from a complete book. Returns answer, limitations and references. No local download needed. Effort defaults to low.',
   'Get manual help for overview, reader, live or turner.',
-  'Get current route and reader availability.',
-  'Get text size, narration speed, Text/PDF mode and control visibility.',
-  'Get canonical anchor and separate selections.',
-  'Get book download progress and completeness.',
-  'Get requested/observed narration state, cue and error.',
+  'Get current app location, reader settings, reading position and narration state.',
   'List saved book identities; follow nextOffset. A partial catalog cannot establish absence. Use getBookInfo for details.',
-  'Get saved book metadata and cached content identity; never downloads.',
-  'Get cached ordered sections: id, parent_id and title. Reports ready/partial/stale/unavailable; never downloads or opens.',
+  'Get saved book metadata, cached content identity and download progress; never downloads.',
+  'Get cached ordered sections: id, parent_id and title. Reports ready/partial/unavailable; never downloads or opens.',
   'Get exact cached segments: id, section_id, plain text and narration times. Reports missingIds/completeness; never downloads.',
   'Read current (0), previous (-1) or next (1) Text page without moving. Reports edge/preparing/stale/unavailable.',
   'End Live immediately, preserving continuation. No farewell required.',
   'Go to the library using app navigation.',
-  'Background text download only; use openBook to read. No follow-up turn on completion: do not promise later actions/notification.',
   'Refresh the shared library catalog.',
-  'Set text size: 100–500%, step 12.5; preserves position.',
-  'Set narration speed: 0.75–2, step 0.05, default 1. Preserves pitch; does not play.',
-  'Change narration speed by 0.05, bounded to 0.75–2.',
-  'Toggle reader controls. For show/hide requests, first read getReaderSettings.',
-  'Set Text/PDF mode; PDF requires a source file.',
-  'Select/clear a segment in the active book/version; does not move or play.',
-  'Open known bookId; automatically downloads missing text and restores position. Do not download separately. Optional contentVersion requires a cached match.',
+  'Update reader settings: textSize (100–500%, step 12.5), playbackSpeed (0.75–2, step 0.05), controlsVisible (boolean), or viewMode (text/pdf).',
+  'Select or clear a segment in the active book; does not move or play.',
+  'Open known bookId; automatically downloads missing text and restores position.',
   'Open a cached section, including nested sections, using ToC IDs.',
-  'Open a cached segment at an optional code-point/grapheme boundary offset.',
-  'Read aloud: selected passage uses getReadingPosition.selectedSegmentId and scope with target="segment"; target="section" is a whole section; target="current" is the Text position. Requires cached audio/timing. Acceptance is not playback; success closes Live.',
+  'Open a cached segment at an optional code-point offset.',
+  'Read aloud: target="segment" plays a segment; target="section" plays a whole section; target="current" plays from the Text position. Requires cached audio/timing. Acceptance is not playback; success closes Live.',
   'Move one Text page; waits for layout. Edges do not move.',
 ]
+
+export function cleanParametersSchema(schema: unknown): unknown {
+  if (!schema || typeof schema !== 'object') return schema
+  if (Array.isArray(schema)) return schema.map(cleanParametersSchema)
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(
+    schema as Record<string, unknown>,
+  )) {
+    if (key === 'pattern') continue
+    if (key === 'additionalProperties') continue
+    if (key === 'maximum' && value === Number.MAX_SAFE_INTEGER) continue
+    result[key] = cleanParametersSchema(value)
+  }
+  return result
+}
+
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(
-  schemas,
+  liveToolSchemas,
 ).map(([name, schema], index) => {
-  const parameters = z.toJSONSchema(schema)
+  const parameters = cleanParametersSchema(z.toJSONSchema(schema)) as Record<
+    string,
+    unknown
+  >
   delete parameters.$schema
   return {
     name,
@@ -197,8 +199,8 @@ export function createLiveTools(
             return
           if (signal.aborted || cancelled.has(id)) return
           let response: Record<string, unknown>
-          const schema = Object.hasOwn(schemas, name)
-            ? schemas[name as keyof typeof schemas]
+          const schema = Object.hasOwn(liveToolSchemas, name)
+            ? liveToolSchemas[name as keyof typeof liveToolSchemas]
             : null
           const parsed = schema?.safeParse(
             call.args === undefined ? {} : call.args,

@@ -11,13 +11,18 @@ import {
 import {
   getReaderAnchor,
   getSelectedSegmentId,
+  getAreControlsVisible,
   openReader,
   closeReader,
   reportLayoutKey,
   selectSegment,
   setReaderAnchor,
 } from '../../src/store/readerSlice'
-import { increaseTextSize } from '../../src/store/textSizeSlice'
+import {
+  increaseTextSize,
+  selectTextSizePercent,
+} from '../../src/store/textSizeSlice'
+import { selectPlaybackSpeed } from '../../src/store/playbackSpeedSlice'
 import { book } from '../api-client/fixtures/book'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 
@@ -27,13 +32,40 @@ describe('Reader commands', () => {
   it('rejects toggling reading controls outside a book', async () => {
     const store = createAppStore()
 
-    store.dispatch(requestReaderCommand({ kind: 'toggleReaderControls' }))
+    store.dispatch(
+      requestReaderCommand({
+        kind: 'updateReaderSettings',
+        controlsVisible: true,
+      }),
+    )
 
     await vi.waitFor(() =>
       expect(getReaderCommandError(store.getState())?.message).toContain(
         'Open a book',
       ),
     )
+  })
+
+  it('updates reader settings when in a book', async () => {
+    await seedContent()
+    const store = createAppStore()
+    store.dispatch(openReader(scope))
+
+    store.dispatch(
+      requestReaderCommand({
+        kind: 'updateReaderSettings',
+        textSize: 150,
+        playbackSpeed: 1.25,
+        controlsVisible: false,
+      }),
+    )
+
+    await vi.waitFor(() => {
+      expect(selectTextSizePercent(store.getState())).toBe(150)
+      expect(selectPlaybackSpeed(store.getState())).toBe(1.25)
+      expect(getAreControlsVisible(store.getState())).toBe(false)
+    })
+    expect(getReaderCommandError(store.getState())).toBeNull()
   })
 
   it('opens an undownloaded library book without a content version', async () => {
@@ -82,7 +114,7 @@ describe('Reader commands', () => {
     { kind: 'navigateToSegment', segmentId: 1, offset: 9 },
     {
       kind: 'startPlayback',
-      destination: { ...scope, target: 'segment', segmentId: 1 },
+      destination: { bookId: 7, target: 'segment', segmentId: 1 },
     },
   ] as const)(
     'rejects unavailable targets before routing: $kind',
@@ -92,7 +124,12 @@ describe('Reader commands', () => {
       const navigate = vi.fn()
       store.registerCommandNavigation(navigate)
 
-      store.dispatch(requestReaderCommand({ ...scope, ...command }))
+      store.dispatch(
+        requestReaderCommand({
+          bookId: 7,
+          ...(command as any),
+        }),
+      )
 
       await vi.waitFor(() =>
         expect(getReaderCommandError(store.getState())).not.toBeNull(),
@@ -117,7 +154,7 @@ describe('Reader commands', () => {
     store.dispatch(
       requestReaderCommand({
         kind: 'navigateToSegment',
-        ...scope,
+        bookId: 7,
         segmentId: 1,
         offset: 1,
       }),
@@ -180,7 +217,11 @@ describe('Reader commands', () => {
       )
 
       store.dispatch(
-        requestReaderCommand({ kind: 'selectSegment', ...scope, segmentId }),
+        requestReaderCommand({
+          kind: 'selectSegment',
+          bookId: 7,
+          segmentId,
+        }),
       )
 
       await vi.waitFor(() =>
@@ -212,7 +253,11 @@ describe('Reader commands', () => {
     store.dispatch(openReader(scope))
 
     store.dispatch(
-      requestReaderCommand({ kind: 'selectSegment', ...scope, segmentId: 1 }),
+      requestReaderCommand({
+        kind: 'selectSegment',
+        bookId: 7,
+        segmentId: 1,
+      }),
     )
     store.dispatch(selectSegment(2))
     await database.segments.toArray()

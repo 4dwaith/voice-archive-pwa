@@ -272,7 +272,7 @@ describe('Live conversation', () => {
     const store = createAppStore()
     const queries = createLiveQueries(store.getState, store.dispatch)
     const pending = Promise.withResolvers<never>()
-    vi.spyOn(queries, 'getBookDownloadState').mockReturnValue(pending.promise)
+    vi.spyOn(queries, 'getBookInfo').mockReturnValue(pending.promise)
     let callbacks!: LiveConnectParameters['callbacks']
     connect.mockImplementation(async (options: LiveConnectParameters) => {
       callbacks = options.callbacks
@@ -288,7 +288,7 @@ describe('Live conversation', () => {
     deliverMessage(callbacks, {
       toolCall: {
         functionCalls: [
-          { id: 'slow', name: 'getBookDownloadState', args: { bookId: 7 } },
+          { id: 'slow', name: 'getBookInfo', args: { bookId: 7 } },
         ],
       },
     })

@@ -13,7 +13,6 @@ import type { ReaderDestination } from './readerCommandsSlice'
 import { booksApi } from '../api-client/resources/booksApi'
 import { database } from '../data/database'
 import { setReaderAudioPlayback } from './readerAudioSlice'
-import { requestBookLoad } from './bookDownloadsSlice'
 import {
   requestReaderCommand,
   reportReaderCommandError,
@@ -26,11 +25,11 @@ import {
   increaseTextSize,
   setTextSizePercent,
 } from './textSizeSlice'
-import { setPlaybackSpeed, adjustPlaybackSpeed } from './playbackSpeedSlice'
+import { setPlaybackSpeed } from './playbackSpeedSlice'
 import type { AppDispatch, RootState } from './store'
 
 async function readCommandTarget(
-  destination: ReaderDestination,
+  destination: ReaderDestination & { contentVersion: string },
   isPlayback: boolean,
 ) {
   const { bookId, contentVersion } = destination
@@ -203,9 +202,6 @@ export function createReaderCommandsListener() {
             navigateToPath(`/books/${command.bookId}`)
             break
           }
-          case 'downloadBook':
-            api.dispatch(requestBookLoad(command.bookId))
-            break
           case 'refreshLibrary': {
             const refresh = api.dispatch(
               booksApi.endpoints.libraryBooks.initiate(undefined, {
@@ -223,62 +219,53 @@ export function createReaderCommandsListener() {
             }
             break
           }
-          case 'setPlaybackSpeed':
-            api.dispatch(setPlaybackSpeed(command.rate))
-            break
-          case 'adjustPlaybackSpeed':
-            api.dispatch(
-              adjustPlaybackSpeed(command.direction === 'faster' ? 1 : -1),
-            )
-            break
-          case 'toggleReaderControls':
-            if (!scope)
-              throw new Error('Open a book before toggling its controls.')
-            api.dispatch(
-              reader.setControlsVisible(
-                !reader.getAreControlsVisible(api.getState()),
-              ),
-            )
-            break
-          case 'setTextSize':
-            api.dispatch(setTextSizePercent(command.percent))
-            break
-          case 'setViewMode': {
-            if (!scope) throw new Error('Open a book before changing its view.')
-            const content = await database.content.get(scope.bookId)
-            if (!isCurrent()) return
-            if (
-              content?.version !== scope.contentVersion ||
-              (command.mode === 'pdf' &&
-                !content.manifest.files.some(
-                  (file) =>
-                    file.kind === 'source_pdf' &&
-                    file.id === content.manifest.source_pdf_file_id,
-                ))
-            )
-              throw new Error('This book has no available matching view.')
-            api.dispatch(reader.setReaderViewMode(command.mode))
+          case 'updateReaderSettings': {
+            if (command.textSize !== undefined) {
+              api.dispatch(setTextSizePercent(command.textSize))
+            }
+            if (command.playbackSpeed !== undefined) {
+              api.dispatch(setPlaybackSpeed(command.playbackSpeed))
+            }
+            if (command.controlsVisible !== undefined) {
+              if (!scope)
+                throw new Error('Open a book before toggling its controls.')
+              api.dispatch(reader.setControlsVisible(command.controlsVisible))
+            }
+            if (command.viewMode !== undefined) {
+              if (!scope)
+                throw new Error('Open a book before changing its view.')
+              const content = await database.content.get(scope.bookId)
+              if (!isCurrent()) return
+              if (
+                content?.version !== scope.contentVersion ||
+                (command.viewMode === 'pdf' &&
+                  !content.manifest.files.some(
+                    (file) =>
+                      file.kind === 'source_pdf' &&
+                      file.id === content.manifest.source_pdf_file_id,
+                  ))
+              )
+                throw new Error('This book has no available matching view.')
+              api.dispatch(reader.setReaderViewMode(command.viewMode))
+            }
             break
           }
           case 'selectSegment': {
-            if (
-              scope?.bookId !== command.bookId ||
-              scope.contentVersion !== command.contentVersion
-            )
+            if (scope?.bookId !== command.bookId)
+              throw new Error('The requested book version is not open.')
+            const contentVersion =
+              command.contentVersion ?? scope.contentVersion
+            if (scope.contentVersion !== contentVersion)
               throw new Error('The requested book version is not open.')
             const content = await database.content.get(command.bookId)
             const segment =
               command.segmentId === null ||
               (await database.segments
                 .where('[bookId+version+id]')
-                .equals([
-                  command.bookId,
-                  command.contentVersion,
-                  command.segmentId,
-                ])
+                .equals([command.bookId, contentVersion, command.segmentId])
                 .first())
             if (!isCurrent()) return
-            if (content?.version !== command.contentVersion || !segment)
+            if (content?.version !== contentVersion || !segment)
               throw new Error(
                 'The requested segment is unavailable in this book version.',
               )
@@ -288,13 +275,31 @@ export function createReaderCommandsListener() {
           case 'navigateToSection':
           case 'navigateToSegment':
           case 'startPlayback': {
-            const destination: ReaderDestination =
+            const rawDestination =
               command.kind === 'startPlayback'
                 ? command.destination
                 : command.kind === 'navigateToSection'
-                  ? { ...command, target: 'section' }
-                  : { ...command, target: 'segment' }
-            const { bookId, contentVersion } = destination
+                  ? { ...command, target: 'section' as const }
+                  : { ...command, target: 'segment' as const }
+            const { bookId } = rawDestination
+            let contentVersion = rawDestination.contentVersion
+            if (!contentVersion) {
+              if (scope?.bookId === bookId) {
+                contentVersion = scope.contentVersion
+              } else {
+                const content = await database.content.get(bookId)
+                if (!content)
+                  throw new Error(
+                    'The requested book version is unavailable. Download it first.',
+                  )
+                contentVersion = content.version
+              }
+            }
+            const destination: ReaderDestination & { contentVersion: string } =
+              {
+                ...rawDestination,
+                contentVersion,
+              }
             const isSameScope = () => {
               const active = reader.getReaderScope(api.getState())
               return (

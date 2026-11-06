@@ -61,7 +61,7 @@ describe('Live book evidence', () => {
     expect(next.nextOffset).toBeNull()
   })
 
-  it('reads saved identity without opening the reader', async () => {
+  it('reads saved identity and download state without opening the reader', async () => {
     await database.books.put({ ...book, id: 7 })
     const { queries } = createQueries()
 
@@ -69,6 +69,7 @@ describe('Live book evidence', () => {
       book: { ...book, id: 7 },
       contentVersion: null,
       identitySource: 'unavailable',
+      download: { status: 'unavailable', complete: false },
     })
 
     await seedContent()
@@ -76,6 +77,37 @@ describe('Live book evidence', () => {
     expect(await queries.getBookInfo({ bookId: 7 })).toMatchObject({
       contentVersion: 'version',
       identitySource: 'cache',
+      download: { status: 'complete', complete: true },
+    })
+  })
+
+  it('provides consolidated app state across location, settings, position and narration', async () => {
+    const { queries } = createQueries()
+
+    const state = queries.getAppState()
+
+    expect(state).toMatchObject({
+      location: {
+        pathname: '/books/7',
+        bookId: 7,
+        contentVersion: 'version',
+        reader: 'ready',
+      },
+      settings: {
+        textSizePercent: 100,
+        playbackSpeed: 1,
+        areControlsVisible: true,
+        viewMode: 'text',
+      },
+      position: {
+        status: 'ready',
+        scope,
+        anchor: { segmentId: 1, offset: 0 },
+      },
+      narration: {
+        requestedPlayback: null,
+        observed: null,
+      },
     })
   })
 
@@ -100,8 +132,8 @@ describe('Live book evidence', () => {
     const { queries } = createQueries()
 
     const result = await queries.getBookToc({
-      ...scope,
-      contentVersion: mode === 'old' ? 'old' : scope.contentVersion,
+      bookId: scope.bookId,
+      ...(mode === 'old' ? { contentVersion: 'old' } : {}),
     })
 
     expect(result.status).toBe(status)
@@ -138,7 +170,7 @@ describe('Live book evidence', () => {
       const { queries } = createQueries()
 
       const result = await queries.getSegments({
-        ...scope,
+        bookId: scope.bookId,
         contentVersion,
         segmentIds: [1, 99],
       })

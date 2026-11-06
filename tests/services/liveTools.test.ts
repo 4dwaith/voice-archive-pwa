@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createLiveTools,
+  liveToolDeclarations,
   type LiveEffectReceipts,
 } from '../../src/services/liveTools'
 import { createLiveQueries } from '../../src/services/liveQueries'
@@ -22,20 +23,28 @@ function createToolConnection() {
 }
 
 describe('Live tools', () => {
+  it('cleans parameter JSON schemas to strip patterns, bounds, and additionalProperties', () => {
+    const rawDeclarations = JSON.stringify(liveToolDeclarations)
+
+    expect(rawDeclarations).not.toContain('pattern')
+    expect(rawDeclarations).not.toContain('additionalProperties')
+    expect(rawDeclarations).not.toContain('9007199254740991')
+    expect(liveToolDeclarations).toHaveLength(18)
+  })
+
   it.each([
     { name: 'missing' },
-    { name: 'ask_library', args: { book_id: 0, query: 'Why?' } },
-    { name: 'ask_library', args: { book_id: 7, query: ' ' } },
-    { name: 'ask_library', args: { book_id: 7, query: 'Why?', effort: 'max' } },
-    { name: 'ask_library', args: { book_id: 7, query: 'Why?', extra: true } },
-    { name: 'setPlaybackSpeed', args: { rate: 0.7 } },
-    { name: 'setPlaybackSpeed', args: { rate: 2.05 } },
-    { name: 'setPlaybackSpeed', args: { rate: 1.03 } },
-    { name: 'adjustPlaybackSpeed', args: { direction: 'up' } },
-    { name: 'toggleReaderControls', args: { visible: true } },
-    { name: 'setTextSize', args: { percent: 101 } },
+    { name: 'ask_library', args: { bookId: 0, query: 'Why?' } },
+    { name: 'ask_library', args: { bookId: 7, query: ' ' } },
+    { name: 'ask_library', args: { bookId: 7, query: 'Why?', effort: 'max' } },
+    { name: 'ask_library', args: { bookId: 7, query: 'Why?', extra: true } },
+    { name: 'updateReaderSettings', args: {} },
+    { name: 'updateReaderSettings', args: { playbackSpeed: 0.7 } },
+    { name: 'updateReaderSettings', args: { playbackSpeed: 2.05 } },
+    { name: 'updateReaderSettings', args: { playbackSpeed: 1.03 } },
+    { name: 'updateReaderSettings', args: { textSize: 101 } },
     { name: 'getAppHelp', args: { topic: 'unknown' } },
-    { name: 'getBookDownloadState', args: { bookId: -1 } },
+    { name: 'getBookInfo', args: { bookId: -1 } },
     { name: 'endLiveSession', args: { extra: true } },
   ])('rejects invalid calls: $name', async (call) => {
     const { connection, send, stop } = createToolConnection()
@@ -123,7 +132,7 @@ describe('Live tools', () => {
         id: 'answer',
         name: 'ask_library',
         args: {
-          book_id: 7,
+          bookId: 7,
           query: 'Why did the traveller return?',
           effort: 'medium',
         },
@@ -149,19 +158,19 @@ describe('Live tools', () => {
   it('suppresses a cancelled delayed read', async () => {
     const { queries, connection, send } = createToolConnection()
     const pending = Promise.withResolvers<never>()
-    vi.spyOn(queries, 'getBookDownloadState').mockReturnValue(pending.promise)
+    vi.spyOn(queries, 'getBookInfo').mockReturnValue(pending.promise)
     const result = connection.invoke({
       id: 'slow',
-      name: 'getBookDownloadState',
+      name: 'getBookInfo',
       args: { bookId: 7 },
     })
     const duplicate = connection.invoke({
       id: 'slow',
-      name: 'getBookDownloadState',
+      name: 'getBookInfo',
       args: { bookId: 7 },
     })
 
-    expect(queries.getBookDownloadState).toHaveBeenCalledOnce()
+    expect(queries.getBookInfo).toHaveBeenCalledOnce()
 
     connection.cancel(['slow'])
     pending.resolve({} as never)
@@ -174,14 +183,14 @@ describe('Live tools', () => {
     'returns an information error when a query fails: %s',
     async (failure) => {
       const { queries, connection, send } = createToolConnection()
-      vi.spyOn(queries, 'getBookDownloadState').mockImplementation(() => {
+      vi.spyOn(queries, 'getBookInfo').mockImplementation(() => {
         if (failure === 'throw') throw new Error('unavailable')
         return Promise.reject(new Error('unavailable'))
       })
 
       await connection.invoke({
         id: 'failed',
-        name: 'getBookDownloadState',
+        name: 'getBookInfo',
         args: { bookId: 7 },
       })
 

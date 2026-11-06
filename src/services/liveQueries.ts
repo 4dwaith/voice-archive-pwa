@@ -1,6 +1,5 @@
 import { database } from '../data/database'
 import { archiveApi } from '../api-client/archiveApi'
-import type { AskRequest } from '../api-client/generated/schemas'
 import { getContentSections } from '../data/contentRepository'
 import {
   readChapterSegments,
@@ -9,7 +8,6 @@ import {
 import { readSavedLibrary } from '../data/libraryRepository'
 import { locateChapter } from '../hooks/deriveReaderNavigation'
 import { clipPageText, resolveAnchorPage } from '../hooks/resolveAnchorPage'
-import type { ReaderScope } from '../models/reader'
 import { selectBookDownloadState } from '../store/bookDownloadsSlice'
 import {
   getReaderAudioObservation,
@@ -49,11 +47,24 @@ export function createLiveQueries(
   getPath = () => window.location.pathname,
 ) {
   return {
-    async ask_library(args: AskRequest, signal: AbortSignal) {
+    async ask_library(
+      args: {
+        bookId: number
+        query: string
+        effort?: 'low' | 'medium' | 'high'
+      },
+      signal: AbortSignal,
+    ) {
       signal.throwIfAborted()
       const request = dispatch(
         archiveApi.endpoints.askApiV1Library.initiate(
-          { askRequest: args },
+          {
+            askRequest: {
+              book_id: args.bookId,
+              query: args.query,
+              effort: args.effort,
+            },
+          },
           { track: false },
         ),
       )
@@ -67,7 +78,7 @@ export function createLiveQueries(
         request.reset()
       }
     },
-    async listAvailableBooks({ offset = 0 }: { offset?: number }) {
+    async listAvailableBooks({ offset = 0 }: { offset?: number } = {}) {
       const { books, catalog } = await readSavedLibrary()
       const items = books.slice(offset, offset + 24)
       const nextOffset = offset + items.length
@@ -100,15 +111,32 @@ export function createLiveQueries(
     },
     async getBookInfo({ bookId }: { bookId: number }) {
       const book = await database.books.get(bookId)
-      const manifest = (await database.content.get(bookId))?.manifest
+      const content = await database.content.get(bookId)
+      const download = selectBookDownloadState(getState(), bookId)
       return {
         book: book ?? null,
-        contentVersion: manifest?.content_version ?? null,
-        contentState: manifest?.state ?? null,
-        identitySource: manifest ? 'cache' : 'unavailable',
+        contentVersion:
+          content?.version ?? download?.manifest?.content_version ?? null,
+        contentState: content?.manifest?.state ?? null,
+        identitySource: content ? 'cache' : 'unavailable',
+        download: {
+          status:
+            download?.status ??
+            (content?.complete ? 'complete' : 'unavailable'),
+          sectionStoredCount: download?.sectionStoredCount ?? 0,
+          segmentStoredCount: download?.segmentStoredCount ?? 0,
+          error: download?.error ?? null,
+          complete: content?.complete ?? false,
+        },
       }
     },
-    async getBookToc({ bookId, contentVersion }: ReaderScope) {
+    async getBookToc({
+      bookId,
+      contentVersion,
+    }: {
+      bookId: number
+      contentVersion?: string
+    }) {
       return database.transaction(
         'r',
         database.content,
@@ -116,7 +144,12 @@ export function createLiveQueries(
         async () => {
           const content = await database.content.get(bookId)
           if (!content) return { status: 'unavailable' }
-          if (content.version !== contentVersion) return { status: 'stale' }
+          if (
+            contentVersion !== undefined &&
+            content.version !== contentVersion
+          )
+            return { status: 'stale' }
+          const resolvedVersion = content.version
           const sections = await getContentSections(bookId)
           const complete =
             (content.complete ||
@@ -125,7 +158,7 @@ export function createLiveQueries(
           return {
             status: complete ? 'ready' : 'partial',
             bookId,
-            contentVersion,
+            contentVersion: resolvedVersion,
             sections: sections.map(({ id, parent_id, title }) => ({
               id,
               parent_id,
@@ -139,7 +172,11 @@ export function createLiveQueries(
       bookId,
       contentVersion,
       segmentIds,
-    }: ReaderScope & { segmentIds: number[] }) {
+    }: {
+      bookId: number
+      contentVersion?: string
+      segmentIds: number[]
+    }) {
       return database.transaction(
         'r',
         database.content,
@@ -147,10 +184,15 @@ export function createLiveQueries(
         async () => {
           const content = await database.content.get(bookId)
           if (!content) return { status: 'unavailable' }
-          if (content.version !== contentVersion) return { status: 'stale' }
+          if (
+            contentVersion !== undefined &&
+            content.version !== contentVersion
+          )
+            return { status: 'stale' }
+          const resolvedVersion = content.version
           const segments = await database.segments
             .where('[bookId+version+id]')
-            .anyOf(segmentIds.map((id) => [bookId, contentVersion, id]))
+            .anyOf(segmentIds.map((id) => [bookId, resolvedVersion, id]))
             .toArray()
           const missingIds = segmentIds.filter(
             (id) => !segments.some((segment) => segment.id === id),
@@ -158,7 +200,7 @@ export function createLiveQueries(
           return {
             status: missingIds.length ? 'partial' : 'ready',
             bookId,
-            contentVersion,
+            contentVersion: resolvedVersion,
             segments: segments.map(
               ({
                 id,
@@ -301,64 +343,47 @@ export function createLiveQueries(
       topic,
       instructions: appHelp[topic],
     }),
-    getAppLocation() {
+    getAppState() {
       const pathname = getPath()
       const match = /^\/books\/([1-9]\d*)$/.exec(pathname)
       const bookId = match ? Number(match[1]) : null
-      const scope = getReaderScope(getState())
-      return {
-        pathname,
-        bookId,
-        contentVersion: scope?.bookId === bookId ? scope.contentVersion : null,
-        reader:
-          bookId === null
-            ? 'unavailable'
-            : scope?.bookId === bookId
-              ? 'ready'
-              : 'loading',
-      }
-    },
-    getReaderSettings: () => ({
-      textSizePercent: selectTextSizePercent(getState()),
-      playbackSpeed: selectPlaybackSpeed(getState()),
-      areControlsVisible: getReaderScope(getState())
-        ? getAreControlsVisible(getState())
-        : null,
-      viewMode: getReaderViewMode(getState()),
-    }),
-    getReadingPosition() {
       const state = getState()
+      const scope = getReaderScope(state)
       return {
-        status: !getReaderScope(state)
-          ? 'unavailable'
-          : getReaderAnchor(state)
-            ? 'ready'
-            : 'preparing',
-        scope: getReaderScope(state),
-        anchor: getReaderAnchor(state),
-        selectedSectionId: getSelectedSectionId(state),
-        selectedSegmentId: getSelectedSegmentId(state),
+        location: {
+          pathname,
+          bookId,
+          contentVersion:
+            scope?.bookId === bookId ? scope.contentVersion : null,
+          reader:
+            bookId === null
+              ? 'unavailable'
+              : scope?.bookId === bookId
+                ? 'ready'
+                : 'loading',
+        },
+        settings: {
+          textSizePercent: selectTextSizePercent(state),
+          playbackSpeed: selectPlaybackSpeed(state),
+          areControlsVisible: scope ? getAreControlsVisible(state) : null,
+          viewMode: getReaderViewMode(state),
+        },
+        position: {
+          status: !scope
+            ? 'unavailable'
+            : getReaderAnchor(state)
+              ? 'ready'
+              : 'preparing',
+          scope,
+          anchor: getReaderAnchor(state),
+          selectedSectionId: getSelectedSectionId(state),
+          selectedSegmentId: getSelectedSegmentId(state),
+        },
+        narration: {
+          requestedPlayback: getReaderAudioPlaybackRequest(state),
+          observed: getReaderAudioObservation(state),
+        },
       }
     },
-    async getBookDownloadState({ bookId }: { bookId: number }) {
-      const before = selectBookDownloadState(getState(), bookId)
-      const content = await database.content.get(bookId)
-      const download = selectBookDownloadState(getState(), bookId)
-      if (before !== download) return { bookId, status: 'stale' }
-      return {
-        bookId,
-        status: download?.status ?? 'unavailable',
-        contentVersion: download?.manifest?.content_version ?? null,
-        sectionStoredCount: download?.sectionStoredCount ?? 0,
-        segmentStoredCount: download?.segmentStoredCount ?? 0,
-        error: download?.error ?? null,
-        committedVersion: content?.version ?? null,
-        complete: content?.complete ?? false,
-      }
-    },
-    getNarrationState: () => ({
-      requestedPlayback: getReaderAudioPlaybackRequest(getState()),
-      observed: getReaderAudioObservation(getState()),
-    }),
   }
 }
