@@ -1,4 +1,21 @@
 Feature: Live voice conversation
+  Scenario: Published summaries reach Live through normal book refresh
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I use the header Home button
+    And English book summaries are published
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And Live calls "getBookInfo" with ID "summary-book" and arguments '{"bookId":7}'
+    And Live calls "getBookToc" with ID "summary-toc" and arguments '{"bookId":7}'
+    And Live calls "getSegments" with ID "summary-segment" and arguments '{"bookId":7,"segmentIds":[1]}'
+    Then Live receives the refreshed English summaries
+    When I stop Live
+    Then Live has released the microphone
+
   Scenario: A book answer leads to its supporting passage
     Given a synchronization book with a nested destination
     And a synthetic Live audio provider

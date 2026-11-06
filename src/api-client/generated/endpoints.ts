@@ -336,6 +336,7 @@ export type BookResponse = {
   language: string
   author: string | null
   description: string | null
+  summary: string | null
   cover_file_id: number | null
   source_pdf_file_id: number | null
   series_id: number | null
@@ -556,6 +557,7 @@ export type ContentFile = {
   url: string
 }
 export type ContentManifest = {
+  summary: string | null
   state: 'empty' | 'pdf_only' | 'published'
   content_version: string | null
   schema_version: number | null
@@ -576,6 +578,7 @@ export type HttpValidationError = {
   detail?: ValidationError[]
 }
 export type SectionRead = {
+  summary: string | null
   id: number
   source_key: string
   parent_id: number | null
@@ -592,6 +595,7 @@ export type SectionPage = {
   next_offset: number | null
 }
 export type SegmentRead = {
+  summary: string | null
   id: number
   source_key: string
   section_id: number | null

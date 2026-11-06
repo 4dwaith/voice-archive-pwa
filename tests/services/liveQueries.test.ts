@@ -140,7 +140,7 @@ describe('Live book evidence', () => {
     expect(result.sections).toEqual(
       ['missing', 'old'].includes(mode)
         ? undefined
-        : [{ id: 10, parent_id: null, title: 'Root' }],
+        : [{ id: 10, parent_id: null, title: 'Root', summary: null }],
     )
   })
 
@@ -153,6 +153,7 @@ describe('Live book evidence', () => {
           id: 1,
           section_id: 10,
           text_content: 'abc',
+          summary: null,
           narration_start_ms: null,
           narration_end_ms: null,
         },

@@ -34,6 +34,7 @@ const sections: SectionReadOutput[] = [
     title: 'Root',
     sibling_sequence: 0,
     audio_file_id: null,
+    summary: null,
     first_segment_source_key: 'a',
   },
   {
@@ -45,6 +46,7 @@ const sections: SectionReadOutput[] = [
     title: 'Child',
     sibling_sequence: 0,
     audio_file_id: null,
+    summary: null,
     first_segment_source_key: 'a',
   },
 ]
@@ -58,6 +60,7 @@ const segments: SegmentReadOutput[] = ['a', 'b'].map((source_key, index) => ({
   sequence: index * 3,
   kind: 'prose',
   html_content: '<p><em>ಕನ್ನಡ</em><br>text</p>',
+  summary: null,
   text_content: 'ಕನ್ನಡ\ntext',
   language: 'kn',
   regions: [],
@@ -72,6 +75,7 @@ const segments: SegmentReadOutput[] = ['a', 'b'].map((source_key, index) => ({
 // The fake server normally publishes two sections and two text segments, no media.
 const published: ContentManifestOutput = {
   state: 'published',
+  summary: null,
   content_version: version,
   schema_version: 1,
   imported_at: '2026-10-24T00:00:00Z',
@@ -84,6 +88,7 @@ const published: ContentManifestOutput = {
 const empty: ContentManifestOutput = {
   ...published,
   state: 'empty',
+  summary: null,
   content_version: null,
   schema_version: null,
   imported_at: null,

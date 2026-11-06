@@ -59,6 +59,7 @@ function seedBookDatabase() {
       version: 'version',
       complete: true,
       manifest: {
+        summary: null,
         state: 'published',
         content_version: 'version',
         schema_version: 1,
@@ -70,6 +71,7 @@ function seedBookDatabase() {
       },
     })
     await database.segments.put({
+      summary: null,
       ...continuingReaderSegment,
       bookId: 7,
       version: 'version',

@@ -253,6 +253,7 @@ export const BookResponse = zod.object({
       ),
     zod.null(),
   ]),
+  summary: zod.union([zod.string(), zod.null()]),
   cover_file_id: zod.union([
     zod
       .int()
@@ -679,6 +680,7 @@ export const ContentIssueResponse = zod.object({
 export type ContentIssueResponse = zod.input<typeof ContentIssueResponse>
 export type ContentIssueResponseOutput = zod.output<typeof ContentIssueResponse>
 export const ContentManifest = zod.object({
+  summary: zod.union([zod.string(), zod.null()]),
   state: zod.enum(['empty', 'pdf_only', 'published']),
   content_version: zod.union([zod.uuid(), zod.null()]),
   schema_version: zod.union([zod.int(), zod.null()]),
@@ -920,6 +922,7 @@ export const NotReadyResponse = zod.object({
 export type NotReadyResponse = zod.input<typeof NotReadyResponse>
 export type NotReadyResponseOutput = zod.output<typeof NotReadyResponse>
 export const SectionRead = zod.object({
+  summary: zod.union([zod.string(), zod.null()]),
   id: zod.int(),
   source_key: zod.string(),
   parent_id: zod.union([zod.int(), zod.null()]),
@@ -940,6 +943,7 @@ export const SectionPage = zod.object({
 export type SectionPage = zod.input<typeof SectionPage>
 export type SectionPageOutput = zod.output<typeof SectionPage>
 export const SegmentRead = zod.object({
+  summary: zod.union([zod.string(), zod.null()]),
   id: zod.int(),
   source_key: zod.string(),
   section_id: zod.union([zod.int(), zod.null()]),

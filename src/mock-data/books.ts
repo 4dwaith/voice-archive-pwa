@@ -10,6 +10,7 @@ export function makeBookFixture(overrides: Partial<BookResponseOutput> = {}) {
     title: 'A Book',
     language: 'en',
     author: null,
+    summary: null,
     description: null,
     cover_file_id: null,
     source_pdf_file_id: null,

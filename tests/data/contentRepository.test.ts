@@ -27,6 +27,7 @@ function createCachedSection(
     title: `Section ${id}`,
     sibling_sequence: sequence,
     audio_file_id: null,
+    summary: null,
     first_segment_source_key: null,
   }
 }
@@ -38,6 +39,7 @@ async function seedCachedContent(segmentCount = 7) {
     complete: true,
     manifest: {
       state: 'published',
+      summary: null,
       content_version: version,
       schema_version: 1,
       imported_at: '2026-10-23T00:00:00Z',
@@ -72,6 +74,7 @@ async function seedCachedContent(segmentCount = 7) {
       ],
       kind: 'prose',
       html_content: '<p>Some text</p>',
+      summary: null,
       text_content: 'Some text',
       language: null,
       regions: [],

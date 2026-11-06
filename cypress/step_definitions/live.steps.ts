@@ -19,6 +19,34 @@ type AudioEvidence = {
 let evidence: AudioEvidence
 let hasCheckpoints = false
 
+Then('Live receives the refreshed English summaries', () => {
+  cy.wrap(null).should(() => {
+    const results = Object.fromEntries(
+      evidence.toolResults.map(({ id, response }) => [id, response.result]),
+    ) as Record<
+      string,
+      {
+        contentVersion?: string
+        book?: { summary: string }
+        sections?: { summary: string }[]
+        segments?: { summary: string }[]
+      }
+    >
+    expect(results['summary-book']?.book?.summary).to.equal(
+      'A book about the journey home.',
+    )
+    expect(results['summary-book']?.contentVersion).to.equal(
+      '1ac04088-bfcb-44e0-bcdf-ff025c93dcac',
+    )
+    expect(results['summary-toc']?.sections?.[0].summary).to.equal(
+      'A passage about the journey home.',
+    )
+    expect(results['summary-segment']?.segments?.[0].summary).to.equal(
+      'A passage about the journey home.',
+    )
+  })
+})
+
 When('I open the turner test library', () => {
   cy.visit('/')
 })
@@ -133,7 +161,16 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(27)
+          expect(
+            message.setup.tools[0].functionDeclarations.map(
+              (declaration: { name: string }) => declaration.name,
+            ),
+          ).to.include.members([
+            'ask_library',
+            'getBookInfo',
+            'getBookToc',
+            'getSegments',
+          ])
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)

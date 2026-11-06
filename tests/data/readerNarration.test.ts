@@ -77,6 +77,7 @@ describe('Reader narration lookup', () => {
       title: 'Nested',
       kind: 'section',
       audio_file_id: null,
+      summary: null,
       first_segment_source_key: null,
     })
     await database.segments.update([7, 'version', 6], { section_id: 11 })

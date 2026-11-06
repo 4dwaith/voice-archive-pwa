@@ -11,6 +11,7 @@ export const readerBookContent: CachedContent = {
   complete: true,
   manifest: {
     state: 'published',
+    summary: null,
     content_version: 'reader-story-1',
     schema_version: 1,
     imported_at: '2026-10-28T00:00:00Z',
@@ -32,10 +33,12 @@ export const readerBookSection: CachedSection = {
   title: 'Chapter',
   kind: 'chapter',
   audio_file_id: null,
+  summary: null,
   first_segment_source_key: continuingReaderSegment.source_key,
 }
 
 export const readerBookSegment: CachedSegment = {
+  summary: null,
   ...continuingReaderSegment,
   bookId: 91001,
   version: 'reader-story-1',

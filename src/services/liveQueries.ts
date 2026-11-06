@@ -114,7 +114,14 @@ export function createLiveQueries(
       const content = await database.content.get(bookId)
       const download = selectBookDownloadState(getState(), bookId)
       return {
-        book: book ?? null,
+        book: book
+          ? {
+              ...book,
+              summary:
+                // The book may stale, but the content always gets refreshed on opening the book
+                (content ? content.manifest.summary : book.summary) ?? null,
+            }
+          : null,
         contentVersion:
           content?.version ?? download?.manifest?.content_version ?? null,
         contentState: content?.manifest?.state ?? null,
@@ -159,10 +166,11 @@ export function createLiveQueries(
             status: complete ? 'ready' : 'partial',
             bookId,
             contentVersion: resolvedVersion,
-            sections: sections.map(({ id, parent_id, title }) => ({
+            sections: sections.map(({ id, parent_id, title, summary }) => ({
               id,
               parent_id,
               title,
+              summary: summary ?? null,
             })),
           }
         },
@@ -206,12 +214,14 @@ export function createLiveQueries(
                 id,
                 section_id,
                 text_content,
+                summary,
                 narration_start_ms,
                 narration_end_ms,
               }) => ({
                 id,
                 section_id,
                 text_content,
+                summary: summary ?? null,
                 narration_start_ms,
                 narration_end_ms,
               }),

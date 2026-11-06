@@ -29,6 +29,7 @@ export async function seedContent() {
     complete: true,
     manifest: {
       state: 'published',
+      summary: null,
       content_version: 'version',
       schema_version: 1,
       imported_at: '2026-10-28T00:00:00Z',
@@ -50,6 +51,7 @@ export async function seedContent() {
     title: 'Root',
     kind: 'chapter',
     audio_file_id: null,
+    summary: null,
     first_segment_source_key: 'text',
   })
   await database.segments.bulkPut(
@@ -63,6 +65,7 @@ export async function seedContent() {
       root_section_id: 10,
       kind: 'prose' as const,
       html_content: '<p>abc</p>',
+      summary: null,
       text_content: id === 1 ? 'abc' : 'invalid',
       language: null,
       regions: [],

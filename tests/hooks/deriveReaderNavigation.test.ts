@@ -17,6 +17,7 @@ const rootSection: Readonly<CachedSection> = {
   title: 'Root',
   kind: 'chapter',
   audio_file_id: null,
+  summary: null,
   first_segment_source_key: 'text',
 }
 

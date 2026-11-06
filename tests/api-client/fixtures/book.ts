@@ -6,6 +6,7 @@ export const book = {
   title: 'ರುದ್ರ ಚಮಕ',
   language: 'kn',
   author: null,
+  summary: null,
   description: 'ಕನ್ನಡ ಪಠ್ಯ',
   cover_file_id: null,
   source_pdf_file_id: null,

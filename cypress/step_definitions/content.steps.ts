@@ -49,6 +49,7 @@ const section: SectionReadOutput = {
   title: 'Chapter',
   sibling_sequence: 0,
   audio_file_id: null,
+  summary: null,
   first_segment_source_key: 'a',
 }
 const segment: SegmentReadOutput = {
@@ -58,6 +59,7 @@ const segment: SegmentReadOutput = {
   sequence: 0,
   kind: 'prose',
   html_content: '<p><em>ಕನ್ನಡ</em><br>text</p>',
+  summary: null,
   text_content: 'ಕನ್ನಡ\ntext',
   language: 'kn',
   regions: [],
@@ -127,6 +129,7 @@ function mockBook(
           title: 'Sync book',
           language: 'kn',
           author: null,
+          summary: null,
           description: null,
           cover_file_id: options.cover ? 99 : null,
           cover_url: options.cover ? '/api/v1/files/99' : null,
@@ -151,6 +154,7 @@ function mockBook(
   cy.intercept('GET', `${apiUrl()}/api/v1/books/${id}/content`, (request) => {
     const manifest: ContentManifestOutput = {
       state,
+      summary: null,
       content_version: state === 'published' ? currentVersion : null,
       schema_version: state === 'published' ? 1 : null,
       imported_at: state === 'published' ? '2026-10-23T00:00:00Z' : null,
@@ -189,6 +193,7 @@ function mockBook(
                         source_key: `empty-${index}`,
                         sequence: index + 1,
                         title: `Empty chapter ${index + 1}`,
+                        summary: null,
                         first_segment_source_key: null,
                       }))
                     : []),
@@ -202,6 +207,7 @@ function mockBook(
                     title: options.chapters
                       ? 'Second chapter'
                       : 'Nested destination',
+                    summary: null,
                     first_segment_source_key: 'b',
                   },
                 ]
@@ -345,6 +351,7 @@ function prepareBookWithMedia(
     cy.intercept('GET', `${apiUrl()}/api/v1/books/${id}/content`, {
       body: {
         state: 'published',
+        summary: null,
         content_version: version,
         schema_version: 1,
         imported_at: '2026-10-23T00:00:00Z',
@@ -1000,6 +1007,28 @@ When('its published content is imported again', () => {
       currentVersion = response.body.content_version
     })
   })
+})
+
+When('English book summaries are published', () => {
+  currentVersion = nextVersion
+  cy.intercept(
+    'GET',
+    /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/,
+    (request) => {
+      request.on('before:response', (response) => {
+        if (response.body.items) {
+          response.body.items = response.body.items.map(
+            (item: SectionReadOutput | SegmentReadOutput) => ({
+              ...item,
+              summary: 'A passage about the journey home.',
+            }),
+          )
+        } else {
+          response.body.summary = 'A book about the journey home.'
+        }
+      })
+    },
+  )
 })
 Then('reopening shows no text and clears the local dataset', () => {
   cy.reload()
