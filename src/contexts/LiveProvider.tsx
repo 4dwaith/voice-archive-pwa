@@ -1,24 +1,36 @@
-import { useAppNavigate } from '../routing/navigation'
+import { useAppNavigate, useAppLocation } from '../routing/navigation'
 import { LiveContext } from './LiveContext'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useAppStore } from '../store/hooks'
 import {
   getLiveSession,
   initializeLiveSession,
   requestLiveSession,
 } from '../store/liveSlice'
+import { reportCommandRoute } from '../store/readerCommandsSlice'
 import { livePageTurnerBinding } from '../services/pageTurnerBindings'
 
 export function LiveProvider({ children }: { children: ReactNode }) {
   const store = useAppStore()
   const navigate = useAppNavigate()
+  const navigateRef = useRef(navigate)
+
+  useEffect(() => {
+    navigateRef.current = navigate
+  }, [navigate])
+
+  const location = useAppLocation()
+
+  useEffect(() => {
+    store.dispatch(reportCommandRoute(location.pathname))
+  }, [store, location.key, location.pathname])
 
   useEffect(
     () =>
-      store.registerCommandNavigation(() => {
-        void navigate('/')
+      store.registerCommandNavigation((path) => {
+        void navigateRef.current(path)
       }),
-    [store, navigate],
+    [store],
   )
 
   useEffect(() => {

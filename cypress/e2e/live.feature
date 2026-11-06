@@ -211,6 +211,40 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live opens cached nested and exact segment destinations from the library
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I use the header Home button
+    Then I return to the synchronization library
+    When Live calls "navigateToSection" with ID "nested" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","sectionId":2}'
+    Then I see the nested section text
+    When I use the header Home button
+    Then I return to the synchronization library
+    When Live calls "navigateToSegment" with ID "exact" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","segmentId":2,"offset":0}'
+    Then I see the nested section text
+    When I use the header Home button
+    Then I return to the synchronization library
+    When Live calls "openBook" with ID "open" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc"}'
+    Then I see its first reader page
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: Live opens a cached narration destination and yields to playback
+    Given a synchronization book with narration after untimed text
+    And a synthetic Live audio provider
+    And its narrated text spans pages
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I use the header Home button
+    Then I return to the synchronization library
+    When Live calls "startPlayback" with ID "read" and arguments '{"destination":{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","target":"section","sectionId":1}}'
+    Then Live has released the microphone
+    And turner narration is playing
+
   Rule: Playback handoff keeps Live available until narration starts
     Background:
       Given a synchronization book with narration after untimed text

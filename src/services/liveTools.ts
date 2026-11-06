@@ -14,8 +14,22 @@ import type { ReaderCommand } from '../store/readerCommandsSlice'
 import { type createLiveQueries } from './liveQueries'
 
 const noArguments = z.strictObject({})
-const bookId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
-const versionedBook = { bookId, contentVersion: z.uuid() }
+const integerId = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+const versionedBook = { bookId: integerId, contentVersion: z.uuid() }
+const sectionTarget = {
+  ...versionedBook,
+  sectionId: integerId,
+}
+const segmentTarget = {
+  ...versionedBook,
+  segmentId: integerId,
+  offset: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(Number.MAX_SAFE_INTEGER)
+    .optional(),
+}
 const schemas = {
   getAppHelp: z.strictObject({
     topic: z.enum(['overview', 'reader', 'live', 'turner']),
@@ -24,7 +38,7 @@ const schemas = {
   getReaderSettings: noArguments,
   getReadingPosition: noArguments,
   getBookDownloadState: z.strictObject({
-    bookId,
+    bookId: integerId,
   }),
   getNarrationState: noArguments,
   listAvailableBooks: z.strictObject({
@@ -35,18 +49,18 @@ const schemas = {
       .max(Number.MAX_SAFE_INTEGER)
       .optional(),
   }),
-  getBookInfo: z.strictObject({ bookId }),
+  getBookInfo: z.strictObject({ bookId: integerId }),
   getBookToc: z.strictObject(versionedBook),
   getSegments: z.strictObject({
     ...versionedBook,
-    segmentIds: z.array(bookId).min(1),
+    segmentIds: z.array(integerId).min(1),
   }),
   getTextPage: z.strictObject({
     offset: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
   }),
   endLiveSession: noArguments,
   goHome: noArguments,
-  downloadBook: z.strictObject({ bookId }),
+  downloadBook: z.strictObject({ bookId: integerId }),
   refreshLibrary: noArguments,
   setTextSize: z.strictObject({
     percent: z
@@ -60,7 +74,17 @@ const schemas = {
   setViewMode: z.strictObject({ mode: z.enum(['text', 'pdf']) }),
   selectSegment: z.strictObject({
     ...versionedBook,
-    segmentId: bookId.nullable(),
+    segmentId: integerId.nullable(),
+  }),
+  openBook: z.strictObject(versionedBook),
+  navigateToSection: z.strictObject(sectionTarget),
+  navigateToSegment: z.strictObject(segmentTarget),
+  startPlayback: z.strictObject({
+    destination: z.discriminatedUnion('target', [
+      z.strictObject({ ...versionedBook, target: z.literal('current') }),
+      z.strictObject({ ...sectionTarget, target: z.literal('section') }),
+      z.strictObject({ ...segmentTarget, target: z.literal('segment') }),
+    ]),
   }),
   moveTextPage: z.strictObject({ direction: z.enum(['previous', 'next']) }),
 }
@@ -83,6 +107,10 @@ const descriptions = [
   'Set text size from 100 to 500 percent in steps of 12.5, preserving the reading anchor.',
   'Set the open book view to text or pdf; PDF requires an available source file.',
   'Select or clear an exact segment in the active book/version without navigation or playback.',
+  'Open a resolved cached book/version and wait for usable Text entry. Download unavailable content separately first.',
+  'Open a resolved cached section, including nested sections, using IDs from ToC evidence.',
+  'Open an exact cached segment at an optional canonical code-point/grapheme boundary offset.',
+  'Read aloud a resolved section/segment or the scoped current Text position. Requires cached root audio/timing. Acceptance is not playback; success closes Live quietly.',
   'Move one previous or next reflowed Text page. Requires Text view; waits for committed layout. True edges do not move.',
 ]
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(

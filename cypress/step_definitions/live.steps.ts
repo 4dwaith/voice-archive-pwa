@@ -130,7 +130,7 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(19)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(23)
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
