@@ -5,6 +5,12 @@ import {
   type FunctionResponse,
 } from '@google/genai'
 import { z } from 'zod'
+import {
+  TEXT_SIZE_BASE,
+  TEXT_SIZE_INCREMENT,
+  MAX_TEXT_SIZE_STEP,
+} from '../store/textSizeSlice'
+import type { ReaderCommand } from '../store/readerCommandsSlice'
 import { type createLiveQueries } from './liveQueries'
 
 const noArguments = z.strictObject({})
@@ -39,6 +45,24 @@ const schemas = {
     offset: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
   }),
   endLiveSession: noArguments,
+  goHome: noArguments,
+  downloadBook: z.strictObject({ bookId }),
+  refreshLibrary: noArguments,
+  setTextSize: z.strictObject({
+    percent: z
+      .number()
+      .min(TEXT_SIZE_BASE)
+      .max(TEXT_SIZE_BASE + MAX_TEXT_SIZE_STEP * TEXT_SIZE_INCREMENT)
+      .refine((value) =>
+        Number.isInteger((value - TEXT_SIZE_BASE) / TEXT_SIZE_INCREMENT),
+      ),
+  }),
+  setViewMode: z.strictObject({ mode: z.enum(['text', 'pdf']) }),
+  selectSegment: z.strictObject({
+    ...versionedBook,
+    segmentId: bookId.nullable(),
+  }),
+  moveTextPage: z.strictObject({ direction: z.enum(['previous', 'next']) }),
 }
 const descriptions = [
   'Get manual help for overview, reader, live or turner.',
@@ -53,6 +77,13 @@ const descriptions = [
   'Read exact cached segment IDs only. Partial results report missingIds and cache completeness without downloading text.',
   'Read exact current (0), previous (-1) or next (1) reflowed Text page in a currently open book. This never moves the reader. Edge, preparing, stale and unavailable are distinct.',
   'End Live immediately, preserving continuation. No farewell required.',
+  'Go to the library using app navigation.',
+  'Download book text in the background without opening it. Acceptance is not completion; inspect download state for progress/errors.',
+  'Refresh the shared library catalog.',
+  'Set text size from 100 to 500 percent in steps of 12.5, preserving the reading anchor.',
+  'Set the open book view to text or pdf; PDF requires an available source file.',
+  'Select or clear an exact segment in the active book/version without navigation or playback.',
+  'Move one previous or next reflowed Text page. Requires Text view; waits for committed layout. True edges do not move.',
 ]
 export const liveToolDeclarations: FunctionDeclaration[] = Object.entries(
   schemas,
@@ -70,11 +101,18 @@ type ToolResult = ToolResponse | Promise<ToolResponse>
 export function createLiveTools(
   queries: ReturnType<typeof createLiveQueries>,
   endLiveSession: () => unknown,
+  requestCommand: (
+    command: ReaderCommand,
+    requestId: string,
+  ) => unknown = () => {},
+  cancelCommands: () => void = () => {},
 ) {
+  let commandId: string | undefined
   const calls = new Map<string, { signature: string; result: ToolResult }>()
   return {
     clear() {
       calls.clear()
+      commandId = undefined
     },
     connect(
       signal: AbortSignal,
@@ -86,6 +124,7 @@ export function createLiveTools(
       return {
         cancel(ids: string[]) {
           ids.forEach((id) => cancelled.add(id))
+          if (commandId && ids.includes(commandId)) cancelCommands()
         },
         async invoke(call: FunctionCall) {
           const { id, name } = call
@@ -124,14 +163,21 @@ export function createLiveTools(
                   ? await prior.result
                   : prior.result
             else {
-              if (name === 'endLiveSession') {
+              if (name === 'endLiveSession' || !Object.hasOwn(queries, name)) {
                 const accepted = { accepted: true, requestId: id }
                 Object.defineProperty(receipts, id, {
                   value: signature,
                   enumerable: true,
                 })
                 saveReceipts()
-                endLiveSession()
+                if (name === 'endLiveSession') endLiveSession()
+                else {
+                  commandId = id
+                  requestCommand(
+                    { kind: name, ...parsed.data } as ReaderCommand,
+                    id,
+                  )
+                }
                 response = accepted
               } else {
                 const failure = {

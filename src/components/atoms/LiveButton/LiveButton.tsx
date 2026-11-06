@@ -1,6 +1,7 @@
 import { useContext, type MouseEvent } from 'react'
 import { LiveContext } from '../../../contexts/LiveContext'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
+import { getReaderCommandError } from '../../../store/readerCommandsSlice'
 import { getLiveSession, requestLiveSession } from '../../../store/liveSlice'
 
 export function LiveButton() {
@@ -10,6 +11,7 @@ export function LiveButton() {
 function ConnectedLiveButton() {
   const dispatch = useAppDispatch()
   const { status, error, canContinue } = useAppSelector(getLiveSession)
+  const commandError = useAppSelector(getReaderCommandError)
   const isActive = status === 'connecting' || status === 'connected'
   const label = isActive
     ? 'Stop Live'
@@ -48,6 +50,11 @@ function ConnectedLiveButton() {
       data-live-state={status}
       data-reader-overlay
     >
+      {commandError && (
+        <p role="alert" className="max-w-80 border-2 border-ink bg-page p-2">
+          {commandError.message}
+        </p>
+      )}
       <button
         type="button"
         aria-label={label}

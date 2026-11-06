@@ -7,6 +7,7 @@ import {
 import type { ReaderAnchor } from '../models/reader'
 import {
   getReaderAnchor,
+  reportLayoutKey,
   getReaderScope,
   getReaderViewMode,
 } from './readerSlice'
@@ -33,6 +34,7 @@ export function createReaderPreferencesListener(
       }
       const step = selectTextSizeStep(state)
       if (step !== selectTextSizeStep(previous)) {
+        api.dispatch(reportLayoutKey(null))
         preferences.textSizeStep = step
         writeReaderPreferences(preferences)
       }

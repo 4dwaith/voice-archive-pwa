@@ -21,6 +21,7 @@ function createToolConnection() {
 describe('Live tools', () => {
   it.each([
     { name: 'missing' },
+    { name: 'setTextSize', args: { percent: 101 } },
     { name: 'getAppHelp', args: { topic: 'unknown' } },
     { name: 'getBookDownloadState', args: { bookId: 0 } },
     { name: 'endLiveSession', args: { extra: true } },
@@ -31,6 +32,40 @@ describe('Live tools', () => {
 
     expect(send.mock.calls[0][0].response.error).toContain('invalid arguments')
     expect(stop).not.toHaveBeenCalled()
+  })
+
+  it('does not repeat a relative command after restoring receipts', async () => {
+    const store = createAppStore()
+    const request = vi.fn()
+    const tools = createLiveTools(
+      createLiveQueries(store.getState),
+      vi.fn(),
+      request,
+    )
+    const receipts: LiveEffectReceipts = {}
+    const call = {
+      id: 'move',
+      name: 'moveTextPage',
+      args: { direction: 'next' },
+    }
+
+    await tools
+      .connect(new AbortController().signal, receipts, vi.fn(), vi.fn())
+      .invoke(call)
+    tools.clear()
+    await tools
+      .connect(
+        new AbortController().signal,
+        JSON.parse(JSON.stringify(receipts)),
+        vi.fn(),
+        vi.fn(),
+      )
+      .invoke(call)
+
+    expect(request).toHaveBeenCalledExactlyOnceWith(
+      { kind: 'moveTextPage', direction: 'next' },
+      'move',
+    )
   })
 
   it('replies synchronously and reuses matching reads', async () => {

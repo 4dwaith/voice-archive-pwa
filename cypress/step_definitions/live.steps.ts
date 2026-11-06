@@ -130,7 +130,7 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(12)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(19)
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
@@ -444,3 +444,10 @@ Given('book content requests are observed', () =>
     .intercept('GET', /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/)
     .as('contentReads'),
 )
+
+Then('Live receives one command failure', () => {
+  cy.wrap(null).should(() => {
+    expect(evidence.errorInputs).to.have.length(1)
+    expect(evidence.errorInputs[0]).to.contain('Open Text view')
+  })
+})

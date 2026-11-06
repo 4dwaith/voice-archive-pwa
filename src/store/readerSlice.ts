@@ -35,6 +35,7 @@ export type ReaderState = {
     requestId: string
     scope: ReaderPageNavigationRequest['scope']
     pageNumber: number
+    relativeDelta?: number
   } | null
   pageNavigationError: string | null
 
@@ -85,6 +86,8 @@ const readerSlice = createSlice({
   reducers: {
     setReaderViewMode(state, action: PayloadAction<ReaderState['viewMode']>) {
       state.viewMode = action.payload
+      if (state.pageNavigationIntent?.relativeDelta)
+        state.pageNavigationIntent = null
     },
     setControlsVisible(state, action: PayloadAction<boolean>) {
       state.areControlsVisible = action.payload
@@ -126,6 +129,27 @@ const readerSlice = createSlice({
     ) {
       if (state.pageScope !== action.payload) state.pageNavigationIntent = null
       state.pageScope = action.payload
+    },
+    cancelTextPageMove(state) {
+      if (state.pageNavigationIntent?.relativeDelta)
+        state.pageNavigationIntent = null
+    },
+    requestTextPageMove: {
+      prepare(delta: number) {
+        return { payload: { delta, requestId: nanoid() } }
+      },
+      reducer(
+        state,
+        { payload }: PayloadAction<{ delta: number; requestId: string }>,
+      ) {
+        state.pageNavigationIntent = {
+          requestId: payload.requestId,
+          scope: 'global',
+          pageNumber: 0,
+          relativeDelta: payload.delta,
+        }
+        state.pageNavigationError = null
+      },
     },
     requestPageNavigation: {
       prepare(
@@ -318,6 +342,8 @@ export const {
   recordMeasurementSave,
   setPageScope,
   requestPageNavigation,
+  requestTextPageMove,
+  cancelTextPageMove,
   completePageNavigation,
   selectSection,
   setSectionExpanded,

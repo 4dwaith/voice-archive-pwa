@@ -11,6 +11,8 @@ import bookDownloadsReducer from './bookDownloadsSlice'
 import readerReducer from './readerSlice'
 import readerSearchReducer from './readerSearchSlice'
 import readerAudioReducer from './readerAudioSlice'
+import readerCommandsReducer from './readerCommandsSlice'
+import { createReaderCommandsListener } from './readerCommandsListener'
 import liveReducer from './liveSlice'
 import { createLiveListener } from './liveListener'
 import { createBookDownloadsListener } from './bookDownloadsListener'
@@ -27,6 +29,7 @@ const rootReducer = combineReducers({
   readerSearch: readerSearchReducer,
   readerAudio: readerAudioReducer,
   live: liveReducer,
+  readerCommands: readerCommandsReducer,
   [archiveApi.reducerPath]: archiveApi.reducer,
 })
 export type RootState = ReturnType<typeof rootReducer>
@@ -35,6 +38,7 @@ export type AppDispatch = ThunkDispatch<RootState, undefined, UnknownAction>
 // Each store owns its listener instances, including isolated integration tests.
 export function createAppStore() {
   const readerAudioListener = createListenerMiddleware()
+  const readerCommandsListener = createReaderCommandsListener()
   const liveListener = createLiveListener()
   const preferences = readReaderPreferences()
   const readerPreferencesListener = createReaderPreferencesListener(preferences)
@@ -43,7 +47,7 @@ export function createAppStore() {
   const readerNavigationListener = createReaderNavigationListener()
   const readerTocListener = createReaderTocListener()
   const readerSearchListener = createReaderSearchListener()
-  return configureStore({
+  const appStore = configureStore({
     preloadedState: {
       textSize: { step: preferences.textSizeStep },
       reader: {
@@ -56,6 +60,7 @@ export function createAppStore() {
       defaults()
         .prepend(
           // Observe after the audio adapter's synchronous effects, especially Pause.
+          readerCommandsListener.middleware,
           liveListener.middleware,
           readerAudioListener.middleware,
           readerPreferencesListener.middleware,
@@ -66,6 +71,9 @@ export function createAppStore() {
           readerMeasurementsListener.middleware,
         )
         .concat(archiveApi.middleware),
+  })
+  return Object.assign(appStore, {
+    registerCommandNavigation: readerCommandsListener.registerNavigation,
   })
 }
 export const store = createAppStore()

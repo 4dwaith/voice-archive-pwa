@@ -21,6 +21,7 @@ describe('Live listener', () => {
       discard: vi.fn(),
       quiesceAudio: vi.fn(),
       resumeAudio: vi.fn(),
+      sendCommandError: vi.fn(),
       getSnapshot: () => ({
         status: 'connected' as const,
         error: null,

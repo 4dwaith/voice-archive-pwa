@@ -1,7 +1,7 @@
 import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
 import { createLiveQueries } from '../services/liveQueries'
 import { createLiveTools } from '../services/liveTools'
-import { endLiveSession } from '../services/liveCommands'
+import { createLiveCommands } from '../services/liveCommands'
 import { createLiveConversation } from '../services/liveConversation'
 import { closeReader, getReaderScope, openReader } from './readerSlice'
 import {
@@ -20,6 +20,16 @@ import {
   reportLiveSession,
   requestLiveSession,
 } from './liveSlice'
+import {
+  reportReaderCommandError,
+  getReaderCommandError,
+  cancelReaderCommands,
+} from './readerCommandsSlice'
+import { completePageNavigation, getPageNavigationError } from './readerSlice'
+import {
+  recordBookRequestFailure,
+  selectBookDownloadState,
+} from './bookDownloadsSlice'
 import type { AppDispatch, RootState } from './store'
 
 export function createLiveListener() {
@@ -30,10 +40,14 @@ export function createLiveListener() {
     matcher: isAnyOf(initializeLiveSession, requestLiveSession),
     effect(action, api) {
       if (!conversation) {
+        const commands = createLiveCommands(api.dispatch)
         conversation = createLiveConversation(
           undefined,
-          createLiveTools(createLiveQueries(api.getState), () =>
-            endLiveSession(api.dispatch),
+          createLiveTools(
+            createLiveQueries(api.getState),
+            commands.endLiveSession,
+            commands.request,
+            commands.cancel,
           ),
         )
         const connectedConversation = conversation
@@ -51,8 +65,11 @@ export function createLiveListener() {
           api.dispatch(setReaderAudioPlayback({ ...scope, isPlaying: false }))
         // Keep activation on the explicit dispatch's user-gesture call stack.
         void conversation.start()
-      } else if (action.payload.kind === 'discard') conversation.discard()
-      else conversation.stop()
+      } else {
+        api.dispatch(cancelReaderCommands())
+        if (action.payload.kind === 'discard') conversation.discard()
+        else conversation.stop()
+      }
     },
   })
 
@@ -92,6 +109,40 @@ export function createLiveListener() {
           conversation.resumeAudio(report.error)
         }
       }
+    },
+  })
+
+  listener.startListening({
+    matcher: isAnyOf(
+      reportReaderCommandError,
+      completePageNavigation,
+      recordBookRequestFailure,
+    ),
+    effect(action, api) {
+      if (getLiveSession(api.getState()).status !== 'connected') return
+      const error = reportReaderCommandError.match(action)
+        ? action.payload.message
+        : recordBookRequestFailure.match(action)
+          ? action.payload.error
+          : getPageNavigationError(api.getState())
+      const previous = api.getOriginalState()
+      if (
+        recordBookRequestFailure.match(action) &&
+        selectBookDownloadState(previous, action.payload.bookId) ===
+          selectBookDownloadState(api.getState(), action.payload.bookId)
+      )
+        return
+      if (
+        reportReaderCommandError.match(action) &&
+        getReaderCommandError(previous)?.requestId === action.payload.requestId
+      )
+        return
+      if (
+        completePageNavigation.match(action) &&
+        getPageNavigationError(previous) === error
+      )
+        return
+      if (error) conversation?.sendCommandError(error)
     },
   })
 

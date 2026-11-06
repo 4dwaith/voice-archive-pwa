@@ -192,6 +192,25 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live changes settings, moves one page and returns Home
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    Then I see its first reader page
+    When Live calls "setTextSize" with ID "size" and arguments '{"percent":112.5}'
+    And Live calls "getReaderSettings" with ID "size-read"
+    Then tool "size-read" reports "textSizePercent" as "112.5"
+    When Live calls "moveTextPage" with ID "move" and arguments '{"direction":"next"}'
+    Then the text shows page 2
+    When Live calls "goHome" with ID "home"
+    Then I return to the synchronization library
+    When Live calls "moveTextPage" with ID "invalid-move" and arguments '{"direction":"next"}'
+    Then Live receives one command failure
+    When I stop Live
+    Then Live has released the microphone
+
   Rule: Playback handoff keeps Live available until narration starts
     Background:
       Given a synchronization book with narration after untimed text

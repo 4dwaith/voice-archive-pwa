@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { configureStore } from '@reduxjs/toolkit'
+import { createAppStore } from '../../src/store/store'
 import {
   act,
   cleanup,
@@ -14,20 +14,9 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from '../../src/App'
 import { archiveApi } from '../../src/api-client/archiveApi'
-import textSize from '../../src/store/textSizeSlice'
-import reader from '../../src/store/readerSlice'
-import live from '../../src/store/liveSlice'
 import { book } from '../api-client/fixtures/book'
 
-const store = configureStore({
-  reducer: {
-    reader,
-    live,
-    textSize,
-    [archiveApi.reducerPath]: archiveApi.reducer,
-  },
-  middleware: (defaults) => defaults().concat(archiveApi.middleware),
-})
+const store = createAppStore()
 
 afterEach(() => {
   cleanup()

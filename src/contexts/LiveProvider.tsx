@@ -1,3 +1,4 @@
+import { useAppNavigate } from '../routing/navigation'
 import { LiveContext } from './LiveContext'
 import { useEffect, type ReactNode } from 'react'
 import { useAppStore } from '../store/hooks'
@@ -10,6 +11,15 @@ import { livePageTurnerBinding } from '../services/pageTurnerBindings'
 
 export function LiveProvider({ children }: { children: ReactNode }) {
   const store = useAppStore()
+  const navigate = useAppNavigate()
+
+  useEffect(
+    () =>
+      store.registerCommandNavigation(() => {
+        void navigate('/')
+      }),
+    [store, navigate],
+  )
 
   useEffect(() => {
     store.dispatch(initializeLiveSession())

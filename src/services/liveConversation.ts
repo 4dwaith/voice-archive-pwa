@@ -395,6 +395,17 @@ export function createLiveConversation(
         }
       }
     },
+    sendCommandError(error: string) {
+      if (current && snapshot.status === 'connected') {
+        try {
+          current.session?.sendRealtimeInput({
+            text: `Application command failed: ${error}. Explain this failure to the user.`,
+          })
+        } catch {
+          stop()
+        }
+      }
+    },
     getSnapshot: () => snapshot,
     subscribe(notify: () => void) {
       listeners.add(notify)

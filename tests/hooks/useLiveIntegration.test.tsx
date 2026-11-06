@@ -9,6 +9,7 @@ import { LiveProvider } from '../../src/contexts/LiveProvider'
 import { createLiveConversation } from '../../src/services/liveConversation'
 import { useReaderAudioControl } from '../../src/hooks/useReaderAudioControl'
 import { createAppStore } from '../../src/store/store'
+import { reportReaderCommandError } from '../../src/store/readerCommandsSlice'
 import { openReader } from '../../src/store/readerSlice'
 import { setReaderAudioPlayback } from '../../src/store/readerAudioSlice'
 import { idleReaderAudioSnapshot } from '../../src/services/readerAudioController'
@@ -41,6 +42,7 @@ function renderIntegration() {
     discard: vi.fn(),
     quiesceAudio: vi.fn(() => events.push('mute live')),
     resumeAudio: vi.fn(),
+    sendCommandError: vi.fn(),
     getSnapshot: () => snapshot,
     subscribe: (notify: () => void) => {
       notifyLive = notify
@@ -111,6 +113,7 @@ function renderIntegration() {
     </Provider>,
   )
   return {
+    store,
     events,
     live,
     snapshot,
@@ -130,6 +133,21 @@ function renderIntegration() {
 }
 
 describe('Live reader integration', () => {
+  it('forwards a new command failure once', () => {
+    const { store, live } = renderIntegration()
+    fireEvent.keyDown(window, { key: 'MediaPlay' })
+    const failure = { requestId: 'refresh', message: 'Refresh failed' }
+
+    act(() => {
+      store.dispatch(reportReaderCommandError(failure))
+      store.dispatch(reportReaderCommandError(failure))
+    })
+
+    expect(live.sendCommandError).toHaveBeenCalledExactlyOnceWith(
+      'Refresh failed',
+    )
+  })
+
   it('starts Live once per media key press and removes the listener on exit', () => {
     const { events, unmount } = renderIntegration()
 
