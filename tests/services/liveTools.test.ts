@@ -23,7 +23,7 @@ describe('Live tools', () => {
     { name: 'missing' },
     { name: 'setTextSize', args: { percent: 101 } },
     { name: 'getAppHelp', args: { topic: 'unknown' } },
-    { name: 'getBookDownloadState', args: { bookId: 0 } },
+    { name: 'getBookDownloadState', args: { bookId: -1 } },
     { name: 'endLiveSession', args: { extra: true } },
   ])('rejects invalid calls: $name', async (call) => {
     const { connection, send, stop } = createToolConnection()

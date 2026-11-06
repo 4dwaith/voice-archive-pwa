@@ -18,11 +18,52 @@ import {
   setReaderAnchor,
 } from '../../src/store/readerSlice'
 import { increaseTextSize } from '../../src/store/textSizeSlice'
+import { book } from '../api-client/fixtures/book'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 
 const scope = { bookId: 7, contentVersion: 'version' }
 
 describe('Reader commands', () => {
+  it('opens an undownloaded library book without a content version', async () => {
+    await database.books.put({ ...book, id: 7 })
+    const store = createAppStore()
+    const navigate = vi.fn()
+    store.registerCommandNavigation(navigate)
+
+    store.dispatch(requestReaderCommand({ kind: 'openBook', bookId: 7 }))
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/books/7'))
+    expect(getReaderCommandError(store.getState())).toBeNull()
+    expect(await database.content.get(7)).toBeUndefined()
+  })
+
+  it('rejects an unknown book before routing', async () => {
+    const store = createAppStore()
+    const navigate = vi.fn()
+    store.registerCommandNavigation(navigate)
+
+    store.dispatch(requestReaderCommand({ kind: 'openBook', bookId: 999 }))
+
+    await vi.waitFor(() =>
+      expect(getReaderCommandError(store.getState())).not.toBeNull(),
+    )
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('keeps manual navigation made during book validation', async () => {
+    await database.books.put({ ...book, id: 7 })
+    const store = createAppStore()
+    const navigate = vi.fn()
+    store.registerCommandNavigation(navigate)
+
+    store.dispatch(requestReaderCommand({ kind: 'openBook', bookId: 7 }))
+    store.dispatch(reportCommandRoute('/books/8'))
+    await database.books.toArray()
+
+    expect(navigate).not.toHaveBeenCalled()
+    expect(getReaderCommandError(store.getState())).toBeNull()
+  })
+
   it.each([
     { kind: 'openBook', contentVersion: 'stale' },
     { kind: 'navigateToSection', sectionId: 999 },

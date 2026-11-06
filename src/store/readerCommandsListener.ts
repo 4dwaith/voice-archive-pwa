@@ -176,6 +176,32 @@ export function createReaderCommandsListener() {
               throw new Error('Home navigation is unavailable.')
             navigateToPath('/')
             break
+          case 'openBook': {
+            if (!navigateToPath)
+              throw new Error('Book navigation is unavailable.')
+            const [book, content] = await Promise.all([
+              database.books.get(command.bookId),
+              database.content.get(command.bookId),
+            ])
+            if (!isCurrent()) return
+            if (!book && !content)
+              throw new Error(
+                'Choose a known book from the library before opening it.',
+              )
+            if (
+              command.contentVersion !== undefined &&
+              content?.version !== command.contentVersion
+            )
+              throw new Error(
+                'The requested cached book version is unavailable.',
+              )
+            if (scope)
+              dispatchOwned(
+                setReaderAudioPlayback({ ...scope, isPlaying: false }),
+              )
+            navigateToPath(`/books/${command.bookId}`)
+            break
+          }
           case 'downloadBook':
             api.dispatch(requestBookLoad(command.bookId))
             break
@@ -241,7 +267,6 @@ export function createReaderCommandsListener() {
             api.dispatch(reader.selectSegment(command.segmentId))
             break
           }
-          case 'openBook':
           case 'navigateToSection':
           case 'navigateToSegment':
           case 'startPlayback': {
@@ -250,9 +275,7 @@ export function createReaderCommandsListener() {
                 ? command.destination
                 : command.kind === 'navigateToSection'
                   ? { ...command, target: 'section' }
-                  : command.kind === 'navigateToSegment'
-                    ? { ...command, target: 'segment' }
-                    : { ...command, target: 'current' }
+                  : { ...command, target: 'segment' }
             const { bookId, contentVersion } = destination
             const isSameScope = () => {
               const active = reader.getReaderScope(api.getState())

@@ -14,7 +14,7 @@ export type ReaderCommand =
   | { kind: 'setTextSize'; percent: number }
   | { kind: 'setViewMode'; mode: 'text' | 'pdf' }
   | ({ kind: 'selectSegment'; segmentId: number | null } & ReaderScope)
-  | ({ kind: 'openBook' } & ReaderScope)
+  | { kind: 'openBook'; bookId: number; contentVersion?: string }
   | ({ kind: 'navigateToSection'; sectionId: number } & ReaderScope)
   | ({
       kind: 'navigateToSegment'

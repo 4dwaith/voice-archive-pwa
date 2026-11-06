@@ -211,6 +211,19 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: Live opens an undownloaded book and its reader loads automatically
+    Given a synchronization book with a slow second batch
+    And a synthetic Live audio provider
+    When I start Live from the library
+    Then Live exchanges browser audio
+    When Live calls "openBook" with ID "open-new" and arguments '{"bookId":7}'
+    Then its first batch is readable without marking the book complete
+    When I wait for book synchronization to finish
+    Then I see its first reader page
+    And Live exchanges browser audio
+    When I stop Live
+    Then Live has released the microphone
+
   Scenario: Live opens cached nested and exact segment destinations from the library
     Given a synchronization book with a nested destination
     And a synthetic Live audio provider
@@ -228,7 +241,7 @@ Feature: Live voice conversation
     When I use the header Home button
     Then I return to the synchronization library
     When Live calls "openBook" with ID "open" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc"}'
-    Then I see its first reader page
+    Then I see the nested section text
     When I stop Live
     Then Live has released the microphone
 
