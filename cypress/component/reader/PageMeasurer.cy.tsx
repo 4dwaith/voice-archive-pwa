@@ -52,16 +52,8 @@ function MeasureChapter({
   )
 }
 
-beforeEach(() => {
-  cy.then(() => database.delete())
-})
-afterEach(() => {
-  cy.then(() => database.delete())
-})
-
 function seedBookDatabase() {
   cy.then(async () => {
-    await database.open()
     await database.content.put({
       bookId: 7,
       version: 'version',

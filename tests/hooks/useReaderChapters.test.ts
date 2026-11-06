@@ -1,22 +1,16 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { database } from '../../src/data/database'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 import { useReaderChapters } from '../../src/hooks/useReaderChapters'
 import { readChapterSegments } from '../../src/data/readerChapterRepository'
 import { saveChapterMeasurement } from '../../src/data/measurementRepository'
 
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
-
 afterEach(async () => {
   cleanup()
   vi.restoreAllMocks()
-  await database.delete()
 })
 
 describe('live reader chapters', () => {

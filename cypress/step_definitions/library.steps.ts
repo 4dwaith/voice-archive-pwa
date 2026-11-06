@@ -194,3 +194,23 @@ Then('I see a loading more error with existing books', () => {
   cy.findByRole('alert').should('contain.text', 'More books couldn’t be loaded')
   cy.findAllByRole('article').should('have.length', 24)
 })
+
+When('the library connection fails and I reload', () => {
+  cy.intercept('GET', `${Cypress.expose('apiUrl')}/api/v1/books*`, {
+    forceNetworkError: true,
+  }).as('offlineLibrary')
+  cy.reload()
+  cy.wait('@offlineLibrary')
+})
+
+Then('the saved library is marked {string}', (status: string) => {
+  cy.findByRole('status').should(
+    'contain.text',
+    status === 'complete'
+      ? 'All books from the last complete catalog are saved.'
+      : 'More books may be available online.',
+  )
+  cy.findByRole('button', { name: bookName }).should('be.visible')
+})
+
+When('the library connection returns with no books', () => interceptLibrary([]))

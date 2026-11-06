@@ -1,5 +1,4 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
-import type { contentTestHarness } from '../../src/testing/contentTestHarness'
 import type { SegmentReadOutput } from '../../src/api-client/generated/schemas'
 
 type AudioEvidence = {
@@ -19,9 +18,6 @@ let hasCheckpoints = false
 
 When('I open the turner test library', () => {
   cy.visit('/')
-  cy.window()
-    .its('contentTestHarness')
-    .then((harness) => (harness as typeof contentTestHarness).remove(7))
 })
 
 When('I press the turner {string} key', (key: string) => {
@@ -195,9 +191,6 @@ Given('Live provisioning fails once', () => {
 
 When('I start Live from the library', () => {
   cy.visit('/')
-  cy.window()
-    .its('contentTestHarness')
-    .then((harness) => (harness as typeof contentTestHarness).remove(7))
   cy.findByRole('button', { name: 'Start Live' }).click()
 })
 

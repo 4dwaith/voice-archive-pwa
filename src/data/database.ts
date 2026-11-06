@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import type { StoredAudioRecording } from '../models/recording'
 import type { StoredReaderMeasurement } from '../models/reader'
+import type { BookResponseOutput } from '../api-client/generated/schemas'
 import type {
   CachedContent,
   CachedSection,
@@ -8,6 +9,11 @@ import type {
 } from '../models/content'
 
 type VoiceArchiveDatabase = Dexie & {
+  books: EntityTable<BookResponseOutput, 'id'>
+  libraryCatalog: EntityTable<
+    { id: 'catalog'; total: number; complete: boolean },
+    'id'
+  >
   recordings: EntityTable<StoredAudioRecording, 'id'>
   content: EntityTable<CachedContent, 'bookId'>
   sections: Table<CachedSection, [number, string, number]>
@@ -83,4 +89,9 @@ database.version(7).stores({
 // Reading positions now live in localStorage; drop only the obsolete object store.
 database.version(8).stores({
   contentPositions: null,
+})
+
+database.version(9).stores({
+  books: 'id',
+  libraryCatalog: 'id',
 })

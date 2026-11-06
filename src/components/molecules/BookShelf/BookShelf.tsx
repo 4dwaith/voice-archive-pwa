@@ -5,6 +5,7 @@ import { Book } from '../../atoms/Book/Book'
 export type BookShelfProps = {
   books: BookResponseOutput[]
   total?: number
+  savedCatalogStatus?: 'complete' | 'partial'
   isLoading?: boolean
   isLoadingMore?: boolean
   hasMore?: boolean
@@ -21,6 +22,7 @@ const actionClass =
 export function BookShelf({
   books,
   total,
+  savedCatalogStatus,
   isLoading = false,
   isLoadingMore = false,
   hasMore = false,
@@ -69,6 +71,14 @@ export function BookShelf({
       className="mx-auto px-5 py-8 sm:px-8"
       aria-labelledby="books-heading"
     >
+      {savedCatalogStatus && (
+        <p role="status" className="mb-5 text-lg font-semibold">
+          Showing saved books.{' '}
+          {savedCatalogStatus === 'complete'
+            ? 'All books from the last complete catalog are saved.'
+            : 'More books may be available online.'}
+        </p>
+      )}
       <div className="mb-6 flex items-end justify-between gap-4">
         <h2 id="books-heading" className="text-3xl font-bold tracking-tight">
           Books

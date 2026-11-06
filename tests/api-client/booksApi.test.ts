@@ -1,3 +1,4 @@
+import '../helpers/database'
 import { configureStore } from '@reduxjs/toolkit'
 import { afterEach, expect, it, vi } from 'vitest'
 import { booksApi } from '../../src/api-client/resources/booksApi'

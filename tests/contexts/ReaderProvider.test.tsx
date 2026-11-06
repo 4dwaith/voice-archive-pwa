@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { waitFor } from '@testing-library/react'
 import { database } from '../../src/data/database'
 import { seedContent } from '../helpers/readerMeasurements'
@@ -55,16 +55,6 @@ function ShowPdfInput() {
 }
 
 describe('ReaderProvider PDF inputs', () => {
-  beforeEach(async () => {
-    await database.delete()
-    await database.open()
-  })
-
-  afterEach(async () => {
-    cleanup()
-    await database.delete()
-  })
-
   it('resolves cached media and clears old geometry when the dataset changes', async () => {
     const content = await seedContent()
     content.manifest.source_pdf_file_id = 9

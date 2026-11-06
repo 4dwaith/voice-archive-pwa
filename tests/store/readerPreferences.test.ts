@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import '../helpers/database'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { waitFor } from '@testing-library/react'
 import {
   readReaderPreferences,
@@ -15,17 +15,10 @@ import {
   setReaderViewMode,
   selectSegment,
 } from '../../src/store/readerSlice'
-import { database } from '../../src/data/database'
 import { seedContent } from '../helpers/readerMeasurements'
-
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
 
 afterEach(async () => {
   vi.restoreAllMocks()
-  await database.delete()
 })
 
 describe('Reader preferences', () => {

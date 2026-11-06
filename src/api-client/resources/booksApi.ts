@@ -3,6 +3,7 @@ import type { ListApiV1BooksApiArg } from '../generated/endpoints'
 import { BookList, type BookListOutput } from '../generated/schemas'
 import { archiveApi } from '../archiveApi'
 import { apiBaseUrl } from '../baseApi'
+import { saveLibraryPages } from '../../data/libraryRepository'
 
 export const libraryPageSize = 24
 
@@ -83,6 +84,21 @@ export const booksApi = taggedBooksApi.injectEndpoints({
       }),
 
       extraOptions: { errorSchemaEndpoint: 'listApiV1Books' },
+
+      async onQueryStarted(_arg, { queryFulfilled, getCacheEntry, requestId }) {
+        let result
+        try {
+          result = await queryFulfilled
+        } catch {
+          return // Failed refreshes leave the saved catalog intact.
+        }
+        if (getCacheEntry().requestId !== requestId) return
+        try {
+          await saveLibraryPages(result.data.pages)
+        } catch {
+          console.warn('The library could not be saved for offline use.')
+        }
+      },
 
       providesTags: (result) => [
         { type: 'Book', id: 'LIST' },

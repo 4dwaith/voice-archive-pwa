@@ -20,7 +20,6 @@ import pdfUrl from '../../fixtures/reader.pdf?url'
 
 afterEach(() => {
   cy.mount(<></>)
-  cy.then(() => database.delete())
 })
 
 describe('Reader narration', () => {
@@ -35,8 +34,6 @@ describe('Reader narration', () => {
     let originalSource: string
     cy.viewport(800, 700)
     cy.then(async () => {
-      await database.delete()
-      await database.open()
       await database.content.put({
         ...readerBookContent,
         manifest: {
@@ -291,7 +288,6 @@ describe('Reader narration', () => {
     let pauseCount: number
     cy.viewport(800, 700)
     cy.then(async () => {
-      await database.open()
       await database.content.put({
         ...readerBookContent,
         manifest: {

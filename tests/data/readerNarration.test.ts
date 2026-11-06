@@ -1,5 +1,5 @@
-import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import '../helpers/database'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../src/data/database'
 import {
   readFileNarration,
@@ -11,8 +11,6 @@ const scope = { bookId: 7, contentVersion: 'version' }
 
 describe('Reader narration lookup', () => {
   beforeEach(async () => {
-    await database.delete()
-    await database.open()
     const content = await seedContent()
     content.manifest.files = [
       {
@@ -30,10 +28,6 @@ describe('Reader narration lookup', () => {
       narration_start_ms: 1000,
       narration_end_ms: 2000,
     })
-  })
-
-  afterEach(async () => {
-    await database.delete()
   })
 
   it('skips untimed opening text and uses the root audio URL', async () => {

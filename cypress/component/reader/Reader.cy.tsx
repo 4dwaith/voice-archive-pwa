@@ -12,14 +12,6 @@ import { continuingReaderSegment } from '../../../src/mock-data/readerPages'
 import { setReaderAnchor } from '../../../src/store/readerSlice'
 import { increaseTextSize } from '../../../src/store/textSizeSlice'
 
-beforeEach(() => {
-  cy.then(() => database.delete())
-})
-
-afterEach(() => {
-  cy.then(() => database.delete())
-})
-
 describe('Reader', () => {
   it('shares the fixed viewport and preserves its anchor across text reflow', () => {
     const store = createAppStore()
@@ -36,7 +28,6 @@ describe('Reader', () => {
 
     cy.viewport(360, 324)
     cy.then(async () => {
-      await database.open()
       await database.content.put(readerBookContent)
       await database.segments.put(readerBookSegment)
     })

@@ -66,3 +66,20 @@ Feature: Library
     When I open the library
     And I use the load more button
     Then the remaining books appear
+
+  Scenario: Saved books survive a failed reload and refresh when the connection returns
+    Given a library containing books
+    When I open the library
+    Then I can select a book
+    When the library connection fails and I reload
+    Then the saved library is marked "complete"
+    When the library connection returns with no books
+    And I retry
+    Then I see that there are no books yet
+
+  Scenario: An incomplete saved catalog explains that other books may exist
+    Given a library with more than one page and no automatic scrolling
+    When I open the library
+    Then I can select a book
+    When the library connection fails and I reload
+    Then the saved library is marked "partial"

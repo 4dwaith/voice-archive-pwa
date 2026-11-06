@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import type { ReactNode } from 'react'

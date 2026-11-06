@@ -1,4 +1,4 @@
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import Dexie from 'dexie'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createAppStore, type AppStore } from '../../src/store/store'
@@ -180,9 +180,6 @@ async function loadBook(bookId = 7) {
 
 // Every case starts with empty IndexedDB and an independent real application store.
 beforeEach(async () => {
-  await database.delete()
-  await database.open()
-
   store = createAppStore()
   serverManifest = structuredClone(published)
   httpRequests = []
@@ -214,7 +211,6 @@ afterEach(async () => {
   )
 
   store.dispatch(archiveApi.util.resetApiState())
-  await database.delete()
 })
 
 it('stores the complete book projection and committed Redux progress', async () => {

@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { readSavedLibrary } from '../data/libraryRepository'
 import { useAppNavigate } from '../routing/navigation'
 import { useSelector } from 'react-redux'
 import { booksApi } from '../api-client/resources/booksApi'
@@ -9,18 +11,24 @@ const selectLibrary = booksApi.endpoints.libraryBooks.select()
 export function LibraryPage() {
   const navigate = useAppNavigate()
 
-  const query = booksApi.useLibraryBooksInfiniteQuery()
+  const query = booksApi.useLibraryBooksInfiniteQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  })
+  const saved = useLiveQuery(readSavedLibrary)
+  const isShowingSaved = !query.data && !!saved?.catalog
 
   const nextPageFailed = useSelector(selectLibrary).isFetchNextPageError
 
   // Offset pages may overlap when records change between requests.
-  const books = [
-    ...new Map(
-      query.data?.pages.flatMap((page) =>
-        page.items.map((book) => [book.id, book] as const),
-      ),
-    ).values(),
-  ]
+  const books = query.data
+    ? [
+        ...new Map(
+          query.data?.pages.flatMap((page) =>
+            page.items.map((book) => [book.id, book] as const),
+          ),
+        ).values(),
+      ]
+    : (saved?.books ?? [])
 
   const { isFetching, isError, fetchNextPage, refetch } = query
 
@@ -36,9 +44,16 @@ export function LibraryPage() {
   return (
     <BookShelf
       books={books}
-      total={query.data?.pages[0]?.total}
-      isLoading={isFetching && !query.data}
-      isLoadingMore={isFetching && !!query.data}
+      total={query.data?.pages[0]?.total ?? saved?.catalog?.total}
+      savedCatalogStatus={
+        isShowingSaved
+          ? saved.catalog?.complete
+            ? 'complete'
+            : 'partial'
+          : undefined
+      }
+      isLoading={isFetching && !query.data && !isShowingSaved}
+      isLoadingMore={isFetching && (!!query.data || isShowingSaved)}
       hasMore={query.hasNextPage}
       hasError={isError}
       selectedBookId={null}
@@ -48,7 +63,11 @@ export function LibraryPage() {
 
         void navigate(`/books/${id}`, {
           state: {
-            book: { id: book.id, cover_url: book.cover_url, title: book.title },
+            book: {
+              id: book.id,
+              cover_url: book.cover_url,
+              title: book.title,
+            },
           },
         })
       }}

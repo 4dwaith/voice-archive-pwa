@@ -24,7 +24,6 @@ afterEach(() => {
   cy.document().then((document) => {
     document.documentElement.style.fontSize = ''
   })
-  cy.then(() => database.delete())
 })
 
 describe('Reader PDF geometry', () => {
@@ -43,8 +42,6 @@ describe('Reader PDF geometry', () => {
         cy.spy(prototype, 'terminate').as('terminatePdfWorker')
       })
     cy.then(async () => {
-      await database.delete()
-      await database.open()
       await database.content.put({
         ...readerBookContent,
         manifest: {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { READER_PREFERENCES_KEY } from '../../src/data/readerPreferences'
 import { database } from '../../src/data/database'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
@@ -18,15 +18,9 @@ import {
   requestPageNavigation,
 } from '../../src/store/readerSlice'
 
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
-
 afterEach(async () => {
   cleanup()
   vi.restoreAllMocks()
-  await database.delete()
 })
 
 describe('Reader anchor navigation', () => {

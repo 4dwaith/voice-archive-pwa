@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { waitFor } from '@testing-library/react'
 import { database } from '../../src/data/database'
@@ -20,14 +20,8 @@ import {
 const scope = { bookId: 7, contentVersion: 'version' }
 const existingAnchor = { segmentId: 1, offset: 2 }
 
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
-
 afterEach(async () => {
   vi.restoreAllMocks()
-  await database.delete()
 })
 
 async function navigateToSection(sectionId: number, layoutKey = 'layout') {

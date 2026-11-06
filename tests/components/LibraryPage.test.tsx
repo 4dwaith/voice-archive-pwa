@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '../helpers/database'
 import { configureStore } from '@reduxjs/toolkit'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'

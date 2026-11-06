@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto'
+import '../helpers/database'
 import { cleanup, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { database } from '../../src/data/database'
 import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 import Dexie from 'dexie'
@@ -32,15 +32,9 @@ function pauseMeasurementWrite() {
   return { release, write }
 }
 
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
-
 afterEach(async () => {
   cleanup()
   vi.restoreAllMocks()
-  await database.delete()
 })
 
 describe('chapter measurement commits', () => {

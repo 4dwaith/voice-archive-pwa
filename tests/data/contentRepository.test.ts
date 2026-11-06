@@ -1,5 +1,5 @@
-import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import '../helpers/database'
+import { expect, it } from 'vitest'
 import { database } from '../../src/data/database'
 import {
   deleteLocalContent,
@@ -89,14 +89,6 @@ async function seedCachedContent(segmentCount = 7) {
 
 it('uses the configured test database', () => {
   expect(database.name).toBe('voice-archive-test')
-})
-
-beforeEach(async () => {
-  await database.delete()
-  await database.open()
-})
-afterEach(async () => {
-  await database.delete()
 })
 
 it('gets section preorder directly from the database index', async () => {

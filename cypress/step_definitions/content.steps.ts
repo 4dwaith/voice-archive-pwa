@@ -673,7 +673,8 @@ Then('the selected PDF pages render through partial delivery', () => {
 })
 
 When('I browse a distant physical PDF page', () => {
-  cy.findByLabelText('Physical page').clear().type('3')
+  cy.findByLabelText('Physical page').clear()
+  cy.findByLabelText('Physical page').type('3')
   cy.findByRole('button', { name: /^Go$/ }).click()
 })
 
@@ -715,7 +716,6 @@ Given('a synchronization book whose first download fails', () =>
 )
 function openBookFromLibrary() {
   cy.visit('/')
-  harness().then((data) => data.remove(id))
   cy.findByRole('button', { name: 'Select Sync book' }).click()
   cy.location('pathname').should('eq', `/books/${id}`)
 }

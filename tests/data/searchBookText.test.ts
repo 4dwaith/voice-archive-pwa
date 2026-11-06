@@ -1,5 +1,5 @@
-import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import '../helpers/database'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { database } from '../../src/data/database'
 import {
   findTextMatches,
@@ -70,13 +70,7 @@ describe('Literal search ranges and excerpts', () => {
 
 describe('Complete local book search', () => {
   beforeEach(async () => {
-    await database.delete()
-    await database.open()
     await seedContent()
-  })
-
-  afterEach(async () => {
-    await database.delete()
   })
 
   it('scans canonical text in document order without requiring measurements', async () => {
