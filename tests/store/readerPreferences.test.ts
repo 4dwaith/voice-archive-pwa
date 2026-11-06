@@ -7,6 +7,11 @@ import {
   READER_PREFERENCES_KEY,
 } from '../../src/data/readerPreferences'
 import { createAppStore } from '../../src/store/store'
+import {
+  adjustPlaybackSpeed,
+  setPlaybackSpeed,
+  selectPlaybackSpeed,
+} from '../../src/store/playbackSpeedSlice'
 import { increaseTextSize } from '../../src/store/textSizeSlice'
 import {
   openReader,
@@ -14,6 +19,8 @@ import {
   setReaderAnchor,
   setReaderViewMode,
   selectSegment,
+  reportLayoutKey,
+  getLayoutKey,
 } from '../../src/store/readerSlice'
 import { seedContent } from '../helpers/readerMeasurements'
 
@@ -22,6 +29,65 @@ afterEach(async () => {
 })
 
 describe('Reader preferences', () => {
+  it('uses exact speed steps and stops at both limits', () => {
+    const store = createAppStore()
+
+    expect(selectPlaybackSpeed(store.getState())).toBe(1)
+
+    store.dispatch(adjustPlaybackSpeed(1))
+
+    expect(selectPlaybackSpeed(store.getState())).toBe(1.05)
+
+    for (let count = 0; count < 40; count++)
+      store.dispatch(adjustPlaybackSpeed(-1))
+
+    expect(selectPlaybackSpeed(store.getState())).toBe(0.75)
+
+    for (let count = 0; count < 40; count++)
+      store.dispatch(adjustPlaybackSpeed(1))
+
+    expect(selectPlaybackSpeed(store.getState())).toBe(2)
+  })
+
+  it('persists speed alongside existing preferences without invalidating layout', () => {
+    localStorage.setItem(
+      READER_PREFERENCES_KEY,
+      JSON.stringify({
+        textSizeStep: 3,
+        viewMode: 'pdf',
+        positions: { 7: { version: 'v', sourceKey: 'text', offset: 2 } },
+      }),
+    )
+    const store = createAppStore()
+    store.dispatch(reportLayoutKey('layout'))
+
+    store.dispatch(setPlaybackSpeed(1.35))
+
+    expect(getLayoutKey(store.getState())).toBe('layout')
+    expect(readReaderPreferences()).toMatchObject({
+      textSizeStep: 3,
+      playbackSpeedStep: 12,
+      viewMode: 'pdf',
+      positions: { 7: { version: 'v', sourceKey: 'text', offset: 2 } },
+    })
+    expect(selectPlaybackSpeed(createAppStore().getState())).toBe(1.35)
+  })
+
+  it.each([-1, 26, 0.5, 'invalid'])(
+    'defaults malformed saved speed %s without dropping text size',
+    (playbackSpeedStep) => {
+      localStorage.setItem(
+        READER_PREFERENCES_KEY,
+        JSON.stringify({ textSizeStep: 3, playbackSpeedStep }),
+      )
+
+      const store = createAppStore()
+
+      expect(selectPlaybackSpeed(store.getState())).toBe(1)
+      expect(readReaderPreferences().textSizeStep).toBe(3)
+    },
+  )
+
   it('restores and persists the reading view without dropping other preferences', () => {
     localStorage.setItem(
       READER_PREFERENCES_KEY,
@@ -75,7 +141,11 @@ describe('Reader preferences', () => {
   ])('ignores malformed preferences %s', (raw) => {
     localStorage.setItem(READER_PREFERENCES_KEY, raw)
 
-    expect(readReaderPreferences()).toEqual({ textSizeStep: 0, positions: {} })
+    expect(readReaderPreferences()).toEqual({
+      textSizeStep: 0,
+      playbackSpeedStep: 5,
+      positions: {},
+    })
   })
 
   it('preserves valid fields alongside an invalid book position', () => {
@@ -92,6 +162,7 @@ describe('Reader preferences', () => {
 
     expect(readReaderPreferences()).toEqual({
       textSizeStep: 3,
+      playbackSpeedStep: 5,
       positions: { 7: { version: 'v', sourceKey: 'text', offset: 2 } },
     })
   })

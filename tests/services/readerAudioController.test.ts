@@ -101,6 +101,36 @@ describe('Reader audio controller', () => {
     vi.unstubAllGlobals()
   })
 
+  it.each([0.75, 1.35, 2])(
+    'keeps highlighting on the media timeline at %sx',
+    async (rate) => {
+      controller.playFromSegment(1)
+      await vi.waitFor(() => expect(media.play).toHaveBeenCalledOnce())
+      media.currentTime = 1.5
+      media.dispatchEvent(new Event('timeupdate'))
+      const pauseCount = vi.mocked(media.pause).mock.calls.length
+      follow.mockClear()
+
+      controller.setPlaybackSpeed(rate)
+
+      expect(media.playbackRate).toBe(rate)
+      expect(media.defaultPlaybackRate).toBe(rate)
+      expect(media.preservesPitch).toBe(true)
+      expect(media.currentTime).toBe(1.5)
+      expect(controller.getSnapshot().speakingSegmentId).toBe(1)
+      expect(follow).not.toHaveBeenCalled()
+      expect(media.pause).toHaveBeenCalledTimes(pauseCount)
+      expect(media.play).toHaveBeenCalledOnce()
+
+      media.currentTime = 3.2
+      media.dispatchEvent(new Event('timeupdate'))
+
+      expect(controller.getSnapshot().speakingSegmentId).toBe(2)
+      expect(follow).toHaveBeenLastCalledWith(targets[1].segment)
+      expect(controller.readProgress()).toBeCloseTo(0.1)
+    },
+  )
+
   it('keeps snapshots stable when only the native clock changes', async () => {
     controller.playFromSegment(1)
     await vi.waitFor(() => expect(media.play).toHaveBeenCalledOnce())
@@ -339,6 +369,7 @@ describe('Reader audio controller', () => {
 
   it('changes chapter files only on the native ended event', async () => {
     targets.push(createTarget(3, 1000, 4000, 2))
+    controller.setPlaybackSpeed(1.35)
     controller.playFromSegment(1)
     await vi.waitFor(() => expect(media.play).toHaveBeenCalledOnce())
 
@@ -356,6 +387,8 @@ describe('Reader audio controller', () => {
     )
     await vi.waitFor(() => expect(media.play).toHaveBeenCalledTimes(2))
     expect(media.currentTime).toBe(0)
+    expect(media.playbackRate).toBe(1.35)
+    expect(media.preservesPitch).toBe(true)
     expect(report).toHaveBeenLastCalledWith(
       expect.objectContaining({
         isPlaying: true,

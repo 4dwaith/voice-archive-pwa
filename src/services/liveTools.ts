@@ -10,6 +10,7 @@ import {
   TEXT_SIZE_INCREMENT,
   MAX_TEXT_SIZE_STEP,
 } from '../store/textSizeSlice'
+import { isPlaybackSpeed } from '../store/playbackSpeedSlice'
 import type { ReaderCommand } from '../store/readerCommandsSlice'
 import { type createLiveQueries } from './liveQueries'
 
@@ -71,6 +72,13 @@ const schemas = {
         Number.isInteger((value - TEXT_SIZE_BASE) / TEXT_SIZE_INCREMENT),
       ),
   }),
+  setPlaybackSpeed: z.strictObject({
+    rate: z.number().min(0.75).max(2).refine(isPlaybackSpeed),
+  }),
+  adjustPlaybackSpeed: z.strictObject({
+    direction: z.enum(['slower', 'faster']),
+  }),
+  toggleReaderControls: noArguments,
   setViewMode: z.strictObject({ mode: z.enum(['text', 'pdf']) }),
   selectSegment: z.strictObject({
     ...versionedBook,
@@ -94,7 +102,7 @@ const schemas = {
 const descriptions = [
   'Get manual help for overview, reader, live or turner.',
   'Get current route and reader availability.',
-  'Get current text size and Text/PDF setting.',
+  'Get current text size, narration speed, Text/PDF setting and reader control visibility.',
   'Get canonical anchor and separate selections.',
   'Get text download progress and committed completeness for a book.',
   'Get requested and reported narration state, cue and error.',
@@ -108,6 +116,9 @@ const descriptions = [
   'Download book text in the background without opening it. Use openBook instead when the user wants to read it. Completion does not trigger another assistant turn; do not promise notification or a later action. Ask the user to ask again if further queries are needed after downloading.',
   'Refresh the shared library catalog.',
   'Set text size from 100 to 500 percent in steps of 12.5, preserving the reading anchor.',
+  'Set the saved narration speed from 0.75 to 2 in steps of 0.05. Defaults to 1; preserves pitch and does not start playback.',
+  'Increase (faster) or decrease (slower) saved narration speed by 0.05, bounded to 0.75 through 2.',
+  'Toggle visibility of the open reader header and reading controls. Read getReaderSettings first when the user asks to show or hide them.',
   'Set the open book view to text or pdf; PDF requires an available source file.',
   'Select or clear an exact segment in the active book/version without navigation or playback.',
   'Open a known book directly by bookId, even without downloaded text or a known contentVersion. The normal reader shows loading and automatically displays text as it downloads; do not download separately first. Preserves normal reading-position restoration. Optional contentVersion requires a matching cached version.',

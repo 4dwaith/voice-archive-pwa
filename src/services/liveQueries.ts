@@ -20,7 +20,9 @@ import {
   getReaderViewMode,
   getSelectedSectionId,
   getSelectedSegmentId,
+  getAreControlsVisible,
 } from '../store/readerSlice'
+import { selectPlaybackSpeed } from '../store/playbackSpeedSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
 import type { RootState } from '../store/store'
 import {
@@ -261,6 +263,10 @@ export function createLiveQueries(
     },
     getReaderSettings: () => ({
       textSizePercent: selectTextSizePercent(getState()),
+      playbackSpeed: selectPlaybackSpeed(getState()),
+      areControlsVisible: getReaderScope(getState())
+        ? getAreControlsVisible(getState())
+        : null,
       viewMode: getReaderViewMode(getState()),
     }),
     getReadingPosition() {

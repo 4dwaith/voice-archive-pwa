@@ -1,5 +1,11 @@
 import { useAppLocation, useAppNavigate } from '../routing/navigation'
 import type { ReactNode } from 'react'
+import {
+  adjustPlaybackSpeed,
+  MAX_PLAYBACK_SPEED_STEP,
+  selectPlaybackSpeed,
+  selectPlaybackSpeedStep,
+} from '../store/playbackSpeedSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   decreaseTextSize,
@@ -18,6 +24,8 @@ export function Header({
   actions?: ReactNode
 }) {
   const dispatch = useAppDispatch()
+  const speed = useAppSelector(selectPlaybackSpeed)
+  const speedStep = useAppSelector(selectPlaybackSpeedStep)
   const textSizeStep = useAppSelector(selectTextSizeStep)
   const textSizePercent = useAppSelector(selectTextSizePercent)
   const location = useAppLocation()
@@ -51,6 +59,37 @@ export function Header({
         )}
         <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
           {actions}
+          <div
+            className="flex items-center gap-2"
+            role="group"
+            aria-label="Speaking speed controls"
+          >
+            <button
+              type="button"
+              className="min-h-12 min-w-12 rounded-xl border-2 border-ink bg-white px-2 text-xl font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
+              onClick={() => dispatch(adjustPlaybackSpeed(-1))}
+              disabled={speedStep === 0}
+              aria-label="Speak slower"
+            >
+              −
+            </button>
+            <span
+              className="min-w-14 text-center font-bold"
+              aria-label="Speaking speed"
+              aria-live="polite"
+            >
+              {speed.toFixed(2)}×
+            </span>
+            <button
+              type="button"
+              className="min-h-12 min-w-12 rounded-xl border-2 border-ink bg-white px-2 text-xl font-bold focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
+              onClick={() => dispatch(adjustPlaybackSpeed(1))}
+              disabled={speedStep === MAX_PLAYBACK_SPEED_STEP}
+              aria-label="Speak faster"
+            >
+              +
+            </button>
+          </div>
           <div
             className="flex items-center gap-2"
             aria-label="Text size controls"

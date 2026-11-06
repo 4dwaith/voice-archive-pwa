@@ -15,6 +15,7 @@ import {
   readerBookSegment,
 } from '../../../src/mock-data/readerBook'
 import audioUrl from '../../fixtures/narration.mp3?url'
+import { setPlaybackSpeed } from '../../../src/store/playbackSpeedSlice'
 import { setReaderAudioPlayback } from '../../../src/store/readerAudioSlice'
 import pdfUrl from '../../fixtures/reader.pdf?url'
 
@@ -279,6 +280,7 @@ describe('Reader narration', () => {
 
   it('plays beyond a split segment timestamp and changes chapter audio at file end', () => {
     const store = createAppStore()
+    store.dispatch(setPlaybackSpeed(1.35))
     const scope = { bookId: 91001, contentVersion: 'reader-story-1' }
     const createLines = (count: number) =>
       Array.from({ length: count }, (_, index) => `Line ${index + 1}.`).join(
@@ -427,6 +429,8 @@ describe('Reader narration', () => {
     cy.findByRole('dialog', { name: 'Narration' }).should('not.exist')
     cy.get('[data-reader-audio]').should(($audio) => {
       expect(($audio[0] as HTMLAudioElement).currentSrc).to.contain('root=2')
+      expect(($audio[0] as HTMLAudioElement).playbackRate).to.equal(1.35)
+      expect(($audio[0] as HTMLAudioElement).preservesPitch).to.equal(true)
       expect(store.getState().reader.anchor?.segmentId).to.equal(3)
     })
 

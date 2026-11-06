@@ -130,7 +130,7 @@ Given('a synthetic Live audio provider', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
-          expect(message.setup.tools[0].functionDeclarations).to.have.length(23)
+          expect(message.setup.tools[0].functionDeclarations).to.have.length(26)
           for (const declaration of message.setup.tools[0].functionDeclarations)
             expect(declaration.behavior).to.equal('BLOCKING')
           evidence.handles.push(message.setup.sessionResumption?.handle)
@@ -450,4 +450,63 @@ Then('Live receives one command failure', () => {
     expect(evidence.errorInputs).to.have.length(1)
     expect(evidence.errorInputs[0]).to.contain('Open Text view')
   })
+})
+
+When('I set narration speed to {float} through Live', (rate: number) => {
+  cy.then(() =>
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          { id: crypto.randomUUID(), name: 'setPlaybackSpeed', args: { rate } },
+        ],
+      },
+    }),
+  )
+})
+
+When('I ask Live to speak {word} by one step', (direction: string) => {
+  cy.then(() =>
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          {
+            id: crypto.randomUUID(),
+            name: 'adjustPlaybackSpeed',
+            args: { direction },
+          },
+        ],
+      },
+    }),
+  )
+})
+
+When('I toggle the reading controls through Live', () => {
+  cy.then(() =>
+    evidence.deliver?.({
+      toolCall: {
+        functionCalls: [
+          { id: crypto.randomUUID(), name: 'toggleReaderControls', args: {} },
+        ],
+      },
+    }),
+  )
+})
+
+Then('the speaking speed is {float} times normal', (rate: number) => {
+  cy.findByLabelText('Speaking speed').should(
+    'have.text',
+    `${rate.toFixed(2)}×`,
+  )
+})
+
+When('I decrease speaking speed using the header', () => {
+  cy.findByRole('button', { name: 'Speak slower' }).click()
+})
+
+Then('the reading controls are hidden', () => {
+  cy.get('[data-reader-controls]').should('not.be.visible')
+})
+
+Then('the reading controls are visible', () => {
+  cy.get('[data-reader-controls]').should('be.visible')
 })

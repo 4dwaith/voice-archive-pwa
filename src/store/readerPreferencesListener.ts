@@ -12,6 +12,7 @@ import {
   getReaderViewMode,
 } from './readerSlice'
 import { selectTextSizeStep } from './textSizeSlice'
+import { selectPlaybackSpeedStep } from './playbackSpeedSlice'
 import type { AppDispatch, RootState } from './store'
 
 export function createReaderPreferencesListener(
@@ -24,6 +25,7 @@ export function createReaderPreferencesListener(
     predicate: (_action, current, previous) =>
       getReaderViewMode(current) !== getReaderViewMode(previous) ||
       selectTextSizeStep(current) !== selectTextSizeStep(previous) ||
+      selectPlaybackSpeedStep(current) !== selectPlaybackSpeedStep(previous) ||
       getReaderAnchor(current) !== getReaderAnchor(previous),
     effect: async (_action, api) => {
       const state = api.getState()
@@ -36,6 +38,12 @@ export function createReaderPreferencesListener(
       if (step !== selectTextSizeStep(previous)) {
         api.dispatch(reportLayoutKey(null))
         preferences.textSizeStep = step
+        writeReaderPreferences(preferences)
+      }
+
+      const speedStep = selectPlaybackSpeedStep(state)
+      if (speedStep !== selectPlaybackSpeedStep(previous)) {
+        preferences.playbackSpeedStep = speedStep
         writeReaderPreferences(preferences)
       }
 

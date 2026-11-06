@@ -21,6 +21,11 @@ function createToolConnection() {
 describe('Live tools', () => {
   it.each([
     { name: 'missing' },
+    { name: 'setPlaybackSpeed', args: { rate: 0.7 } },
+    { name: 'setPlaybackSpeed', args: { rate: 2.05 } },
+    { name: 'setPlaybackSpeed', args: { rate: 1.03 } },
+    { name: 'adjustPlaybackSpeed', args: { direction: 'up' } },
+    { name: 'toggleReaderControls', args: { visible: true } },
     { name: 'setTextSize', args: { percent: 101 } },
     { name: 'getAppHelp', args: { topic: 'unknown' } },
     { name: 'getBookDownloadState', args: { bookId: -1 } },

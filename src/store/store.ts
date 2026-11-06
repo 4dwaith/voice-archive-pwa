@@ -5,6 +5,7 @@ import {
 } from '@reduxjs/toolkit'
 import type { ThunkDispatch, UnknownAction } from '@reduxjs/toolkit'
 import textSizeReducer from './textSizeSlice'
+import playbackSpeedReducer from './playbackSpeedSlice'
 import { readReaderPreferences } from '../data/readerPreferences'
 import { createReaderPreferencesListener } from './readerPreferencesListener'
 import bookDownloadsReducer from './bookDownloadsSlice'
@@ -24,6 +25,7 @@ import { archiveApi } from '../api-client/archiveApi'
 
 const rootReducer = combineReducers({
   textSize: textSizeReducer,
+  playbackSpeed: playbackSpeedReducer,
   bookDownloads: bookDownloadsReducer,
   reader: readerReducer,
   readerSearch: readerSearchReducer,
@@ -50,6 +52,7 @@ export function createAppStore() {
   const appStore = configureStore({
     preloadedState: {
       textSize: { step: preferences.textSizeStep },
+      playbackSpeed: { step: preferences.playbackSpeedStep },
       reader: {
         ...readerReducer(undefined, { type: 'initialize' }),
         viewMode: preferences.viewMode ?? 'text',

@@ -1,5 +1,9 @@
 import { z } from 'zod'
 import { MAX_TEXT_SIZE_STEP } from '../store/textSizeSlice'
+import {
+  DEFAULT_PLAYBACK_SPEED_STEP,
+  MAX_PLAYBACK_SPEED_STEP,
+} from '../store/playbackSpeedSlice'
 
 export const READER_PREFERENCES_KEY =
   import.meta.env.VITE_READER_PREFERENCES_KEY || 'voice-archive-reader'
@@ -12,6 +16,12 @@ const positionSchema = z.object({
 
 const preferencesSchema = z.object({
   viewMode: z.enum(['text', 'pdf']).optional().catch(undefined),
+  playbackSpeedStep: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_PLAYBACK_SPEED_STEP)
+    .catch(DEFAULT_PLAYBACK_SPEED_STEP),
   textSizeStep: z.number().int().min(0).max(MAX_TEXT_SIZE_STEP).catch(0),
   positions: z
     .record(
@@ -23,6 +33,7 @@ const preferencesSchema = z.object({
 
 export type ReaderPreferences = {
   viewMode?: 'text' | 'pdf'
+  playbackSpeedStep: number
   textSizeStep: number
   positions: Record<string, z.infer<typeof positionSchema>>
 }
@@ -41,7 +52,11 @@ export function readReaderPreferences(): ReaderPreferences {
       ),
     }
   } catch {
-    return { textSizeStep: 0, positions: {} }
+    return {
+      textSizeStep: 0,
+      playbackSpeedStep: DEFAULT_PLAYBACK_SPEED_STEP,
+      positions: {},
+    }
   }
 }
 

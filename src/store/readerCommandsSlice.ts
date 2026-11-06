@@ -11,6 +11,9 @@ export type ReaderDestination = ReaderScope &
 export type ReaderCommand =
   | { kind: 'goHome' | 'refreshLibrary' }
   | { kind: 'downloadBook'; bookId: number }
+  | { kind: 'setPlaybackSpeed'; rate: number }
+  | { kind: 'adjustPlaybackSpeed'; direction: 'slower' | 'faster' }
+  | { kind: 'toggleReaderControls' }
   | { kind: 'setTextSize'; percent: number }
   | { kind: 'setViewMode'; mode: 'text' | 'pdf' }
   | ({ kind: 'selectSegment'; segmentId: number | null } & ReaderScope)

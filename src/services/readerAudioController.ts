@@ -54,6 +54,13 @@ export function createReaderAudioController(
     follow: (segment: NarrationCue) => void
   },
 ) {
+  let playbackSpeed = 1
+  function applyPlaybackSpeed() {
+    media.preservesPitch = true
+    media.defaultPlaybackRate = playbackSpeed
+    media.playbackRate = playbackSpeed
+  }
+
   let state: PlaybackState = { kind: 'idle' }
   let snapshot = idleReaderAudioSnapshot
   const subscribers = new Set<() => void>()
@@ -213,6 +220,7 @@ export function createReaderAudioController(
         signal,
       )
       signal.throwIfAborted()
+      applyPlaybackSpeed()
       media.currentTime = fromFileStart
         ? 0
         : (target.segment.narration_seek_ms ??
@@ -404,6 +412,10 @@ export function createReaderAudioController(
         },
         options,
       )
+    },
+    setPlaybackSpeed(rate: number) {
+      playbackSpeed = rate
+      applyPlaybackSpeed()
     },
     playFromSegment,
     pausePlayback,

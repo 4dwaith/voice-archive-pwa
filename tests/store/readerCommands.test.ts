@@ -24,6 +24,18 @@ import { createMeasurement, seedContent } from '../helpers/readerMeasurements'
 const scope = { bookId: 7, contentVersion: 'version' }
 
 describe('Reader commands', () => {
+  it('rejects toggling reading controls outside a book', async () => {
+    const store = createAppStore()
+
+    store.dispatch(requestReaderCommand({ kind: 'toggleReaderControls' }))
+
+    await vi.waitFor(() =>
+      expect(getReaderCommandError(store.getState())?.message).toContain(
+        'Open a book',
+      ),
+    )
+  })
+
   it('opens an undownloaded library book without a content version', async () => {
     await database.books.put({ ...book, id: 7 })
     const store = createAppStore()

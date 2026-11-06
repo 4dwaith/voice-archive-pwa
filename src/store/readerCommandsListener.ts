@@ -26,6 +26,7 @@ import {
   increaseTextSize,
   setTextSizePercent,
 } from './textSizeSlice'
+import { setPlaybackSpeed, adjustPlaybackSpeed } from './playbackSpeedSlice'
 import type { AppDispatch, RootState } from './store'
 
 async function readCommandTarget(
@@ -222,6 +223,23 @@ export function createReaderCommandsListener() {
             }
             break
           }
+          case 'setPlaybackSpeed':
+            api.dispatch(setPlaybackSpeed(command.rate))
+            break
+          case 'adjustPlaybackSpeed':
+            api.dispatch(
+              adjustPlaybackSpeed(command.direction === 'faster' ? 1 : -1),
+            )
+            break
+          case 'toggleReaderControls':
+            if (!scope)
+              throw new Error('Open a book before toggling its controls.')
+            api.dispatch(
+              reader.setControlsVisible(
+                !reader.getAreControlsVisible(api.getState()),
+              ),
+            )
+            break
           case 'setTextSize':
             api.dispatch(setTextSizePercent(command.percent))
             break

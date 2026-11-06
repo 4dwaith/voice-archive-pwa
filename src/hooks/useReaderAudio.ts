@@ -13,6 +13,7 @@ import {
   seekReaderAudioBySeconds,
   getReaderAudioObservation,
 } from '../store/readerAudioSlice'
+import { selectPlaybackSpeed } from '../store/playbackSpeedSlice'
 import { useReaderAudioControl } from './useReaderAudioControl'
 
 export function useReaderAudio(
@@ -27,6 +28,7 @@ export function useReaderAudio(
   },
 ) {
   const dispatch = useAppDispatch()
+  const playbackSpeed = useAppSelector(selectPlaybackSpeed)
   const [element, setElement] = useState<HTMLAudioElement | null>(null)
   const content = useLiveQuery(async () => {
     if (bookId === undefined || !contentVersion) return undefined
@@ -72,6 +74,10 @@ export function useReaderAudio(
     player?.connect()
     return () => player?.dispose()
   }, [player])
+
+  useEffect(() => {
+    player?.setPlaybackSpeed(playbackSpeed)
+  }, [player, playbackSpeed])
 
   useEffect(() => {
     void player?.refreshContent()

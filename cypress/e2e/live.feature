@@ -258,6 +258,25 @@ Feature: Live voice conversation
     Then Live has released the microphone
     And turner narration is playing
 
+  Scenario: Voice changes speaking speed and reveals reading controls
+    Given a synchronization book with a nested destination
+    And a synthetic Live audio provider
+    When I start Live from the library
+    And I enter the synchronization reader during Live
+    And I wait for book synchronization to finish
+    And I set narration speed to 1.25 through Live
+    Then the speaking speed is 1.25 times normal
+    When I ask Live to speak faster by one step
+    Then the speaking speed is 1.30 times normal
+    When I decrease speaking speed using the header
+    Then the speaking speed is 1.25 times normal
+    When I toggle the reading controls through Live
+    Then the reading controls are hidden
+    When I toggle the reading controls through Live
+    Then the reading controls are visible
+    When I reload the reader
+    Then the speaking speed is 1.25 times normal
+
   Rule: Playback handoff keeps Live available until narration starts
     Background:
       Given a synchronization book with narration after untimed text
