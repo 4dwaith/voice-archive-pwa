@@ -1,28 +1,27 @@
 Feature: Live voice conversation
-  Scenario: Published summaries reach Live through normal book refresh
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+  Background:
+    Given Live is available
+
+  Scenario: Live can use newly published summaries after reopening a book
+    Given a book with a nested chapter
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     And I use the header Home button
     And English book summaries are published
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
-    And Live calls "getBookInfo" with ID "summary-book" and arguments '{"bookId":7}'
-    And Live calls "getBookToc" with ID "summary-toc" and arguments '{"bookId":7}'
-    And Live calls "getSegments" with ID "summary-segment" and arguments '{"bookId":7,"segmentIds":[1]}'
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
+    And I ask Live for summaries of the book, its chapters and the first passage
     Then Live receives the refreshed English summaries
     When I stop Live
     Then Live has released the microphone
 
   Scenario: A book answer leads to its supporting passage
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     And the book answer is "available"
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     And I use the header Home button
     And I ask Live about the nested destination
     Then Live receives the grounded answer and supporting passage
@@ -31,26 +30,10 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: An outdated answer reference cannot open another version
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And the book answer is "outdated"
-    When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
-    And I use the header Home button
-    And I ask Live about the nested destination
-    Then Live receives the grounded answer and supporting passage
-    When I ask Live to open the supporting passage
-    Then Live explains that the supporting version is unavailable
-    When I stop Live
-    Then Live has released the microphone
-
   Scenario: An unavailable book answer keeps its qualification
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     And the book answer is "unavailable"
-    And book content requests are observed
+    And I have not downloaded the book
     When I start Live from the library
     And I ask Live about the nested destination
     Then Live receives the answer unavailability and its limitation
@@ -59,54 +42,51 @@ Feature: Live voice conversation
     Then Live has released the microphone
 
   Scenario: The turner starts and stops Live from the library
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    When I open the turner test library
-    And I press the turner "MediaTrackPrevious" key
-    And I press the turner "MediaTrackNext" key
+    Given a book with a nested chapter
+    When I open the library
+    And I use the turner "left double tap" gesture
+    And I use the turner "right double tap" gesture
     Then Live offers a fresh conversation
-    When I press the turner "MediaPlay" key
-    Then Live exchanges browser audio
-    When I press the turner "MediaPlay" key
+    When I use the turner "right hold" gesture
+    Then I can talk with Live and hear its reply
+    When I use the turner "right hold" gesture
     Then Live has released the microphone
 
   Scenario: Turner controls coordinate narration, Live and PDF
-    Given a synchronization book with narration after untimed text
+    Given a book whose narration starts after an introduction
     And its narrated text spans pages
-    And a synthetic Live audio provider
-    When I open the synchronization book from the library
-    And I wait for book synchronization to finish
+    When I open the book from the library
+    And I wait for the book to finish loading
     And I focus the Live control
-    And I press the turner "MediaPlay" key
-    Then Live exchanges browser audio
+    And I use the turner "right hold" gesture
+    Then I can talk with Live and hear its reply
     When I focus the Live control
-    And I press the turner "MediaTrackPrevious" key
+    And I use the turner "left double tap" gesture
     Then Live has released the microphone
     And turner narration is playing
-    When I press the turner "MediaTrackPrevious" key
+    When I use the turner "left double tap" gesture
     Then turner narration is paused
     When I focus the Live control
-    And I press the turner "MediaTrackPrevious" key
+    And I use the turner "left double tap" gesture
     Then turner narration is playing
-    When I press the turner "MediaPlay" key
+    When I use the turner "right hold" gesture
     Then narration stops and the modal closes
     When I focus the Live control
-    And I press the turner "MediaTrackNext" key
+    And I use the turner "right double tap" gesture
     Then only the PDF surface is open
-    When I press the turner "MediaTrackPrevious" key
-    Then Live exchanges browser audio
+    When I use the turner "left double tap" gesture
+    Then I can talk with Live and hear its reply
     And turner narration is paused
-    When I press the turner "MediaPlay" key
+    When I use the turner "right hold" gesture
     Then Live has released the microphone
-    When I press the turner "MediaTrackNext" key
+    When I use the turner "right double tap" gesture
     Then the turner restores Text mode
 
   Scenario: Stop and reload preserve the conversation until discard
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And Live provides resumable checkpoints
+    Given a book with a nested chapter
+    And the conversation can be continued later
     When I start Live from the library
-    Then Live exchanges browser audio
+    Then I can talk with Live and hear its reply
     When I stop Live
     Then Live has released the microphone
     When I reload the Live app
@@ -116,56 +96,53 @@ Feature: Live voice conversation
     When I stop Live
     And I discard the Live conversation
     Then Live offers a fresh conversation
-    When I press the turner "MediaPlay" key
-    Then Live exchanges browser audio
-    When I press the turner "MediaPlay" key
+    When I use the turner "right hold" gesture
+    Then I can talk with Live and hear its reply
+    When I use the turner "right hold" gesture
     Then Live has released the microphone
 
   Scenario: Discard returns focus so every turner gesture still works
-    Given a synchronization book with narration after untimed text
+    Given a book whose narration starts after an introduction
     And its narrated text spans pages
-    And a synthetic Live audio provider
-    And Live provides resumable checkpoints
+    And the conversation can be continued later
     When I start Live from the library
-    Then Live exchanges browser audio
-    When I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    Then I can talk with Live and hear its reply
+    When I open the book while talking with Live
+    And I wait for the book to finish loading
     And I focus the text and hide the controls
     And I stop Live
     And I tap Discard on the touchscreen
     Then Live offers a fresh conversation
     And the reader has keyboard focus
     And the reader controls are hidden
-    When I press the turner "MediaPlay" key
-    Then Live exchanges browser audio
-    When I press the turner "MediaPlay" key
+    When I use the turner "right hold" gesture
+    Then I can talk with Live and hear its reply
+    When I use the turner "right hold" gesture
     Then Live has released the microphone
-    When I press the turner "MediaTrackNext" key
+    When I use the turner "right double tap" gesture
     Then only the PDF surface is open
-    When I press the turner "MediaTrackNext" key
+    When I use the turner "right double tap" gesture
     Then the turner restores Text mode
-    When I press the turner "MediaTrackPrevious" key
+    When I use the turner "left double tap" gesture
     Then turner narration is playing
 
-  Scenario: A non-resumable checkpoint explains the fresh start
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And Live provides resumable checkpoints
+  Scenario: A conversation that can no longer continue offers a fresh start
+    Given a book with a nested chapter
+    And the conversation can be continued later
     When I start Live from the library
-    Then Live exchanges browser audio
-    When the Live checkpoint becomes unavailable
+    Then I can talk with Live and hear its reply
+    When the conversation can no longer be continued
     And I stop Live
     Then Live offers a fresh conversation
     And Live has released the microphone
 
   Scenario: Live stays available while reading and closes quietly on narration
-    Given a synchronization book with narration after untimed text
+    Given a book whose narration starts after an introduction
     And its narrated text spans pages
-    And a synthetic Live audio provider
     When I start Live from the library
-    Then Live exchanges browser audio
-    When I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    Then I can talk with Live and hear its reply
+    When I open the book while talking with Live
+    And I wait for the book to finish loading
     And I focus the text and hide the controls
     Then the corner Live control remains reachable
     When I play the page narration
@@ -175,205 +152,184 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: Provisioning failure releases the microphone and allows retry
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And Live provisioning fails once
+  Scenario: A failed start releases the microphone and allows retry
+    Given a book with a nested chapter
+    And starting Live fails once
     When I start Live from the library
     Then Live reports failure and releases the microphone
     When I retry Live
-    Then Live exchanges browser audio
+    Then I can talk with Live and hear its reply
     When I stop Live
     Then Live has released the microphone
 
   Scenario: Live reads current settings after a manual change
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     When I start Live from the library
-    Then Live exchanges browser audio
-    When Live calls "getAppLocation" with ID "library"
-    Then tool "library" reports "reader" as "unavailable"
-    When I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    Then I can talk with Live and hear its reply
+    When I ask Live whether I have a book open
+    Then Live knows I am in the library
+    When I open the book while talking with Live
+    And I wait for the book to finish loading
     And I focus the text and hide the controls
-    And I press the turner "MediaTrackNext" key
+    And I use the turner "right double tap" gesture
     Then only the PDF surface is open
-    When Live calls "getReaderSettings" with ID "settings"
-    Then tool "settings" reports "viewMode" as "pdf"
+    When I ask Live which view I am using
+    Then Live knows I am viewing the PDF
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: Voice End releases capture and is not replayed after reload
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And Live provides resumable checkpoints
+  Scenario: Ending Live by voice preserves the conversation for later
+    Given a book with a nested chapter
+    And the conversation can be continued later
     When I start Live from the library
-    Then Live exchanges browser audio
-    When Live calls "endLiveSession" with ID "end"
+    Then I can talk with Live and hear its reply
+    When I ask Live to end the conversation
     Then Live has released the microphone
     When I reload the Live app
     And I continue Live
     Then Live resumes the same conversation
-    When Live calls "endLiveSession" with ID "end"
-    Then tool "end" reports "accepted" as "true"
-    And Live resumes the same conversation
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: Live reports missing local content without downloading
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
-    And book content requests are observed
+  Scenario: Live identifies books without downloading them
+    Given a book with a nested chapter
+    And I have not downloaded the book
     When I start Live from the library
-    And Live calls "listAvailableBooks" with ID "catalog"
-    Then tool "catalog" reports "total" as "1"
-    When Live calls "getBookInfo" with ID "info" and arguments '{"bookId":7}'
-    Then tool "info" reports "identitySource" as "unavailable"
-    When Live calls "getBookToc" with ID "toc" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc"}'
-    Then tool "toc" reports "status" as "unavailable"
+    And I ask Live which books I can read
+    Then Live knows the book is in my library
+    When I ask Live about the book and its chapters
+    Then Live knows the book has not been downloaded
     And Live has not opened or downloaded the book
     When I stop Live
     Then Live has released the microphone
 
   Scenario: Live reads nearby Text without navigating
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     When I start Live from the library
-    And Live calls "getTextPage" with ID "absent" and arguments '{"offset":0}'
-    Then tool "absent" reports "status" as "unavailable"
-    When I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I ask Live to read the current text page
+    Then Live knows there is no text page open
+    When I open the book while talking with Live
+    And I wait for the book to finish loading
     Then I see its first reader page
-    When Live calls "getReadingPosition" with ID "before"
-    And Live calls "getTextPage" with ID "adjacent" and arguments '{"offset":1}'
-    Then tool "adjacent" reports "status" as "ready"
+    When I ask Live to read the next text page without turning the page
+    Then Live receives the next page text
     And I see its first reader page
     When I stop Live
     Then Live has released the microphone
 
   Scenario: Live changes settings, moves one page and returns Home
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     Then I see its first reader page
-    When Live calls "setTextSize" with ID "size" and arguments '{"percent":112.5}'
-    And Live calls "getReaderSettings" with ID "size-read"
-    Then tool "size-read" reports "textSizePercent" as "112.5"
-    When Live calls "moveTextPage" with ID "move" and arguments '{"direction":"next"}'
+    When I ask Live to set the text size to 112.5 percent
+    Then Live knows the text size is 112.5 percent
+    When I ask Live to turn to the next text page
     Then the text shows page 2
-    When Live calls "goHome" with ID "home"
-    Then I return to the synchronization library
-    When Live calls "moveTextPage" with ID "invalid-move" and arguments '{"direction":"next"}'
-    Then Live receives one command failure
+    When I ask Live to return to the library
+    Then I am back in the library
+    When I ask Live to turn to the next text page
+    Then Live is told to open Text view first
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: Live opens an undownloaded book and its reader loads automatically
-    Given a synchronization book with a slow second batch
-    And a synthetic Live audio provider
+  Scenario: Live opens a new book while the rest of it loads
+    Given a book that takes time to finish loading
     When I start Live from the library
-    Then Live exchanges browser audio
-    When Live calls "openBook" with ID "open-new" and arguments '{"bookId":7}'
-    Then its first batch is readable without marking the book complete
-    When I wait for book synchronization to finish
+    Then I can talk with Live and hear its reply
+    When I ask Live to open the book
+    Then I can start reading while the rest of the book loads
+    When I wait for the book to finish loading
     Then I see its first reader page
-    And Live exchanges browser audio
+    And I can talk with Live and hear its reply
     When I stop Live
     Then Live has released the microphone
 
-  Scenario: Live opens cached nested and exact segment destinations from the library
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+  Scenario: Live opens chapters and passages and remembers my reading place
+    Given a book with a nested chapter
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     And I use the header Home button
-    Then I return to the synchronization library
-    When Live calls "navigateToSection" with ID "nested" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","sectionId":2}'
+    Then I am back in the library
+    When I ask Live to open the nested chapter
     Then I see the nested section text
     When I use the header Home button
-    Then I return to the synchronization library
-    When Live calls "navigateToSegment" with ID "exact" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","segmentId":2,"offset":0}'
+    Then I am back in the library
+    When I ask Live to open the nested passage
     Then I see the nested section text
     When I use the header Home button
-    Then I return to the synchronization library
-    When Live calls "openBook" with ID "open" and arguments '{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc"}'
+    Then I am back in the library
+    When I ask Live to open the book
     Then I see the nested section text
     When I stop Live
     Then Live has released the microphone
 
   Scenario: Live plays the selected passage in the open book
-    Given a synchronization book with narration after untimed text
-    And a synthetic Live audio provider
+    Given a book whose narration starts after an introduction
     And its narrated text spans pages
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     And I focus the text and hide the controls
     And I select a text segment
     Then the text segment is selected
-    When Live calls "getReadingPosition" with ID "selected-position"
-    Then tool "selected-position" reports "status" as "ready"
     When I ask Live to play the selected passage
     Then Live has released the microphone
     And turner narration is playing
 
   Scenario: Live opens a cached narration destination and yields to playback
-    Given a synchronization book with narration after untimed text
-    And a synthetic Live audio provider
+    Given a book whose narration starts after an introduction
     And its narrated text spans pages
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
     And I use the header Home button
-    Then I return to the synchronization library
-    When Live calls "startPlayback" with ID "read" and arguments '{"destination":{"bookId":7,"contentVersion":"a3027b66-924c-4c9a-aad5-660ba7a733bc","target":"section","sectionId":1}}'
+    Then I am back in the library
+    When I ask Live to read the first chapter aloud
     Then Live has released the microphone
     And turner narration is playing
 
   Scenario: Voice changes speaking speed and reveals reading controls
-    Given a synchronization book with a nested destination
-    And a synthetic Live audio provider
+    Given a book with a nested chapter
     When I start Live from the library
-    And I enter the synchronization reader during Live
-    And I wait for book synchronization to finish
-    And I set narration speed to 1.25 through Live
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
+    And I ask Live to set the speaking speed to 1.25 times normal
     Then the speaking speed is 1.25 times normal
-    When I ask Live to speak faster by one step
+    When I ask Live to set the speaking speed to 1.30 times normal
     Then the speaking speed is 1.30 times normal
     When I decrease speaking speed using the header
     Then the speaking speed is 1.25 times normal
-    When I toggle the reading controls through Live
+    When I ask Live to hide the reading controls
     Then the reading controls are hidden
-    When I toggle the reading controls through Live
+    When I ask Live to show the reading controls
     Then the reading controls are visible
     When I reload the reader
     Then the speaking speed is 1.25 times normal
 
   Rule: Playback handoff keeps Live available until narration starts
     Background:
-      Given a synchronization book with narration after untimed text
-      And a synthetic Live audio provider
+      Given a book whose narration starts after an introduction
       And its narrated text spans pages
-      And narration Play is delayed
+      And the narration takes time to start
       When I start Live from the library
-      Then Live exchanges browser audio
-      When I enter the synchronization reader during Live
-      And I wait for book synchronization to finish
+      Then I can talk with Live and hear its reply
+      When I open the book while talking with Live
+      And I wait for the book to finish loading
       And I play the page narration
       Then Live waits silently for narration
 
-    Scenario: Slow Play closes Live only after actual playback
-      When delayed narration "plays"
+    Scenario: Live stops once narration starts
+      When the narration starts
       Then Live has released the microphone
       And turner narration is playing
 
-    Scenario: Rejected Play explains the error on the existing connection
-      When delayed narration "fails"
-      Then Live receives the playback failure once
+    Scenario: Failed narration lets the conversation continue
+      When the narration cannot start
+      Then Live is told narration could not start and the conversation continues
 
-    Scenario: Pause cancels delayed Play without restarting Live
+    Scenario: Pausing while narration is loading keeps the conversation going
       When I cancel delayed narration
       Then Live continues without delayed narration

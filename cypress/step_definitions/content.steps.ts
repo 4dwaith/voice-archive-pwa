@@ -718,9 +718,11 @@ Then('PDF browsing fetches more ranges without navigating text', () => {
 Given('a slow synchronization book with a cover', () =>
   mockBook({ slow: true, cover: true }),
 )
-Given('a synchronization book with a slow second batch', () =>
+
+Given('a book that takes time to finish loading', () =>
   mockBook({ slowSecond: true }),
 )
+
 Given('a synchronization book whose first download fails', () =>
   mockBook({ failOnce: true }),
 )
@@ -744,8 +746,13 @@ function cacheBookFromLibrary() {
   })
 }
 
-When('I open the synchronization book from the library', openBookFromLibrary)
-When('I wait for book synchronization to finish', waitForBookSynchronization)
+When('I open the book from the library', () => {
+  openBookFromLibrary()
+})
+
+When('I wait for the book to finish loading', () => {
+  waitForBookSynchronization()
+})
 
 When('I open the synchronization book directly', () => {
   cy.visit(`/books/${id}`, {
@@ -764,7 +771,7 @@ When('I go forward in browser history', () => {
   cy.go('forward')
 })
 
-Then('I return to the synchronization library', () => {
+Then('I am back in the library', () => {
   cy.location('pathname').should('eq', '/')
   cy.findByRole('button', { name: 'Select Sync book' }).should('be.visible')
   cy.findByRole('button', { name: /^Home$/ }).should('not.exist')
@@ -791,7 +798,8 @@ Then('its complete structured dataset is available locally', () => {
     expect(cached.readable[0].html_content).to.equal(segment.html_content)
   })
 })
-Then('its first batch is readable without marking the book complete', () => {
+
+Then('I can start reading while the rest of the book loads', () => {
   // Poll IndexedDB through the data layer while the second response is delayed.
   harness().then(async (data) => {
     for (let attempt = 0; attempt < 30; attempt++) {
@@ -1131,9 +1139,7 @@ Then('the reader controls are visible', () => {
   cy.findByRole('button', { name: 'Make text larger' }).should('be.enabled')
 })
 
-Given('a synchronization book with a nested destination', () =>
-  mockBook({ nested: true }),
-)
+Given('a book with a nested chapter', () => mockBook({ nested: true }))
 
 When('I select the nested ToC destination', () => {
   // Cypress's focusable-element list omits native summary elements.
@@ -1580,7 +1586,7 @@ Then('the search field and actions remain usable', () => {
 
 let audioRangeResponses = 0
 
-Given('a synchronization book with narration after untimed text', () => {
+Given('a book whose narration starts after an introduction', () => {
   audioRangeResponses = 0
   cy.readFile('cypress/fixtures/narration.mp3', 'base64').then((encoded) => {
     prepareBookWithMedia(mediaFixture.pdf, undefined, encoded)

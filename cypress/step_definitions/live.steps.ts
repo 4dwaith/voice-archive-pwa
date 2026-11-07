@@ -19,6 +19,150 @@ type AudioEvidence = {
 let evidence: AudioEvidence
 let hasCheckpoints = false
 
+function requestLiveAction(
+  name: string,
+  args: Record<string, unknown> = {},
+  id: string = crypto.randomUUID(),
+) {
+  return cy.then(() => {
+    expect(evidence.deliver).to.be.a('function')
+    evidence.deliver!({ toolCall: { functionCalls: [{ id, name, args }] } })
+  })
+}
+
+function expectLiveInformation(id: string, field: string, expected: unknown) {
+  return cy.wrap(null).should(() => {
+    const response = evidence.toolResults.find(
+      (call) => call.id === id,
+    )?.response
+    expect(Cypress._.get(response?.result, field)).to.deep.equal(expected)
+  })
+}
+
+When(
+  'I ask Live for summaries of the book, its chapters and the first passage',
+  () => {
+    requestLiveAction('getBookInfo', { bookId: 7 }, 'summary-book')
+    requestLiveAction('getBookToc', { bookId: 7 }, 'summary-toc')
+    requestLiveAction(
+      'getSegments',
+      { bookId: 7, segmentIds: [1] },
+      'summary-segment',
+    )
+  },
+)
+
+When('I ask Live whether I have a book open', () =>
+  requestLiveAction('getAppState', {}, 'library'),
+)
+
+Then('Live knows I am in the library', () =>
+  expectLiveInformation('library', 'location.reader', 'unavailable'),
+)
+
+When('I ask Live which view I am using', () =>
+  requestLiveAction('getAppState', {}, 'settings'),
+)
+
+Then('Live knows I am viewing the PDF', () =>
+  expectLiveInformation('settings', 'settings.viewMode', 'pdf'),
+)
+
+When('I ask Live to end the conversation', () =>
+  requestLiveAction('endLiveSession'),
+)
+
+When('I ask Live which books I can read', () =>
+  requestLiveAction('listAvailableBooks', {}, 'catalog'),
+)
+
+Then('Live knows the book is in my library', () =>
+  expectLiveInformation('catalog', 'items.0.title', 'Sync book'),
+)
+
+When('I ask Live about the book and its chapters', () => {
+  requestLiveAction('getBookInfo', { bookId: 7 }, 'info')
+  requestLiveAction('getBookToc', { bookId: 7 }, 'toc')
+})
+
+Then('Live knows the book has not been downloaded', () => {
+  expectLiveInformation('info', 'identitySource', 'unavailable')
+  expectLiveInformation('toc', 'status', 'unavailable')
+})
+
+When('I ask Live to read the current text page', () =>
+  requestLiveAction('getTextPage', { offset: 0 }, 'absent'),
+)
+
+Then('Live knows there is no text page open', () =>
+  expectLiveInformation('absent', 'status', 'unavailable'),
+)
+
+When('I ask Live to read the next text page without turning the page', () =>
+  requestLiveAction('getTextPage', { offset: 1 }, 'adjacent'),
+)
+
+Then('Live receives the next page text', () => {
+  expectLiveInformation('adjacent', 'status', 'ready')
+  cy.wrap(null).should(() => {
+    const result = evidence.toolResults.find(({ id }) => id === 'adjacent')
+      ?.response.result
+    expect(Cypress._.get(result, 'fragments.0.text')).to.be.a('string').and.not
+      .be.empty
+  })
+})
+
+When('I ask Live to set the text size to {float} percent', (textSize: number) =>
+  requestLiveAction('updateReaderSettings', { textSize }),
+)
+
+Then('Live knows the text size is {float} percent', (size: number) => {
+  requestLiveAction('getAppState', {}, 'size-read')
+  expectLiveInformation('size-read', 'settings.textSizePercent', size)
+})
+
+When('I ask Live to turn to the next text page', () =>
+  requestLiveAction('moveTextPage', { direction: 'next' }),
+)
+
+When('I ask Live to return to the library', () => requestLiveAction('goHome'))
+
+When('I ask Live to open the book', () =>
+  requestLiveAction('openBook', { bookId: 7 }),
+)
+
+When('I ask Live to open the nested chapter', () =>
+  requestLiveAction('navigateToSection', { bookId: 7, sectionId: 2 }),
+)
+
+When('I ask Live to open the nested passage', () =>
+  requestLiveAction('navigateToSegment', {
+    bookId: 7,
+    segmentId: 2,
+    offset: 0,
+  }),
+)
+
+When('I ask Live to read the first chapter aloud', () =>
+  requestLiveAction('startPlayback', {
+    destination: { bookId: 7, target: 'section', sectionId: 1 },
+  }),
+)
+
+When(
+  'I ask Live to set the speaking speed to {float} times normal',
+  (playbackSpeed: number) =>
+    requestLiveAction('updateReaderSettings', { playbackSpeed }),
+)
+
+When('I ask Live to hide the reading controls', () =>
+  requestLiveAction('updateReaderSettings', { controlsVisible: false }),
+)
+
+When('I ask Live to show the reading controls', () =>
+  requestLiveAction('updateReaderSettings', { controlsVisible: true }),
+)
+
 Then('Live receives the refreshed English summaries', () => {
   cy.wrap(null).should(() => {
     const results = Object.fromEntries(
@@ -47,11 +191,14 @@ Then('Live receives the refreshed English summaries', () => {
   })
 })
 
-When('I open the turner test library', () => {
-  cy.visit('/')
-})
+When('I use the turner {string} gesture', (gesture: string) => {
+  const key = {
+    'right hold': 'MediaPlay',
+    'left double tap': 'MediaTrackPrevious',
+    'right double tap': 'MediaTrackNext',
+  }[gesture]
+  if (!key) throw new Error(`Unsupported turner gesture: ${gesture}`)
 
-When('I press the turner {string} key', (key: string) => {
   const keyCodes: Record<string, number> = {
     MediaPlay: 179,
     MediaTrackPrevious: 177,
@@ -96,7 +243,7 @@ Then('the turner restores Text mode', () => {
   cy.findByRole('region', { name: 'Source PDF' }).should('not.exist')
 })
 
-Given('Live provides resumable checkpoints', () => {
+Given('the conversation can be continued later', () => {
   hasCheckpoints = true
 })
 
@@ -114,7 +261,7 @@ Given('its narrated text spans pages', () => {
   })
 })
 
-Given('a synthetic Live audio provider', () => {
+Given('Live is available', () => {
   hasCheckpoints = false
   evidence = {
     inputs: 0,
@@ -222,7 +369,7 @@ Given('a synthetic Live audio provider', () => {
   })
 })
 
-Given('Live provisioning fails once', () => {
+Given('starting Live fails once', () => {
   cy.intercept(
     { method: 'POST', url: '**/api/v1/live/token', times: 1 },
     { statusCode: 503 },
@@ -234,7 +381,7 @@ When('I start Live from the library', () => {
   cy.findByRole('button', { name: 'Start Live' }).click()
 })
 
-Then('Live exchanges browser audio', () => {
+Then('I can talk with Live and hear its reply', () => {
   cy.get('[data-live-state="connected"]').should('be.visible')
   cy.wrap(null).should(() => {
     expect(evidence.inputs).to.be.greaterThan(0)
@@ -242,7 +389,7 @@ Then('Live exchanges browser audio', () => {
   })
 })
 
-When('I enter the synchronization reader during Live', () => {
+When('I open the book while talking with Live', () => {
   cy.findByRole('button', { name: 'Select Sync book' }).click()
 })
 
@@ -309,7 +456,7 @@ When('I discard the Live conversation', () =>
   cy.findByRole('button', { name: 'Discard Live conversation' }).click(),
 )
 
-When('the Live checkpoint becomes unavailable', () => {
+When('the conversation can no longer be continued', () => {
   cy.then(() =>
     evidence.deliver?.({ sessionResumptionUpdate: { resumable: false } }),
   )
@@ -339,7 +486,7 @@ Then('Live reports failure and releases the microphone', () => {
   )
 })
 
-Given('narration Play is delayed', () => {
+Given('the narration takes time to start', () => {
   cy.on('window:before:load', (win) => {
     const play = win.HTMLMediaElement.prototype.play
     cy.stub(win.HTMLMediaElement.prototype, 'play').callsFake(function (
@@ -365,24 +512,25 @@ Then('Live waits silently for narration', () => {
   cy.get('[data-live-state="connected"]').should('exist')
 })
 
-When('delayed narration {string}', (outcome: string) => {
-  cy.then(() =>
-    outcome === 'fails' ? evidence.rejectPlay?.() : evidence.resolvePlay?.(),
-  )
-})
+When('the narration starts', () => cy.then(() => evidence.resolvePlay?.()))
 
-Then('Live receives the playback failure once', () => {
-  cy.wrap(null).should(() => {
-    expect(evidence.errorInputs).to.have.length(1)
-    expect(evidence.errorInputs[0]).to.contain('Synthetic playback rejection')
-    expect(evidence.stream?.getTracks()[0].enabled).to.equal(true)
-    expect(evidence.connections).to.equal(1)
-  })
-  cy.get('[data-live-state="connected"]').should('exist')
-  cy.get('[data-reader-audio]').should(($audio) =>
-    expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
-  )
-})
+When('the narration cannot start', () => cy.then(() => evidence.rejectPlay?.()))
+
+Then(
+  'Live is told narration could not start and the conversation continues',
+  () => {
+    cy.wrap(null).should(() => {
+      expect(evidence.errorInputs).to.have.length(1)
+      expect(evidence.errorInputs[0]).to.contain('Synthetic playback rejection')
+      expect(evidence.stream?.getTracks()[0].enabled).to.equal(true)
+      expect(evidence.connections).to.equal(1)
+    })
+    cy.get('[data-live-state="connected"]').should('exist')
+    cy.get('[data-reader-audio]').should(($audio) =>
+      expect(($audio[0] as HTMLAudioElement).paused).to.equal(true),
+    )
+  },
+)
 
 When('I cancel delayed narration', () => {
   cy.findByRole('button', { name: 'Pause' }).click()
@@ -399,26 +547,6 @@ Then('Live continues without delayed narration', () => {
     expect(evidence.errorInputs).to.have.length(0)
   })
 })
-
-When('Live calls {string} with ID {string}', (name: string, id: string) => {
-  cy.then(() =>
-    evidence.deliver?.({
-      toolCall: { functionCalls: [{ id, name, args: {} }] },
-    }),
-  )
-})
-
-Then(
-  'tool {string} reports {string} as {string}',
-  (id: string, field: string, value: string) => {
-    cy.wrap(null).should(() => {
-      const result = evidence.toolResults.find((call) => call.id === id)
-        ?.response as Record<string, unknown>
-      const valueSource = (result?.result ?? result) as Record<string, unknown>
-      expect(String(valueSource?.[field])).to.equal(value)
-    })
-  },
-)
 
 Then('the reader has keyboard focus', () => {
   cy.get('[data-reader-surface]').should('be.focused')
@@ -462,17 +590,6 @@ When('I focus the Live control', () => {
   cy.findByRole('button', { name: /^(Start|Continue|Stop) Live$/ }).focus()
 })
 
-When(
-  'Live calls {string} with ID {string} and arguments {string}',
-  (name: string, id: string, args: string) => {
-    cy.then(() =>
-      evidence.deliver?.({
-        toolCall: { functionCalls: [{ id, name, args: JSON.parse(args) }] },
-      }),
-    )
-  },
-)
-
 Then('Live has not opened or downloaded the book', () => {
   cy.location('pathname').should('equal', '/')
   cy.get('[data-reader-surface]').should('not.exist')
@@ -480,15 +597,20 @@ Then('Live has not opened or downloaded the book', () => {
 })
 
 When('I ask Live to play the selected passage', () => {
+  requestLiveAction('getAppState', {}, 'selected-position')
+  expectLiveInformation('selected-position', 'position.status', 'ready')
+
   cy.then(() => {
     const position = evidence.toolResults.find(
       ({ id }) => id === 'selected-position',
     )?.response.result as {
-      scope: { bookId: number; contentVersion: string }
-      selectedSegmentId: number
+      position: {
+        scope: { bookId: number }
+        selectedSegmentId: number
+      }
     }
 
-    expect(position.selectedSegmentId).to.be.a('number')
+    expect(position.position.selectedSegmentId).to.be.a('number')
     evidence.deliver?.({
       toolCall: {
         functionCalls: [
@@ -497,9 +619,9 @@ When('I ask Live to play the selected passage', () => {
             name: 'startPlayback',
             args: {
               destination: {
-                ...position.scope,
+                bookId: position.position.scope.bookId,
                 target: 'segment',
-                segmentId: position.selectedSegmentId,
+                segmentId: position.position.selectedSegmentId,
               },
             },
           },
@@ -509,7 +631,7 @@ When('I ask Live to play the selected passage', () => {
   })
 })
 
-Given('book content requests are observed', () =>
+Given('I have not downloaded the book', () =>
   cy
     .intercept('GET', /\/api\/v1\/books\/7\/(content|sections|segments)(\?|$)/)
     .as('contentReads'),
@@ -532,10 +654,7 @@ Given('the book answer is {string}', (outcome: string) => {
         : [
             {
               book_id: 7,
-              content_version:
-                outcome === 'outdated'
-                  ? '1ac04088-bfcb-44e0-bcdf-ff025c93dcac'
-                  : 'a3027b66-924c-4c9a-aad5-660ba7a733bc',
+              content_version: 'a3027b66-924c-4c9a-aad5-660ba7a733bc',
               segment_id: 2,
               section_id: 2,
               path: ['Sync book', 'Chapter', 'Nested destination'],
@@ -565,7 +684,7 @@ When('I ask Live about the nested destination', () => {
             id: 'book-question',
             name: 'ask_library',
             args: {
-              book_id: 7,
+              bookId: 7,
               query: 'What does Sync book say about the nested destination?',
               effort: 'medium',
             },
@@ -608,7 +727,6 @@ When('I ask Live to open the supporting passage', () => {
             name: 'navigateToSegment',
             args: {
               bookId: reference.book_id,
-              contentVersion: reference.content_version,
               segmentId: reference.segment_id,
             },
           },
@@ -616,16 +734,6 @@ When('I ask Live to open the supporting passage', () => {
       },
     })
   })
-})
-
-Then('Live explains that the supporting version is unavailable', () => {
-  cy.wrap(null).should(() => {
-    expect(evidence.errorInputs).to.have.length(1)
-    expect(evidence.errorInputs[0]).to.contain(
-      'requested book version is unavailable',
-    )
-  })
-  cy.location('pathname').should('equal', '/')
 })
 
 Then('Live receives the answer unavailability and its limitation', () => {
@@ -643,51 +751,11 @@ Then('Live receives the answer unavailability and its limitation', () => {
   cy.location('pathname').should('equal', '/')
 })
 
-Then('Live receives one command failure', () => {
+Then('Live is told to open Text view first', () => {
   cy.wrap(null).should(() => {
     expect(evidence.errorInputs).to.have.length(1)
     expect(evidence.errorInputs[0]).to.contain('Open Text view')
   })
-})
-
-When('I set narration speed to {float} through Live', (rate: number) => {
-  cy.then(() =>
-    evidence.deliver?.({
-      toolCall: {
-        functionCalls: [
-          { id: crypto.randomUUID(), name: 'setPlaybackSpeed', args: { rate } },
-        ],
-      },
-    }),
-  )
-})
-
-When('I ask Live to speak {word} by one step', (direction: string) => {
-  cy.then(() =>
-    evidence.deliver?.({
-      toolCall: {
-        functionCalls: [
-          {
-            id: crypto.randomUUID(),
-            name: 'adjustPlaybackSpeed',
-            args: { direction },
-          },
-        ],
-      },
-    }),
-  )
-})
-
-When('I toggle the reading controls through Live', () => {
-  cy.then(() =>
-    evidence.deliver?.({
-      toolCall: {
-        functionCalls: [
-          { id: crypto.randomUUID(), name: 'toggleReaderControls', args: {} },
-        ],
-      },
-    }),
-  )
 })
 
 Then('the speaking speed is {float} times normal', (rate: number) => {

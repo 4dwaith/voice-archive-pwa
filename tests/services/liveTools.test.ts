@@ -45,6 +45,14 @@ describe('Live tools', () => {
     { name: 'updateReaderSettings', args: { textSize: 101 } },
     { name: 'getAppHelp', args: { topic: 'unknown' } },
     { name: 'getBookInfo', args: { bookId: -1 } },
+    {
+      name: 'navigateToSegment',
+      args: {
+        bookId: 7,
+        segmentId: 2,
+        contentVersion: '1ac04088-bfcb-44e0-bcdf-ff025c93dcac',
+      },
+    },
     { name: 'endLiveSession', args: { extra: true } },
   ])('rejects invalid calls: $name', async (call) => {
     const { connection, send, stop } = createToolConnection()
