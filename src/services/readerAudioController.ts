@@ -121,6 +121,7 @@ export function createReaderAudioController(
   }
 
   function reportFailure(error: unknown) {
+    console.warn('Narration playback failed.', error)
     const loaded = readLoadedNarration()
     operation.abort()
     media.pause()

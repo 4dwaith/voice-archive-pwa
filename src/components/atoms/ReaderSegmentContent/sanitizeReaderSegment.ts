@@ -108,7 +108,8 @@ export function sanitizeReaderSegment(
       return { isValid: false, error: 'text-mismatch' }
     }
     return { isValid: true, nodes }
-  } catch {
+  } catch (error) {
+    console.warn('Reader content sanitization failed.', error)
     return { isValid: false, error: 'sanitizer-unavailable' }
   }
 }

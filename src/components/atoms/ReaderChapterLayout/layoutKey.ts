@@ -56,7 +56,15 @@ export async function readFontEnvironment(element: HTMLElement) {
   // Failed faces settle to CSS fallback; both failure status and actual fallback
   // metrics are represented. Never publish while the FontFaceSet is loading.
   await Promise.all(
-    fonts.map((font) => document.fonts.load(font, FONT_PROBE).catch(() => [])),
+    fonts.map((font) =>
+      document.fonts.load(font, FONT_PROBE).catch((error) => {
+        console.warn(
+          'Reader font loading failed; using fallback metrics.',
+          error,
+        )
+        return []
+      }),
+    ),
   )
   await document.fonts.ready
 

@@ -51,7 +51,8 @@ export function readReaderPreferences(): ReaderPreferences {
         ),
       ),
     }
-  } catch {
+  } catch (error) {
+    console.warn('Reader preferences could not be read; using defaults.', error)
     return {
       textSizeStep: 0,
       playbackSpeedStep: DEFAULT_PLAYBACK_SPEED_STEP,
@@ -63,7 +64,8 @@ export function readReaderPreferences(): ReaderPreferences {
 export function writeReaderPreferences(preferences: ReaderPreferences) {
   try {
     localStorage.setItem(READER_PREFERENCES_KEY, JSON.stringify(preferences))
-  } catch {
+  } catch (error) {
+    console.warn('Reader preferences could not be saved.', error)
     // Storage availability must never prevent reading.
   }
 }

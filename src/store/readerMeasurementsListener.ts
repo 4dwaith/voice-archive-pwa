@@ -13,7 +13,8 @@ export function createReaderMeasurementsListener() {
 
       try {
         outcome = await saveChapterMeasurement(payload)
-      } catch {
+      } catch (error) {
+        console.warn('Chapter measurement could not be saved.', error)
         outcome = 'failed'
       }
 

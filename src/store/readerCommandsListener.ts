@@ -210,9 +210,10 @@ export function createReaderCommandsListener() {
             )
             try {
               await refresh.unwrap()
-            } catch {
+            } catch (error) {
               throw new Error(
                 'The library could not be refreshed. Please try again.',
+                { cause: error },
               )
             } finally {
               refresh.unsubscribe()
@@ -442,6 +443,7 @@ export function createReaderCommandsListener() {
             )
         }
       } catch (error) {
+        if (isCurrent()) console.warn('Reader command failed.', error)
         if (isCurrent())
           api.dispatch(
             reportReaderCommandError({

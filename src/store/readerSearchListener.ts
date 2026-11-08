@@ -18,7 +18,8 @@ export function createReaderSearchListener() {
       try {
         const results = await searchBookText(payload.scope, payload.query)
         api.dispatch(recordSearchSuccess({ ...payload, results }))
-      } catch {
+      } catch (error) {
+        console.warn('Reader search failed.', error)
         api.dispatch(recordSearchFailure(payload))
       }
     },

@@ -92,13 +92,15 @@ export function createReaderTocListener() {
               'No readable text target for this section.',
             ),
           )
-      } catch {
-        if (!api.signal.aborted)
+      } catch (error) {
+        if (!api.signal.aborted) {
+          console.warn('Table of contents navigation failed.', error)
           api.dispatch(
             reportTocNavigationError(
               'The section could not be opened. Try again.',
             ),
           )
+        }
       }
     },
   })

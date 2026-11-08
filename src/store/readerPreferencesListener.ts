@@ -66,7 +66,8 @@ export function createReaderPreferencesListener(
           offset: anchor.offset,
         }
         writeReaderPreferences(preferences)
-      } catch {
+      } catch (error) {
+        console.warn('The reading position could not be saved.', error)
         // A cache read failure must not interrupt reading.
       }
     },

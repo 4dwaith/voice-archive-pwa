@@ -83,6 +83,7 @@ export function createBookDownloadsListener() {
         }
       } catch (error) {
         if (!controller.signal.aborted) {
+          console.warn('Book content could not be loaded.', error)
           api.dispatch(
             recordBookRequestFailure({
               ...request,

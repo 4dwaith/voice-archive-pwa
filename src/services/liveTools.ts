@@ -260,11 +260,17 @@ export function createLiveTools(
                       ? value
                           .then(
                             (result) => ({ result }),
-                            () => failure,
+                            (error) => {
+                              if (!request.signal.aborted)
+                                console.warn('Live tool query failed.', error)
+                              return failure
+                            },
                           )
                           .finally(() => requests.delete(id))
                       : { result: value }
-                } catch {
+                } catch (error) {
+                  if (!request.signal.aborted)
+                    console.warn('Live tool query failed.', error)
                   result = failure
                 }
                 if (!(result instanceof Promise)) requests.delete(id)

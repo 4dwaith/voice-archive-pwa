@@ -95,8 +95,8 @@ export const booksApi = taggedBooksApi.injectEndpoints({
         if (getCacheEntry().requestId !== requestId) return
         try {
           await saveLibraryPages(result.data.pages)
-        } catch {
-          console.warn('The library could not be saved for offline use.')
+        } catch (error) {
+          console.warn('The library could not be saved for offline use.', error)
         }
       },
 

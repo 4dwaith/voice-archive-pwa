@@ -56,7 +56,8 @@ export function createLiveConversation(
     if (saved.success && saved.data.expiresAt > Date.now())
       checkpoint = saved.data
     else sessionStorage.removeItem(checkpointKey)
-  } catch {
+  } catch (error) {
+    console.warn('Live checkpoint could not be read.', error)
     /* Storage may be unavailable; in-memory continuation still works. */
   }
   let snapshot: LiveSnapshot = {
@@ -77,7 +78,8 @@ export function createLiveConversation(
       if (checkpoint)
         sessionStorage.setItem(checkpointKey, JSON.stringify(checkpoint))
       else sessionStorage.removeItem(checkpointKey)
-    } catch {
+    } catch (error) {
+      console.warn('Live checkpoint could not be saved.', error)
       /* Do not interrupt audio when storage is blocked or full. */
     }
   }
@@ -104,7 +106,11 @@ export function createLiveConversation(
         attempt.capture.disconnect()
       }
       stopOutput(attempt)
-      void attempt.context.close().catch(() => {})
+      void attempt.context
+        .close()
+        .catch((error) =>
+          console.warn('Live audio context could not be closed.', error),
+        )
       attempt.session?.close()
     }
     publish({
@@ -215,7 +221,8 @@ export function createLiveConversation(
         (response) => {
           try {
             active.session?.sendToolResponse({ functionResponses: [response] })
-          } catch {
+          } catch (error) {
+            console.warn('Live tool results could not be sent.', error)
             fail('Live could not send tool results. Start Live again.')
           }
         },
@@ -294,11 +301,15 @@ export function createLiveConversation(
                 source.start(time)
                 active.nextTime = time + buffer.duration
               }
-            } catch {
+            } catch (error) {
+              console.warn('Live audio playback failed.', error)
               fail('Live audio could not be played. Start Live again.')
             }
           },
-          onerror: () => handleDisconnect(),
+          onerror: (error) => {
+            console.warn('Live connection failed.', error)
+            handleDisconnect()
+          },
           onclose: () => handleDisconnect(),
         },
       })
@@ -336,11 +347,14 @@ export function createLiveConversation(
               mimeType: `audio/pcm;rate=${context.sampleRate}`,
             },
           })
-        } catch {
+        } catch (error) {
+          console.warn('Live microphone audio could not be sent.', error)
           fail('Live could not send microphone audio. Start Live again.')
         }
       }
     } catch (error) {
+      if (current === attempt && !attempt.abort.signal.aborted)
+        console.warn('Live connection setup failed.', error)
       if (current === attempt && previous && requestedConnection) {
         checkpoint = null
         saveCheckpoint()
@@ -385,7 +399,8 @@ export function createLiveConversation(
           current.session?.sendRealtimeInput({
             text: `Narration failed: ${error}. Explain this failure to the user.`,
           })
-        } catch {
+        } catch (cause) {
+          console.warn('Live narration error could not be sent.', cause)
           stop()
           publish({
             status: 'failed',
@@ -401,7 +416,8 @@ export function createLiveConversation(
           current.session?.sendRealtimeInput({
             text: `Application command failed: ${error}. Explain this failure to the user.`,
           })
-        } catch {
+        } catch (cause) {
+          console.warn('Live command error could not be sent.', cause)
           stop()
         }
       }

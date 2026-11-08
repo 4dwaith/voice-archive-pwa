@@ -254,7 +254,9 @@ export default function ReaderPdf() {
               void document
                 .getPageLabels()
                 .then(setLabels)
-                .catch(() => {})
+                .catch((error) =>
+                  console.warn('PDF page labels could not be loaded.', error),
+                )
             }}
           >
             {!pages.length && (

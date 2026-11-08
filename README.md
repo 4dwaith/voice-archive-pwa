@@ -229,6 +229,11 @@ for the reader tab. Console shows frontend errors; Network shows API/PDF request
 Sources supports breakpoints in the Vite TypeScript modules. Device/browser support
 for remote inspection varies; see [Chrome's Android debugging guide](https://developer.chrome.com/docs/devtools/remote-debugging).
 
+Operational fallbacks log the original error with context in the browser Console,
+including storage, reader loading/search/navigation, audio, Live and tool failures.
+Cancellation and expected validation defaults remain quiet. Backend causes are in
+server logs; public API responses retain their existing safe error messages.
+
 Reader layout hashing uses the browser's Web Crypto API and requires a secure
 context. Use HTTP localhost for IDE development or the trusted HTTPS origin for
 LAN access. PWA installation and service workers also require a secure context.
