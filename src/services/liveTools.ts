@@ -34,6 +34,11 @@ export const liveToolSchemas = {
       useWholeBook: z.boolean().optional(),
       query: z.string().trim().min(1),
       queryEn: z.string().trim().min(1).optional(),
+      lexicalTerms: z
+        .array(z.string().trim().min(1).max(200))
+        .min(1)
+        .max(8)
+        .optional(),
       effort: z.enum(['low', 'medium', 'high']).optional(),
     })
     .refine(
@@ -106,7 +111,7 @@ export const liveToolSchemas = {
 }
 
 const descriptions = [
-  'Answer a self-contained question from canonical passages. Scope: bookId or seriesId (never both), or neither for the whole library. Default is dense search: also give queryEn, a faithful English rendering (copy English unchanged). useWholeBook=true with bookId answers from the entire book instead (no queryEn); use it only when the question needs the whole book, never as a fallback after unavailable or thin results. Returns answer, limitations and references. Effort defaults to low.',
+  "Answer a self-contained question from canonical passages. Scope: bookId or seriesId (never both), or neither for the whole library. Default is dense search: also give queryEn, a faithful English rendering (copy English unchanged). Optionally add lexicalTerms: names or short phrases from the question or the user's remembered wording, in the book's language when you know the exact form, otherwise as the user said them; never guessed. They only steer keyword matching, so query and queryEn still carry the full question. useWholeBook=true with bookId answers from the entire book instead (no queryEn); use it only when the question needs the whole book, never as a fallback after unavailable or thin results. Returns answer, limitations and references. Effort defaults to low.",
   'Get manual help for overview, reader, live or turner.',
   'Get current app location, reader settings, reading position and narration state.',
   'List saved book identities; follow nextOffset. A partial catalog cannot establish absence. Use getBookInfo for details.',

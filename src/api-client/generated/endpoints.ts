@@ -698,6 +698,7 @@ export type AskResult = {
 export type AskRequest = {
   query: string
   query_en?: string | null
+  lexical_terms?: string[] | null
   book_id?: number | null
   series_id?: number | null
   use_whole_book?: boolean

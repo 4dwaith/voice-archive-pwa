@@ -54,6 +54,7 @@ export function createLiveQueries(
         useWholeBook?: boolean
         query: string
         queryEn?: string
+        lexicalTerms?: string[]
         effort?: 'low' | 'medium' | 'high'
       },
       signal: AbortSignal,
@@ -68,6 +69,7 @@ export function createLiveQueries(
               use_whole_book: args.useWholeBook,
               query: args.query,
               query_en: args.queryEn,
+              lexical_terms: args.lexicalTerms,
               effort: args.effort,
             },
           },

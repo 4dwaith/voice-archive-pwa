@@ -41,6 +41,16 @@ describe('Live tools', () => {
     { name: 'ask_library', args: { bookId: 7, seriesId: 1, query: 'Why?' } },
     { name: 'ask_library', args: { seriesId: 0, query: 'Why?' } },
     { name: 'ask_library', args: { query: 'Why?', queryEn: ' ' } },
+    { name: 'ask_library', args: { query: 'Why?', lexicalTerms: [] } },
+    { name: 'ask_library', args: { query: 'Why?', lexicalTerms: [' '] } },
+    {
+      name: 'ask_library',
+      args: { query: 'Why?', lexicalTerms: ['x'.repeat(201)] },
+    },
+    {
+      name: 'ask_library',
+      args: { query: 'Why?', lexicalTerms: Array(9).fill('name') },
+    },
     { name: 'ask_library', args: { query: 'Why?', useWholeBook: true } },
     {
       name: 'ask_library',

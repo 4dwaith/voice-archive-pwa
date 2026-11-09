@@ -678,6 +678,7 @@ Given('the book answer is {string}', (outcome: string) => {
         ? { use_whole_book: true }
         : {
             query_en: 'What does Sync book say about the nested destination?',
+            lexical_terms: ['nested destination'],
           }),
       effort: 'medium',
     })
@@ -703,6 +704,7 @@ function askLiveAboutDestination(
                 : {
                     queryEn:
                       'What does Sync book say about the nested destination?',
+                    lexicalTerms: ['nested destination'],
                   }),
               effort: 'medium',
             },

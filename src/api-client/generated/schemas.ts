@@ -22,6 +22,9 @@ export const askRequestQueryMax = 8000
 export const askRequestQueryRegExp = new RegExp('\\S')
 export const askRequestQueryEnOneMax = 8000
 export const askRequestQueryEnOneRegExp = new RegExp('\\S')
+export const askRequestLexicalTermsOneItemMax = 200
+export const askRequestLexicalTermsOneItemRegExp = new RegExp('\\S')
+export const askRequestLexicalTermsOneMax = 8
 export const askRequestBookIdOneExclusiveMin = 0
 export const askRequestBookIdOneMax = 9223372036854776000
 export const askRequestSeriesIdOneExclusiveMin = 0
@@ -50,6 +53,27 @@ export const AskRequest = zod.object({
           { error: 'String has too many Unicode code points' },
         )
         .regex(askRequestQueryEnOneRegExp),
+      zod.null(),
+    ])
+    .optional(),
+  lexical_terms: zod
+    .union([
+      zod
+        .array(
+          zod
+            .string()
+            .refine((value) => Array.from(value).length >= 1, {
+              error: 'String has too few Unicode code points',
+            })
+            .refine(
+              (value) =>
+                Array.from(value).length <= askRequestLexicalTermsOneItemMax,
+              { error: 'String has too many Unicode code points' },
+            )
+            .regex(askRequestLexicalTermsOneItemRegExp),
+        )
+        .min(1)
+        .max(askRequestLexicalTermsOneMax),
       zod.null(),
     ])
     .optional(),
