@@ -49,8 +49,11 @@ export function createLiveQueries(
   return {
     async ask_library(
       args: {
-        bookId: number
+        bookId?: number
+        seriesId?: number
+        useWholeBook?: boolean
         query: string
+        queryEn?: string
         effort?: 'low' | 'medium' | 'high'
       },
       signal: AbortSignal,
@@ -61,7 +64,10 @@ export function createLiveQueries(
           {
             askRequest: {
               book_id: args.bookId,
+              series_id: args.seriesId,
+              use_whole_book: args.useWholeBook,
               query: args.query,
+              query_en: args.queryEn,
               effort: args.effort,
             },
           },

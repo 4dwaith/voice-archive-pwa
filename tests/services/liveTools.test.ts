@@ -38,6 +38,18 @@ describe('Live tools', () => {
     { name: 'ask_library', args: { bookId: 7, query: ' ' } },
     { name: 'ask_library', args: { bookId: 7, query: 'Why?', effort: 'max' } },
     { name: 'ask_library', args: { bookId: 7, query: 'Why?', extra: true } },
+    { name: 'ask_library', args: { bookId: 7, seriesId: 1, query: 'Why?' } },
+    { name: 'ask_library', args: { seriesId: 0, query: 'Why?' } },
+    { name: 'ask_library', args: { query: 'Why?', queryEn: ' ' } },
+    { name: 'ask_library', args: { query: 'Why?', useWholeBook: true } },
+    {
+      name: 'ask_library',
+      args: { seriesId: 1, query: 'Why?', useWholeBook: true },
+    },
+    {
+      name: 'ask_library',
+      args: { bookId: 7, query: 'Why?', useWholeBook: 'true' },
+    },
     { name: 'updateReaderSettings', args: {} },
     { name: 'updateReaderSettings', args: { playbackSpeed: 0.7 } },
     { name: 'updateReaderSettings', args: { playbackSpeed: 2.05 } },

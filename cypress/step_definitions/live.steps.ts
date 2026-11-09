@@ -654,7 +654,10 @@ Given('the book answer is {string}', (outcome: string) => {
         : [
             {
               book_id: 7,
-              content_version: 'a3027b66-924c-4c9a-aad5-660ba7a733bc',
+              content_version:
+                outcome === 'another edition'
+                  ? 'b3027b66-924c-4c9a-aad5-660ba7a733bc'
+                  : 'a3027b66-924c-4c9a-aad5-660ba7a733bc',
               segment_id: 2,
               section_id: 2,
               path: ['Sync book', 'Chapter', 'Nested destination'],
@@ -667,15 +670,24 @@ Given('the book answer is {string}', (outcome: string) => {
 
   cy.intercept('POST', '**/api/v1/library/ask', (request) => {
     expect(request.body).to.deep.equal({
-      book_id: 7,
+      ...(request.body.series_id === undefined
+        ? { book_id: 7 }
+        : { series_id: 11 }),
       query: 'What does Sync book say about the nested destination?',
+      ...(outcome === 'whole book'
+        ? { use_whole_book: true }
+        : {
+            query_en: 'What does Sync book say about the nested destination?',
+          }),
       effort: 'medium',
     })
     request.reply(result)
   }).as('bookAnswer')
 })
 
-When('I ask Live about the nested destination', () => {
+function askLiveAboutDestination(
+  scope: { bookId: number; useWholeBook?: boolean } | { seriesId: number },
+) {
   cy.then(() =>
     evidence.deliver?.({
       toolCall: {
@@ -684,8 +696,14 @@ When('I ask Live about the nested destination', () => {
             id: 'book-question',
             name: 'ask_library',
             args: {
-              bookId: 7,
+              ...scope,
               query: 'What does Sync book say about the nested destination?',
+              ...('useWholeBook' in scope && scope.useWholeBook
+                ? {}
+                : {
+                    queryEn:
+                      'What does Sync book say about the nested destination?',
+                  }),
               effort: 'medium',
             },
           },
@@ -694,6 +712,18 @@ When('I ask Live about the nested destination', () => {
     }),
   )
   cy.wait('@bookAnswer')
+}
+
+When('I ask Live about the nested destination', () => {
+  askLiveAboutDestination({ bookId: 7 })
+})
+
+When('I ask Live about the nested destination across its series', () => {
+  askLiveAboutDestination({ seriesId: 11 })
+})
+
+When('I ask Live to use the whole book for the question', () => {
+  askLiveAboutDestination({ bookId: 7, useWholeBook: true })
 })
 
 Then('Live receives the grounded answer and supporting passage', () => {
@@ -750,6 +780,26 @@ Then('Live receives the answer unavailability and its limitation', () => {
   })
   cy.location('pathname').should('equal', '/')
 })
+
+Then(
+  'Live can identify that the supporting passage belongs to another edition',
+  () => {
+    cy.wrap(null).should(() => {
+      const answer = evidence.toolResults.find(
+        ({ id }) => id === 'book-question',
+      )?.response.result as AskResult
+      const book = evidence.toolResults.find(({ id }) => id === 'info')
+        ?.response.result as { contentVersion: string }
+
+      expect(book.contentVersion).to.equal(
+        'a3027b66-924c-4c9a-aad5-660ba7a733bc',
+      )
+      expect(answer.references![0].content_version).not.to.equal(
+        book.contentVersion,
+      )
+    })
+  },
+)
 
 Then('Live is told to open Text view first', () => {
   cy.wrap(null).should(() => {

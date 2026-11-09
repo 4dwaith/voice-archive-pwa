@@ -697,7 +697,10 @@ export type AskResult = {
 }
 export type AskRequest = {
   query: string
-  book_id: number
+  query_en?: string | null
+  book_id?: number | null
+  series_id?: number | null
+  use_whole_book?: boolean
   effort?: 'low' | 'medium' | 'high'
 }
 export type HealthResponse = {

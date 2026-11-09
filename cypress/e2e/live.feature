@@ -41,6 +41,50 @@ Feature: Live voice conversation
     When I stop Live
     Then Live has released the microphone
 
+  Scenario: A series question receives supporting passages
+    Given a book with a nested chapter
+    And the book answer is "available"
+    When I start Live from the library
+    And I ask Live about the nested destination across its series
+    Then Live receives the grounded answer and supporting passage
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: Live can explicitly request a whole-book answer
+    Given a book with a nested chapter
+    And the book answer is "whole book"
+    When I start Live from the library
+    And I ask Live to use the whole book for the question
+    Then Live receives the grounded answer and supporting passage
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: Supporting passages can be unavailable on this device
+    Given a book with a nested chapter
+    And the book answer is "available"
+    And I have not downloaded the book
+    When I start Live from the library
+    And I ask Live about the nested destination
+    Then Live receives the grounded answer and supporting passage
+    When I ask Live about the book and its chapters
+    Then Live knows the book has not been downloaded
+    And Live has not opened or downloaded the book
+    When I stop Live
+    Then Live has released the microphone
+
+  Scenario: A supporting passage belongs to a different edition than the local book
+    Given a book with a nested chapter
+    And the book answer is "another edition"
+    When I start Live from the library
+    And I open the book while talking with Live
+    And I wait for the book to finish loading
+    And I ask Live about the nested destination
+    And I ask Live about the book and its chapters
+    Then Live can identify that the supporting passage belongs to another edition
+    And I see its first reader page
+    When I stop Live
+    Then Live has released the microphone
+
   Scenario: The turner starts and stops Live from the library
     Given a book with a nested chapter
     When I open the library
@@ -265,6 +309,21 @@ Feature: Live voice conversation
     Then I see the nested section text
     When I stop Live
     Then Live has released the microphone
+
+  Scenario Outline: Live downloads an uncached destination before navigating
+    Given a nested chapter book that takes time to finish loading
+    When I start Live from the library
+    And I ask Live to open the nested <target>
+    Then I can start reading while the rest of the book loads
+    And I see the nested section text
+    And I can talk with Live and hear its reply
+    When I stop Live
+    Then Live has released the microphone
+
+    Examples:
+      | target  |
+      | chapter |
+      | passage |
 
   Scenario: Live plays the selected passage in the open book
     Given a book whose narration starts after an introduction

@@ -11,6 +11,7 @@ import { getGraphemeBoundaries } from '../components/atoms/ReaderChapterLayout/g
 import { resolveAnchorPage } from '../hooks/resolveAnchorPage'
 import type { ReaderDestination } from './readerCommandsSlice'
 import { booksApi } from '../api-client/resources/booksApi'
+import { selectBookDownloadState } from './bookDownloadsSlice'
 import { database } from '../data/database'
 import { setReaderAudioPlayback } from './readerAudioSlice'
 import {
@@ -143,7 +144,8 @@ export function createReaderCommandsListener() {
         [routeOrigin, routeTarget].some(
           (scope) =>
             scope?.bookId === action.payload.bookId &&
-            scope.contentVersion === action.payload.contentVersion,
+            (scope.contentVersion === undefined ||
+              scope.contentVersion === action.payload.contentVersion),
         )
       )
         return
@@ -283,12 +285,85 @@ export function createReaderCommandsListener() {
                   ? { ...command, target: 'section' as const }
                   : { ...command, target: 'segment' as const }
             const { bookId } = rawDestination
+            const content = await database.content.get(bookId)
+            if (!isCurrent()) return
+            const needsDownload =
+              command.kind !== 'startPlayback' && !content?.complete
             let contentVersion = rawDestination.contentVersion
+            if (needsDownload) {
+              const book = await database.books.get(bookId)
+              if (!isCurrent()) return
+              if (!book && !content)
+                throw new Error('Choose a known book from the library first.')
+              if (
+                contentVersion &&
+                content &&
+                content.version !== contentVersion
+              )
+                throw new Error(
+                  'The requested cached book version is unavailable.',
+                )
+              if (!navigateToPath)
+                throw new Error('Book navigation is unavailable.')
+              if (scope)
+                dispatchOwned(
+                  setReaderAudioPlayback({ ...scope, isPlaying: false }),
+                )
+              routeTarget = rawDestination
+              routeOrigin = scope
+              expectedPath = `/books/${bookId}`
+              navigateToPath(expectedPath)
+              let subscription: { unsubscribe(): void } | undefined
+              const hasDownloadFailed = () =>
+                ['error', 'empty', 'offline'].includes(
+                  selectBookDownloadState(api.getState(), bookId)?.status ?? '',
+                )
+              try {
+                const downloaded = new Promise<string>((resolve, reject) => {
+                  subscription = liveQuery(async () => {
+                    const current = await database.content.get(bookId)
+                    if (
+                      contentVersion &&
+                      current &&
+                      current.version !== contentVersion
+                    )
+                      throw new Error(
+                        'The target book changed while downloading it.',
+                      )
+                    return current?.complete ? current.version : null
+                  }).subscribe({
+                    next: (version) => {
+                      if (version) resolve(version)
+                    },
+                    error: reject,
+                  })
+                })
+                const failed = (
+                  hasDownloadFailed()
+                    ? Promise.resolve()
+                    : api.condition(hasDownloadFailed)
+                ).then(() => {
+                  throw new Error(
+                    'The target book could not finish downloading. Retry in the reader.',
+                  )
+                })
+                const timeout = api.delay(120000).then(() => {
+                  throw new Error(
+                    'The target book is still downloading. Please retry.',
+                  )
+                })
+                contentVersion = await api.pause(
+                  Promise.race([downloaded, failed, timeout]),
+                )
+              } finally {
+                subscription?.unsubscribe()
+              }
+              if (!isCurrent()) return
+            }
             if (!contentVersion) {
               if (scope?.bookId === bookId) {
                 contentVersion = scope.contentVersion
               } else {
-                const content = await database.content.get(bookId)
                 if (!content)
                   throw new Error(
                     'The requested book version is unavailable. Download it first.',
@@ -301,6 +376,7 @@ export function createReaderCommandsListener() {
                 ...rawDestination,
                 contentVersion,
               }
+            if (needsDownload) routeTarget = destination
             const isSameScope = () => {
               const active = reader.getReaderScope(api.getState())
               return (
@@ -337,7 +413,7 @@ export function createReaderCommandsListener() {
               dispatchOwned(
                 setReaderAudioPlayback({ ...scope, isPlaying: false }),
               )
-            if (!isSameScope()) {
+            if (!isSameScope() && !needsDownload) {
               if (!navigateToPath)
                 throw new Error('Book navigation is unavailable.')
               routeTarget = destination
@@ -348,11 +424,12 @@ export function createReaderCommandsListener() {
             dispatchOwned(reader.setReaderViewMode('text'))
             const hasEntryLayout = () =>
               isSameScope() && reader.getLayoutKey(api.getState()) !== null
+            const layoutTimeout = needsDownload ? 120000 : 15000
             if (
               !hasEntryLayout() &&
               !(await api.condition(
                 () => !isCurrent() || hasEntryLayout(),
-                15000,
+                layoutTimeout,
               ))
             )
               throw new Error(
@@ -393,7 +470,7 @@ export function createReaderCommandsListener() {
                   error: reject,
                 })
               })
-              const timeout = api.delay(15000).then(() => {
+              const timeout = api.delay(layoutTimeout).then(() => {
                 throw new Error(
                   'The target layout is still preparing. Please retry.',
                 )

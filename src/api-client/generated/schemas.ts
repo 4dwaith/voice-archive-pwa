@@ -20,8 +20,13 @@ export type AnswerReference = zod.input<typeof AnswerReference>
 export type AnswerReferenceOutput = zod.output<typeof AnswerReference>
 export const askRequestQueryMax = 8000
 export const askRequestQueryRegExp = new RegExp('\\S')
-export const askRequestBookIdExclusiveMin = 0
-export const askRequestBookIdMax = 9223372036854776000
+export const askRequestQueryEnOneMax = 8000
+export const askRequestQueryEnOneRegExp = new RegExp('\\S')
+export const askRequestBookIdOneExclusiveMin = 0
+export const askRequestBookIdOneMax = 9223372036854776000
+export const askRequestSeriesIdOneExclusiveMin = 0
+export const askRequestSeriesIdOneMax = 9223372036854776000
+export const askRequestUseWholeBookDefault = false
 export const askRequestEffortDefault = `low`
 export const AskRequest = zod.object({
   query: zod
@@ -33,7 +38,37 @@ export const AskRequest = zod.object({
       error: 'String has too many Unicode code points',
     })
     .regex(askRequestQueryRegExp),
-  book_id: zod.int().gt(askRequestBookIdExclusiveMin).max(askRequestBookIdMax),
+  query_en: zod
+    .union([
+      zod
+        .string()
+        .refine((value) => Array.from(value).length >= 1, {
+          error: 'String has too few Unicode code points',
+        })
+        .refine(
+          (value) => Array.from(value).length <= askRequestQueryEnOneMax,
+          { error: 'String has too many Unicode code points' },
+        )
+        .regex(askRequestQueryEnOneRegExp),
+      zod.null(),
+    ])
+    .optional(),
+  book_id: zod
+    .union([
+      zod.int().gt(askRequestBookIdOneExclusiveMin).max(askRequestBookIdOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  series_id: zod
+    .union([
+      zod
+        .int()
+        .gt(askRequestSeriesIdOneExclusiveMin)
+        .max(askRequestSeriesIdOneMax),
+      zod.null(),
+    ])
+    .optional(),
+  use_whole_book: zod.boolean().default(askRequestUseWholeBookDefault),
   effort: zod.enum(['low', 'medium', 'high']).default(askRequestEffortDefault),
 })
 export type AskRequest = zod.input<typeof AskRequest>

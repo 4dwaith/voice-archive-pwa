@@ -27,11 +27,23 @@ const segmentTarget = {
 }
 
 export const liveToolSchemas = {
-  ask_library: z.strictObject({
-    bookId: integerId.positive(),
-    query: z.string().trim().min(1),
-    effort: z.enum(['low', 'medium', 'high']).optional(),
-  }),
+  ask_library: z
+    .strictObject({
+      bookId: integerId.positive().optional(),
+      seriesId: integerId.positive().optional(),
+      useWholeBook: z.boolean().optional(),
+      query: z.string().trim().min(1),
+      queryEn: z.string().trim().min(1).optional(),
+      effort: z.enum(['low', 'medium', 'high']).optional(),
+    })
+    .refine(
+      ({ bookId, seriesId }) => bookId === undefined || seriesId === undefined,
+      'Choose at most one scope',
+    )
+    .refine(
+      ({ useWholeBook, bookId }) => !useWholeBook || bookId !== undefined,
+      'Whole-book answering requires a book',
+    ),
   getAppHelp: z.strictObject({
     topic: z.enum(['overview', 'reader', 'live', 'turner']),
   }),
@@ -94,7 +106,7 @@ export const liveToolSchemas = {
 }
 
 const descriptions = [
-  'Answer a self-contained question from a complete book. Returns answer, limitations and references. No local download needed. Effort defaults to low.',
+  'Answer a self-contained question from canonical passages. Scope: bookId or seriesId (never both), or neither for the whole library. Default is dense search: also give queryEn, a faithful English rendering (copy English unchanged). useWholeBook=true with bookId answers from the entire book instead (no queryEn); use it only when the question needs the whole book, never as a fallback after unavailable or thin results. Returns answer, limitations and references. Effort defaults to low.',
   'Get manual help for overview, reader, live or turner.',
   'Get current app location, reader settings, reading position and narration state.',
   'List saved book identities; follow nextOffset. A partial catalog cannot establish absence. Use getBookInfo for details.',
@@ -108,8 +120,8 @@ const descriptions = [
   'Update reader settings: textSize (100–500%, step 12.5), playbackSpeed (0.75–2, step 0.05), controlsVisible (boolean), or viewMode (text/pdf).',
   'Select or clear a segment in the active book; does not move or play.',
   'Open known bookId; automatically downloads missing text and restores position.',
-  'Open a cached section, including nested sections, using ToC IDs.',
-  'Open a cached segment at an optional code-point offset.',
+  'Open a known section, including nested sections, using ToC IDs. Opens and downloads an uncached book, then waits for Text measurements before navigating. Acceptance is not completion.',
+  'Open a known segment at an optional code-point offset. Opens and downloads an uncached book, then waits for Text measurements before navigating. Acceptance is not completion.',
   'Read aloud: target="segment" plays a segment; target="section" plays a whole section; target="current" plays from the Text position. Requires cached audio/timing. Acceptance is not playback; success closes Live.',
   'Move one Text page; waits for layout. Edges do not move.',
 ]

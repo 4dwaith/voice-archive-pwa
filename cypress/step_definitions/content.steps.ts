@@ -1141,6 +1141,10 @@ Then('the reader controls are visible', () => {
 
 Given('a book with a nested chapter', () => mockBook({ nested: true }))
 
+Given('a nested chapter book that takes time to finish loading', () =>
+  mockBook({ nested: true, slowSecond: true }),
+)
+
 When('I select the nested ToC destination', () => {
   // Cypress's focusable-element list omits native summary elements.
   cy.get('summary[aria-label="Subsections of Chapter"]').then(($summary) => {

@@ -7,7 +7,9 @@ import {
   getReaderCommandError,
   requestReaderCommand,
   reportCommandRoute,
+  cancelReaderCommands,
 } from '../../src/store/readerCommandsSlice'
+import { requestBookLoad } from '../../src/store/bookDownloadsSlice'
 import {
   getReaderAnchor,
   getSelectedSegmentId,
@@ -197,6 +199,107 @@ describe('Reader commands', () => {
 
     await database.content.update(7, { version: 'new' })
     await database.measurements.put(createMeasurement())
+
+    await vi.waitFor(() =>
+      expect(getReaderCommandError(store.getState())).not.toBeNull(),
+    )
+    expect(getReaderAnchor(store.getState())).toBeNull()
+  })
+
+  async function startUndownloadedNavigation(
+    command:
+      | { kind: 'navigateToSection'; sectionId: number }
+      | {
+          kind: 'navigateToSegment'
+          segmentId: number
+          offset?: number
+        },
+  ) {
+    await database.books.put({ ...book, id: 7 })
+    const store = createAppStore()
+    const navigate = vi.fn(() => {
+      store.dispatch(reportCommandRoute('/books/7'))
+      store.dispatch(openReader(scope))
+      store.dispatch(closeReader(scope))
+      store.dispatch(openReader(scope))
+      store.dispatch(reportLayoutKey('layout'))
+    })
+    store.registerCommandNavigation(navigate)
+
+    store.dispatch(requestReaderCommand({ ...command, bookId: 7 }))
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledOnce())
+    expect(await database.content.get(7)).toBeUndefined()
+    expect(getReaderAnchor(store.getState())).toBeNull()
+    return store
+  }
+
+  it.each([
+    { command: { kind: 'navigateToSection', sectionId: 10 }, offset: 0 },
+    {
+      command: { kind: 'navigateToSegment', segmentId: 1, offset: 1 },
+      offset: 1,
+    },
+  ] as const)(
+    'opens an uncached book and waits for download and layout: $command.kind',
+    async ({ command, offset }) => {
+      const store = await startUndownloadedNavigation(command)
+      await database.transaction(
+        'rw',
+        database.content,
+        database.sections,
+        database.segments,
+        async () => {
+          await seedContent()
+          await database.content.update(7, { complete: false })
+        },
+      )
+
+      expect(getReaderAnchor(store.getState())).toBeNull()
+
+      await database.content.update(7, { complete: true })
+      await database.content.get(7)
+
+      expect(getReaderAnchor(store.getState())).toBeNull()
+
+      await database.measurements.put(createMeasurement())
+
+      await vi.waitFor(() =>
+        expect(getReaderAnchor(store.getState())).toEqual({
+          segmentId: 1,
+          offset,
+        }),
+      )
+      expect(getReaderCommandError(store.getState())).toBeNull()
+    },
+  )
+
+  it('cancels an uncached destination while its download is pending', async () => {
+    const store = await startUndownloadedNavigation({
+      kind: 'navigateToSegment',
+      segmentId: 1,
+    })
+
+    store.dispatch(cancelReaderCommands())
+    await seedContent()
+    await database.measurements.put(createMeasurement())
+
+    expect(getReaderAnchor(store.getState())).toBeNull()
+    expect(getSelectedSegmentId(store.getState())).toBeNull()
+    expect(getReaderCommandError(store.getState())).toBeNull()
+  })
+
+  it('reports failed downloads without applying an uncached destination', async () => {
+    const store = await startUndownloadedNavigation({
+      kind: 'navigateToSection',
+      sectionId: 10,
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 503 })),
+    )
+
+    store.dispatch(requestBookLoad(7))
 
     await vi.waitFor(() =>
       expect(getReaderCommandError(store.getState())).not.toBeNull(),
