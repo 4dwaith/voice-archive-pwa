@@ -96,11 +96,14 @@ export default function ReaderPdf() {
 
   useLayoutEffect(() => {
     const container = viewport.current!
-    const observer = new ResizeObserver(() => setWidth(container.clientWidth))
+    const observer = new ResizeObserver(() => {
+      setWidth(container.clientWidth)
+      centerRegions()
+    })
     setWidth(container.clientWidth)
     observer.observe(container)
     return () => observer.disconnect()
-  }, [])
+  }, [centerRegions])
 
   useLayoutEffect(() => {
     canCenter.current = true
