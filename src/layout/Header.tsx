@@ -1,5 +1,7 @@
 import { useAppLocation, useAppNavigate } from '../routing/navigation'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { getCurrentUser } from '../store/authSlice'
+import { signOut } from '../services/auth'
 import {
   adjustPlaybackSpeed,
   MAX_PLAYBACK_SPEED_STEP,
@@ -30,6 +32,8 @@ export function Header({
   const textSizePercent = useAppSelector(selectTextSizePercent)
   const location = useAppLocation()
   const navigate = useAppNavigate()
+  const user = useAppSelector(getCurrentUser)
+  const [signOutFailed, setSignOutFailed] = useState(false)
 
   function goHome() {
     // BrowserRouter's index counts entries within the app, unlike history.length.
@@ -52,12 +56,8 @@ export function Header({
           </button>
         )}
 
-        {location.pathname.startsWith('/books/') && (
-          <div className="flex flex-1 justify-center empty:hidden">
-            {children}
-          </div>
-        )}
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          {location.pathname.startsWith('/books/') && children}
           {actions}
           <div
             className="flex items-center gap-2"
@@ -116,6 +116,27 @@ export function Header({
               Text size {textSizePercent} percent
             </span>
           </div>
+        </div>
+        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+          <span>{user?.display_name || user?.email || 'Guest'}</span>
+          <button
+            className="min-h-12 border-2 border-ink px-3 font-bold"
+            onClick={() => {
+              if (!user) {
+                void navigate('/login')
+                return
+              }
+              void signOut().catch((error) => {
+                console.warn('Sign-out failed.', error)
+                setSignOutFailed(true)
+              })
+            }}
+          >
+            {user ? 'Sign out' : 'Sign in'}
+          </button>
+          {signOutFailed && (
+            <p role="alert">Sign-out failed. Please try again.</p>
+          )}
         </div>
       </div>
     </header>

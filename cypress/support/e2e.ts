@@ -1,7 +1,23 @@
 import '@testing-library/cypress/add-commands'
 import '@cypress/code-coverage/support'
+import { requestApi } from './api'
 
 beforeEach(() => {
+  if (Cypress.expose('mode') === 'live') {
+    cy.session(
+      'reader',
+      () =>
+        requestApi('POST', `${Cypress.expose('apiUrl')}/api/v1/auth/login`, {
+          email: 'reader@example.com',
+          password: 'e2e-password',
+        }),
+      { cacheAcrossSpecs: true },
+    )
+  } else {
+    cy.intercept('GET', '**/api/v1/auth/me', {
+      body: { id: 2, email: 'reader@example.com', display_name: null },
+    })
+  }
   // Reset on the app's origin before starting it. Reloads inside a scenario keep data.
   cy.intercept(
     { method: 'GET', pathname: '/__cypress_reset', times: 1 },

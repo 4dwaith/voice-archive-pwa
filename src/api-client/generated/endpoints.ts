@@ -2,6 +2,28 @@
 import { baseApi as api } from '../baseApi'
 const injectedRtkApi = api.injectEndpoints({
   endpoints: (build) => ({
+    loginApiV1User: build.mutation<
+      LoginApiV1UserApiResponse,
+      LoginApiV1UserApiArg
+    >({
+      query: (queryArg) => ({
+        url: `/api/v1/auth/login`,
+        method: 'POST',
+        body: queryArg.loginInput,
+      }),
+    }),
+    getApiV1CurrentUser: build.query<
+      GetApiV1CurrentUserApiResponse,
+      GetApiV1CurrentUserApiArg
+    >({
+      query: () => ({ url: `/api/v1/auth/me` }),
+    }),
+    logoutApiV1User: build.mutation<
+      LogoutApiV1UserApiResponse,
+      LogoutApiV1UserApiArg
+    >({
+      query: () => ({ url: `/api/v1/auth/logout`, method: 'POST' }),
+    }),
     createApiV1Book: build.mutation<
       CreateApiV1BookApiResponse,
       CreateApiV1BookApiArg
@@ -214,6 +236,16 @@ const injectedRtkApi = api.injectEndpoints({
   overrideExisting: false,
 })
 export { injectedRtkApi as generatedApi }
+export type LoginApiV1UserApiResponse =
+  /** status 200 Successful Response */ UserResponse
+export type LoginApiV1UserApiArg = {
+  loginInput: LoginInput
+}
+export type GetApiV1CurrentUserApiResponse =
+  /** status 200 Successful Response */ UserResponse | null
+export type GetApiV1CurrentUserApiArg = void
+export type LogoutApiV1UserApiResponse = unknown
+export type LogoutApiV1UserApiArg = void
 export type CreateApiV1BookApiResponse =
   /** status 201 Successful Response */ BookResponse
 export type CreateApiV1BookApiArg = {
@@ -329,6 +361,39 @@ export type GetApiV1HealthApiArg = void
 export type GetApiV1ReadyApiResponse =
   /** status 200 Successful Response */ HealthResponse
 export type GetApiV1ReadyApiArg = void
+export type UserResponse = {
+  id: number
+  email: string
+  display_name: string | null
+}
+export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError = {
+  code: 'route_not_found' | 'method_not_allowed' | 'http_error'
+  message: string
+}
+export type HttpErrorResponse = {
+  error: ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError
+}
+export type ValidationError = {
+  loc: (string | number)[]
+  msg: string
+  type: string
+  input?: unknown
+  ctx?: object
+}
+export type HttpValidationError = {
+  detail?: ValidationError[]
+}
+export type ErrorDetailLiteralInternalError = {
+  code: 'internal_error'
+  message: string
+}
+export type InternalErrorResponse = {
+  error: ErrorDetailLiteralInternalError
+}
+export type LoginInput = {
+  email: string
+  password: string
+}
 export type BookResponse = {
   id: number
   title: string
@@ -372,13 +437,6 @@ export type ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict = {
 export type SeriesErrorResponse = {
   error: ErrorDetailLiteralSeriesNotFoundSeriesOrderConflict
 }
-export type ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError = {
-  code: 'route_not_found' | 'method_not_allowed' | 'http_error'
-  message: string
-}
-export type HttpErrorResponse = {
-  error: ErrorDetailLiteralRouteNotFoundMethodNotAllowedHttpError
-}
 export type BookErrorCode =
   | 'book_not_found'
   | 'duplicate_book'
@@ -403,13 +461,6 @@ export type ValidationIssue = {
 export type ValidationErrorResponse = {
   error: ErrorDetailLiteralValidationError
   issues: ValidationIssue[]
-}
-export type ErrorDetailLiteralInternalError = {
-  code: 'internal_error'
-  message: string
-}
-export type InternalErrorResponse = {
-  error: ErrorDetailLiteralInternalError
 }
 export type BookCreate = {
   title: string
@@ -567,16 +618,6 @@ export type ContentManifest = {
   segment_count: number
   files: ContentFile[]
 }
-export type ValidationError = {
-  loc: (string | number)[]
-  msg: string
-  type: string
-  input?: unknown
-  ctx?: object
-}
-export type HttpValidationError = {
-  detail?: ValidationError[]
-}
 export type SectionRead = {
   summary: string | null
   id: number
@@ -713,6 +754,9 @@ export type NotReadyResponse = {
   api_version: 'v1'
 }
 export const {
+  useLoginApiV1UserMutation,
+  useGetApiV1CurrentUserQuery,
+  useLogoutApiV1UserMutation,
   useCreateApiV1BookMutation,
   useListApiV1BooksQuery,
   useGetApiV1BookQuery,

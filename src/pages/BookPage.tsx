@@ -63,6 +63,7 @@ export function BookPage() {
       <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-6 bg-page">
         {loading && book?.cover_url && !coverFailed && (
           <img
+            crossOrigin="use-credentials"
             src={book.cover_url}
             alt={`Cover of ${book.title}`}
             className="max-h-80 rounded object-contain"

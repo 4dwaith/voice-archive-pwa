@@ -287,6 +287,20 @@ WebStorm debugger launch itself still needs verification in the IDE.
 
 ## Application shell
 
+### Sign-in and guest access
+
+The app checks `/api/v1/auth/me` at startup. Guests can read public books;
+Live requires sign-in. Use `/login` to sign in and the header to sign out.
+API, PDF, cover and narration requests include the backend's HttpOnly cookie.
+For plain HTTP development, configure the backend with
+`VOICE_ARCHIVE_AUTH_COOKIE_SECURE=false`; use the local Vite proxy for a shared
+origin. Production cookies should remain secure.
+
+Changing accounts clears cached books, recordings, reader positions and Live
+checkpoints, then reloads the app. Display preferences remain shared. Startup
+requires a network connection. Coordination across tabs and outstanding background
+work is deferred; see the [scope and follow-up record](../plan/users-and-guest-access.md).
+
 The compact header provides Back on book pages and app-wide text-size controls.
 Back uses application history, falling back to the library for direct book entry.
 The recording footer and route have been retired. Existing recordings remain in

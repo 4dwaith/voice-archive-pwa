@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import secrets
 
 from dotenv import load_dotenv
 from psycopg import connect, sql
@@ -46,12 +47,24 @@ def main() -> None:
     os.environ["VOICE_ARCHIVE_POSTGRES_DB"] = database
     os.environ["VOICE_ARCHIVE_UPLOAD_ROOT"] = str(Path(uploads).resolve())
     os.environ["VOICE_ARCHIVE_CORS_ORIGINS"] = '["http://127.0.0.1:5174"]'
+    os.environ["VOICE_ARCHIVE_AUTH_SECRET"] = secrets.token_urlsafe(32)
+    os.environ["VOICE_ARCHIVE_AUTH_COOKIE_SECURE"] = 'false'
     os.chdir(repository_path)
     if action == "migrate":
         from alembic import command
         from alembic.config import Config
 
         command.upgrade(Config(str(repository_path / "alembic.ini")), "head")
+        from voice_archive_api.core.passwords import create_password_hash
+        from voice_archive_api.db.models.user import User
+        from voice_archive_api.db.session import create_database_engine, create_session_factory
+
+        engine = create_database_engine(Settings().database_url)
+        try:
+            with create_session_factory(engine).begin() as session:
+                session.add(User(email="reader@example.com", password_hash=create_password_hash("e2e-password"), is_enabled=True))
+        finally:
+            engine.dispose()
     elif action == "serve":
         import uvicorn
 

@@ -974,6 +974,28 @@ export const LiveTokenResponse = zod.object({
 })
 export type LiveTokenResponse = zod.input<typeof LiveTokenResponse>
 export type LiveTokenResponseOutput = zod.output<typeof LiveTokenResponse>
+export const loginInputEmailMax = 320
+export const loginInputPasswordMax = 1024
+export const LoginInput = zod.object({
+  email: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= loginInputEmailMax, {
+      error: 'String has too many Unicode code points',
+    }),
+  password: zod
+    .string()
+    .refine((value) => Array.from(value).length >= 1, {
+      error: 'String has too few Unicode code points',
+    })
+    .refine((value) => Array.from(value).length <= loginInputPasswordMax, {
+      error: 'String has too many Unicode code points',
+    }),
+})
+export type LoginInput = zod.input<typeof LoginInput>
+export type LoginInputOutput = zod.output<typeof LoginInput>
 export const NotReadyResponse = zod.object({
   status: zod.literal('unavailable').meta({ title: 'Status' }),
   api_version: zod.literal('v1').meta({ title: 'Api Version' }),
@@ -1094,6 +1116,13 @@ export const SeriesPatch = zod.object({
 })
 export type SeriesPatch = zod.input<typeof SeriesPatch>
 export type SeriesPatchOutput = zod.output<typeof SeriesPatch>
+export const UserResponse = zod.object({
+  id: zod.int(),
+  email: zod.string(),
+  display_name: zod.union([zod.string(), zod.null()]),
+})
+export type UserResponse = zod.input<typeof UserResponse>
+export type UserResponseOutput = zod.output<typeof UserResponse>
 export const ValidationIssue = zod.object({
   location: zod.array(zod.union([zod.string(), zod.int()])),
   code: zod.string(),
@@ -1110,6 +1139,175 @@ export type ValidationErrorResponseOutput = zod.output<
   typeof ValidationErrorResponse
 >
 /**
+ * @summary Login
+ */
+export const LoginApiV1UserBody = LoginInput
+export type LoginApiV1UserBody = zod.input<typeof LoginApiV1UserBody>
+export type LoginApiV1UserBodyOutput = zod.output<typeof LoginApiV1UserBody>
+export const LoginApiV1User200Response = UserResponse
+export type LoginApiV1User200Response = zod.input<
+  typeof LoginApiV1User200Response
+>
+export type LoginApiV1User200ResponseOutput = zod.output<
+  typeof LoginApiV1User200Response
+>
+export const LoginApiV1User401Response = HttpErrorResponse
+export type LoginApiV1User401Response = zod.input<
+  typeof LoginApiV1User401Response
+>
+export type LoginApiV1User401ResponseOutput = zod.output<
+  typeof LoginApiV1User401Response
+>
+export const LoginApiV1User403Response = HttpErrorResponse
+export type LoginApiV1User403Response = zod.input<
+  typeof LoginApiV1User403Response
+>
+export type LoginApiV1User403ResponseOutput = zod.output<
+  typeof LoginApiV1User403Response
+>
+export const LoginApiV1User405Response = HttpErrorResponse
+export type LoginApiV1User405Response = zod.input<
+  typeof LoginApiV1User405Response
+>
+export type LoginApiV1User405ResponseOutput = zod.output<
+  typeof LoginApiV1User405Response
+>
+export const LoginApiV1User422Response = HTTPValidationError
+export type LoginApiV1User422Response = zod.input<
+  typeof LoginApiV1User422Response
+>
+export type LoginApiV1User422ResponseOutput = zod.output<
+  typeof LoginApiV1User422Response
+>
+export const LoginApiV1User429Response = HttpErrorResponse
+export type LoginApiV1User429Response = zod.input<
+  typeof LoginApiV1User429Response
+>
+export type LoginApiV1User429ResponseOutput = zod.output<
+  typeof LoginApiV1User429Response
+>
+export const LoginApiV1User500Response = InternalErrorResponse
+export type LoginApiV1User500Response = zod.input<
+  typeof LoginApiV1User500Response
+>
+export type LoginApiV1User500ResponseOutput = zod.output<
+  typeof LoginApiV1User500Response
+>
+export const LoginApiV1User503Response = HttpErrorResponse
+export type LoginApiV1User503Response = zod.input<
+  typeof LoginApiV1User503Response
+>
+export type LoginApiV1User503ResponseOutput = zod.output<
+  typeof LoginApiV1User503Response
+>
+/**
+ * @summary Get Current User
+ */
+export const GetApiV1CurrentUser200Response = zod.union([
+  UserResponse,
+  zod.null(),
+])
+export type GetApiV1CurrentUser200Response = zod.input<
+  typeof GetApiV1CurrentUser200Response
+>
+export type GetApiV1CurrentUser200ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser200Response
+>
+export const GetApiV1CurrentUser401Response = HttpErrorResponse
+export type GetApiV1CurrentUser401Response = zod.input<
+  typeof GetApiV1CurrentUser401Response
+>
+export type GetApiV1CurrentUser401ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser401Response
+>
+export const GetApiV1CurrentUser403Response = HttpErrorResponse
+export type GetApiV1CurrentUser403Response = zod.input<
+  typeof GetApiV1CurrentUser403Response
+>
+export type GetApiV1CurrentUser403ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser403Response
+>
+export const GetApiV1CurrentUser405Response = HttpErrorResponse
+export type GetApiV1CurrentUser405Response = zod.input<
+  typeof GetApiV1CurrentUser405Response
+>
+export type GetApiV1CurrentUser405ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser405Response
+>
+export const GetApiV1CurrentUser429Response = HttpErrorResponse
+export type GetApiV1CurrentUser429Response = zod.input<
+  typeof GetApiV1CurrentUser429Response
+>
+export type GetApiV1CurrentUser429ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser429Response
+>
+export const GetApiV1CurrentUser500Response = InternalErrorResponse
+export type GetApiV1CurrentUser500Response = zod.input<
+  typeof GetApiV1CurrentUser500Response
+>
+export type GetApiV1CurrentUser500ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser500Response
+>
+export const GetApiV1CurrentUser503Response = HttpErrorResponse
+export type GetApiV1CurrentUser503Response = zod.input<
+  typeof GetApiV1CurrentUser503Response
+>
+export type GetApiV1CurrentUser503ResponseOutput = zod.output<
+  typeof GetApiV1CurrentUser503Response
+>
+/**
+ * @summary Logout
+ */
+export const LogoutApiV1User204Response = zod.void()
+export type LogoutApiV1User204Response = zod.input<
+  typeof LogoutApiV1User204Response
+>
+export type LogoutApiV1User204ResponseOutput = zod.output<
+  typeof LogoutApiV1User204Response
+>
+export const LogoutApiV1User401Response = HttpErrorResponse
+export type LogoutApiV1User401Response = zod.input<
+  typeof LogoutApiV1User401Response
+>
+export type LogoutApiV1User401ResponseOutput = zod.output<
+  typeof LogoutApiV1User401Response
+>
+export const LogoutApiV1User403Response = HttpErrorResponse
+export type LogoutApiV1User403Response = zod.input<
+  typeof LogoutApiV1User403Response
+>
+export type LogoutApiV1User403ResponseOutput = zod.output<
+  typeof LogoutApiV1User403Response
+>
+export const LogoutApiV1User405Response = HttpErrorResponse
+export type LogoutApiV1User405Response = zod.input<
+  typeof LogoutApiV1User405Response
+>
+export type LogoutApiV1User405ResponseOutput = zod.output<
+  typeof LogoutApiV1User405Response
+>
+export const LogoutApiV1User429Response = HttpErrorResponse
+export type LogoutApiV1User429Response = zod.input<
+  typeof LogoutApiV1User429Response
+>
+export type LogoutApiV1User429ResponseOutput = zod.output<
+  typeof LogoutApiV1User429Response
+>
+export const LogoutApiV1User500Response = InternalErrorResponse
+export type LogoutApiV1User500Response = zod.input<
+  typeof LogoutApiV1User500Response
+>
+export type LogoutApiV1User500ResponseOutput = zod.output<
+  typeof LogoutApiV1User500Response
+>
+export const LogoutApiV1User503Response = HttpErrorResponse
+export type LogoutApiV1User503Response = zod.input<
+  typeof LogoutApiV1User503Response
+>
+export type LogoutApiV1User503ResponseOutput = zod.output<
+  typeof LogoutApiV1User503Response
+>
+/**
  * Create a book. Title and language are required; prepared cover/PDF IDs are optional.
  * @summary Create Book
  */
@@ -1122,6 +1320,20 @@ export type CreateApiV1Book201Response = zod.input<
 >
 export type CreateApiV1Book201ResponseOutput = zod.output<
   typeof CreateApiV1Book201Response
+>
+export const CreateApiV1Book401Response = HttpErrorResponse
+export type CreateApiV1Book401Response = zod.input<
+  typeof CreateApiV1Book401Response
+>
+export type CreateApiV1Book401ResponseOutput = zod.output<
+  typeof CreateApiV1Book401Response
+>
+export const CreateApiV1Book403Response = HttpErrorResponse
+export type CreateApiV1Book403Response = zod.input<
+  typeof CreateApiV1Book403Response
+>
+export type CreateApiV1Book403ResponseOutput = zod.output<
+  typeof CreateApiV1Book403Response
 >
 export const CreateApiV1Book404Response = zod.union([
   FileErrorResponse,
@@ -1159,6 +1371,13 @@ export type CreateApiV1Book422Response = zod.input<
 >
 export type CreateApiV1Book422ResponseOutput = zod.output<
   typeof CreateApiV1Book422Response
+>
+export const CreateApiV1Book429Response = HttpErrorResponse
+export type CreateApiV1Book429Response = zod.input<
+  typeof CreateApiV1Book429Response
+>
+export type CreateApiV1Book429ResponseOutput = zod.output<
+  typeof CreateApiV1Book429Response
 >
 export const CreateApiV1Book500Response = InternalErrorResponse
 export type CreateApiV1Book500Response = zod.input<
@@ -1201,6 +1420,20 @@ export type ListApiV1Books200Response = zod.input<
 export type ListApiV1Books200ResponseOutput = zod.output<
   typeof ListApiV1Books200Response
 >
+export const ListApiV1Books401Response = HttpErrorResponse
+export type ListApiV1Books401Response = zod.input<
+  typeof ListApiV1Books401Response
+>
+export type ListApiV1Books401ResponseOutput = zod.output<
+  typeof ListApiV1Books401Response
+>
+export const ListApiV1Books403Response = HttpErrorResponse
+export type ListApiV1Books403Response = zod.input<
+  typeof ListApiV1Books403Response
+>
+export type ListApiV1Books403ResponseOutput = zod.output<
+  typeof ListApiV1Books403Response
+>
 export const ListApiV1Books405Response = HttpErrorResponse
 export type ListApiV1Books405Response = zod.input<
   typeof ListApiV1Books405Response
@@ -1214,6 +1447,13 @@ export type ListApiV1Books422Response = zod.input<
 >
 export type ListApiV1Books422ResponseOutput = zod.output<
   typeof ListApiV1Books422Response
+>
+export const ListApiV1Books429Response = HttpErrorResponse
+export type ListApiV1Books429Response = zod.input<
+  typeof ListApiV1Books429Response
+>
+export type ListApiV1Books429ResponseOutput = zod.output<
+  typeof ListApiV1Books429Response
 >
 export const ListApiV1Books500Response = InternalErrorResponse
 export type ListApiV1Books500Response = zod.input<
@@ -1240,6 +1480,16 @@ export type GetApiV1Book200Response = zod.input<typeof GetApiV1Book200Response>
 export type GetApiV1Book200ResponseOutput = zod.output<
   typeof GetApiV1Book200Response
 >
+export const GetApiV1Book401Response = HttpErrorResponse
+export type GetApiV1Book401Response = zod.input<typeof GetApiV1Book401Response>
+export type GetApiV1Book401ResponseOutput = zod.output<
+  typeof GetApiV1Book401Response
+>
+export const GetApiV1Book403Response = HttpErrorResponse
+export type GetApiV1Book403Response = zod.input<typeof GetApiV1Book403Response>
+export type GetApiV1Book403ResponseOutput = zod.output<
+  typeof GetApiV1Book403Response
+>
 export const GetApiV1Book404Response = BookErrorResponse
 export type GetApiV1Book404Response = zod.input<typeof GetApiV1Book404Response>
 export type GetApiV1Book404ResponseOutput = zod.output<
@@ -1254,6 +1504,11 @@ export const GetApiV1Book422Response = ValidationErrorResponse
 export type GetApiV1Book422Response = zod.input<typeof GetApiV1Book422Response>
 export type GetApiV1Book422ResponseOutput = zod.output<
   typeof GetApiV1Book422Response
+>
+export const GetApiV1Book429Response = HttpErrorResponse
+export type GetApiV1Book429Response = zod.input<typeof GetApiV1Book429Response>
+export type GetApiV1Book429ResponseOutput = zod.output<
+  typeof GetApiV1Book429Response
 >
 export const GetApiV1Book500Response = InternalErrorResponse
 export type GetApiV1Book500Response = zod.input<typeof GetApiV1Book500Response>
@@ -1286,6 +1541,20 @@ export type PatchApiV1Book200Response = zod.input<
 >
 export type PatchApiV1Book200ResponseOutput = zod.output<
   typeof PatchApiV1Book200Response
+>
+export const PatchApiV1Book401Response = HttpErrorResponse
+export type PatchApiV1Book401Response = zod.input<
+  typeof PatchApiV1Book401Response
+>
+export type PatchApiV1Book401ResponseOutput = zod.output<
+  typeof PatchApiV1Book401Response
+>
+export const PatchApiV1Book403Response = HttpErrorResponse
+export type PatchApiV1Book403Response = zod.input<
+  typeof PatchApiV1Book403Response
+>
+export type PatchApiV1Book403ResponseOutput = zod.output<
+  typeof PatchApiV1Book403Response
 >
 export const PatchApiV1Book404Response = zod.union([
   BookErrorResponse,
@@ -1325,6 +1594,13 @@ export type PatchApiV1Book422Response = zod.input<
 export type PatchApiV1Book422ResponseOutput = zod.output<
   typeof PatchApiV1Book422Response
 >
+export const PatchApiV1Book429Response = HttpErrorResponse
+export type PatchApiV1Book429Response = zod.input<
+  typeof PatchApiV1Book429Response
+>
+export type PatchApiV1Book429ResponseOutput = zod.output<
+  typeof PatchApiV1Book429Response
+>
 export const PatchApiV1Book500Response = InternalErrorResponse
 export type PatchApiV1Book500Response = zod.input<
   typeof PatchApiV1Book500Response
@@ -1353,6 +1629,20 @@ export type DeleteApiV1Book204Response = zod.input<
 >
 export type DeleteApiV1Book204ResponseOutput = zod.output<
   typeof DeleteApiV1Book204Response
+>
+export const DeleteApiV1Book401Response = HttpErrorResponse
+export type DeleteApiV1Book401Response = zod.input<
+  typeof DeleteApiV1Book401Response
+>
+export type DeleteApiV1Book401ResponseOutput = zod.output<
+  typeof DeleteApiV1Book401Response
+>
+export const DeleteApiV1Book403Response = HttpErrorResponse
+export type DeleteApiV1Book403Response = zod.input<
+  typeof DeleteApiV1Book403Response
+>
+export type DeleteApiV1Book403ResponseOutput = zod.output<
+  typeof DeleteApiV1Book403Response
 >
 export const DeleteApiV1Book404Response = BookErrorResponse
 export type DeleteApiV1Book404Response = zod.input<
@@ -1385,6 +1675,13 @@ export type DeleteApiV1Book422Response = zod.input<
 export type DeleteApiV1Book422ResponseOutput = zod.output<
   typeof DeleteApiV1Book422Response
 >
+export const DeleteApiV1Book429Response = HttpErrorResponse
+export type DeleteApiV1Book429Response = zod.input<
+  typeof DeleteApiV1Book429Response
+>
+export type DeleteApiV1Book429ResponseOutput = zod.output<
+  typeof DeleteApiV1Book429Response
+>
 export const DeleteApiV1Book500Response = InternalErrorResponse
 export type DeleteApiV1Book500Response = zod.input<
   typeof DeleteApiV1Book500Response
@@ -1407,6 +1704,20 @@ export type CreateApiV1Series201Response = zod.input<
 export type CreateApiV1Series201ResponseOutput = zod.output<
   typeof CreateApiV1Series201Response
 >
+export const CreateApiV1Series401Response = HttpErrorResponse
+export type CreateApiV1Series401Response = zod.input<
+  typeof CreateApiV1Series401Response
+>
+export type CreateApiV1Series401ResponseOutput = zod.output<
+  typeof CreateApiV1Series401Response
+>
+export const CreateApiV1Series403Response = HttpErrorResponse
+export type CreateApiV1Series403Response = zod.input<
+  typeof CreateApiV1Series403Response
+>
+export type CreateApiV1Series403ResponseOutput = zod.output<
+  typeof CreateApiV1Series403Response
+>
 export const CreateApiV1Series405Response = HttpErrorResponse
 export type CreateApiV1Series405Response = zod.input<
   typeof CreateApiV1Series405Response
@@ -1420,6 +1731,13 @@ export type CreateApiV1Series422Response = zod.input<
 >
 export type CreateApiV1Series422ResponseOutput = zod.output<
   typeof CreateApiV1Series422Response
+>
+export const CreateApiV1Series429Response = HttpErrorResponse
+export type CreateApiV1Series429Response = zod.input<
+  typeof CreateApiV1Series429Response
+>
+export type CreateApiV1Series429ResponseOutput = zod.output<
+  typeof CreateApiV1Series429Response
 >
 export const CreateApiV1Series500Response = InternalErrorResponse
 export type CreateApiV1Series500Response = zod.input<
@@ -1461,6 +1779,20 @@ export type ListApiV1Series200Response = zod.input<
 export type ListApiV1Series200ResponseOutput = zod.output<
   typeof ListApiV1Series200Response
 >
+export const ListApiV1Series401Response = HttpErrorResponse
+export type ListApiV1Series401Response = zod.input<
+  typeof ListApiV1Series401Response
+>
+export type ListApiV1Series401ResponseOutput = zod.output<
+  typeof ListApiV1Series401Response
+>
+export const ListApiV1Series403Response = HttpErrorResponse
+export type ListApiV1Series403Response = zod.input<
+  typeof ListApiV1Series403Response
+>
+export type ListApiV1Series403ResponseOutput = zod.output<
+  typeof ListApiV1Series403Response
+>
 export const ListApiV1Series405Response = HttpErrorResponse
 export type ListApiV1Series405Response = zod.input<
   typeof ListApiV1Series405Response
@@ -1474,6 +1806,13 @@ export type ListApiV1Series422Response = zod.input<
 >
 export type ListApiV1Series422ResponseOutput = zod.output<
   typeof ListApiV1Series422Response
+>
+export const ListApiV1Series429Response = HttpErrorResponse
+export type ListApiV1Series429Response = zod.input<
+  typeof ListApiV1Series429Response
+>
+export type ListApiV1Series429ResponseOutput = zod.output<
+  typeof ListApiV1Series429Response
 >
 export const ListApiV1Series500Response = InternalErrorResponse
 export type ListApiV1Series500Response = zod.input<
@@ -1502,6 +1841,20 @@ export type GetApiV1Series200Response = zod.input<
 export type GetApiV1Series200ResponseOutput = zod.output<
   typeof GetApiV1Series200Response
 >
+export const GetApiV1Series401Response = HttpErrorResponse
+export type GetApiV1Series401Response = zod.input<
+  typeof GetApiV1Series401Response
+>
+export type GetApiV1Series401ResponseOutput = zod.output<
+  typeof GetApiV1Series401Response
+>
+export const GetApiV1Series403Response = HttpErrorResponse
+export type GetApiV1Series403Response = zod.input<
+  typeof GetApiV1Series403Response
+>
+export type GetApiV1Series403ResponseOutput = zod.output<
+  typeof GetApiV1Series403Response
+>
 export const GetApiV1Series404Response = SeriesErrorResponse
 export type GetApiV1Series404Response = zod.input<
   typeof GetApiV1Series404Response
@@ -1522,6 +1875,13 @@ export type GetApiV1Series422Response = zod.input<
 >
 export type GetApiV1Series422ResponseOutput = zod.output<
   typeof GetApiV1Series422Response
+>
+export const GetApiV1Series429Response = HttpErrorResponse
+export type GetApiV1Series429Response = zod.input<
+  typeof GetApiV1Series429Response
+>
+export type GetApiV1Series429ResponseOutput = zod.output<
+  typeof GetApiV1Series429Response
 >
 export const GetApiV1Series500Response = InternalErrorResponse
 export type GetApiV1Series500Response = zod.input<
@@ -1555,6 +1915,20 @@ export type PatchApiV1Series200Response = zod.input<
 export type PatchApiV1Series200ResponseOutput = zod.output<
   typeof PatchApiV1Series200Response
 >
+export const PatchApiV1Series401Response = HttpErrorResponse
+export type PatchApiV1Series401Response = zod.input<
+  typeof PatchApiV1Series401Response
+>
+export type PatchApiV1Series401ResponseOutput = zod.output<
+  typeof PatchApiV1Series401Response
+>
+export const PatchApiV1Series403Response = HttpErrorResponse
+export type PatchApiV1Series403Response = zod.input<
+  typeof PatchApiV1Series403Response
+>
+export type PatchApiV1Series403ResponseOutput = zod.output<
+  typeof PatchApiV1Series403Response
+>
 export const PatchApiV1Series404Response = SeriesErrorResponse
 export type PatchApiV1Series404Response = zod.input<
   typeof PatchApiV1Series404Response
@@ -1575,6 +1949,13 @@ export type PatchApiV1Series422Response = zod.input<
 >
 export type PatchApiV1Series422ResponseOutput = zod.output<
   typeof PatchApiV1Series422Response
+>
+export const PatchApiV1Series429Response = HttpErrorResponse
+export type PatchApiV1Series429Response = zod.input<
+  typeof PatchApiV1Series429Response
+>
+export type PatchApiV1Series429ResponseOutput = zod.output<
+  typeof PatchApiV1Series429Response
 >
 export const PatchApiV1Series500Response = InternalErrorResponse
 export type PatchApiV1Series500Response = zod.input<
@@ -1605,6 +1986,20 @@ export type DeleteApiV1Series204Response = zod.input<
 export type DeleteApiV1Series204ResponseOutput = zod.output<
   typeof DeleteApiV1Series204Response
 >
+export const DeleteApiV1Series401Response = HttpErrorResponse
+export type DeleteApiV1Series401Response = zod.input<
+  typeof DeleteApiV1Series401Response
+>
+export type DeleteApiV1Series401ResponseOutput = zod.output<
+  typeof DeleteApiV1Series401Response
+>
+export const DeleteApiV1Series403Response = HttpErrorResponse
+export type DeleteApiV1Series403Response = zod.input<
+  typeof DeleteApiV1Series403Response
+>
+export type DeleteApiV1Series403ResponseOutput = zod.output<
+  typeof DeleteApiV1Series403Response
+>
 export const DeleteApiV1Series404Response = SeriesErrorResponse
 export type DeleteApiV1Series404Response = zod.input<
   typeof DeleteApiV1Series404Response
@@ -1625,6 +2020,13 @@ export type DeleteApiV1Series422Response = zod.input<
 >
 export type DeleteApiV1Series422ResponseOutput = zod.output<
   typeof DeleteApiV1Series422Response
+>
+export const DeleteApiV1Series429Response = HttpErrorResponse
+export type DeleteApiV1Series429Response = zod.input<
+  typeof DeleteApiV1Series429Response
+>
+export type DeleteApiV1Series429ResponseOutput = zod.output<
+  typeof DeleteApiV1Series429Response
 >
 export const DeleteApiV1Series500Response = InternalErrorResponse
 export type DeleteApiV1Series500Response = zod.input<
@@ -1678,7 +2080,24 @@ export type ReplaceApiV1SeriesBooks200Response = zod.input<
 export type ReplaceApiV1SeriesBooks200ResponseOutput = zod.output<
   typeof ReplaceApiV1SeriesBooks200Response
 >
-export const ReplaceApiV1SeriesBooks404Response = SeriesErrorResponse
+export const ReplaceApiV1SeriesBooks401Response = HttpErrorResponse
+export type ReplaceApiV1SeriesBooks401Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks401Response
+>
+export type ReplaceApiV1SeriesBooks401ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks401Response
+>
+export const ReplaceApiV1SeriesBooks403Response = HttpErrorResponse
+export type ReplaceApiV1SeriesBooks403Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks403Response
+>
+export type ReplaceApiV1SeriesBooks403ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks403Response
+>
+export const ReplaceApiV1SeriesBooks404Response = zod.union([
+  SeriesErrorResponse,
+  BookErrorResponse,
+])
 export type ReplaceApiV1SeriesBooks404Response = zod.input<
   typeof ReplaceApiV1SeriesBooks404Response
 >
@@ -1705,6 +2124,13 @@ export type ReplaceApiV1SeriesBooks422Response = zod.input<
 >
 export type ReplaceApiV1SeriesBooks422ResponseOutput = zod.output<
   typeof ReplaceApiV1SeriesBooks422Response
+>
+export const ReplaceApiV1SeriesBooks429Response = HttpErrorResponse
+export type ReplaceApiV1SeriesBooks429Response = zod.input<
+  typeof ReplaceApiV1SeriesBooks429Response
+>
+export type ReplaceApiV1SeriesBooks429ResponseOutput = zod.output<
+  typeof ReplaceApiV1SeriesBooks429Response
 >
 export const ReplaceApiV1SeriesBooks500Response = InternalErrorResponse
 export type ReplaceApiV1SeriesBooks500Response = zod.input<
@@ -1755,6 +2181,20 @@ export type ImportApiV1BookContent200Response = zod.input<
 export type ImportApiV1BookContent200ResponseOutput = zod.output<
   typeof ImportApiV1BookContent200Response
 >
+export const ImportApiV1BookContent401Response = HttpErrorResponse
+export type ImportApiV1BookContent401Response = zod.input<
+  typeof ImportApiV1BookContent401Response
+>
+export type ImportApiV1BookContent401ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent401Response
+>
+export const ImportApiV1BookContent403Response = HttpErrorResponse
+export type ImportApiV1BookContent403Response = zod.input<
+  typeof ImportApiV1BookContent403Response
+>
+export type ImportApiV1BookContent403ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent403Response
+>
 export const ImportApiV1BookContent404Response = BookErrorResponse
 export type ImportApiV1BookContent404Response = zod.input<
   typeof ImportApiV1BookContent404Response
@@ -1793,6 +2233,13 @@ export type ImportApiV1BookContent422Response = zod.input<
 export type ImportApiV1BookContent422ResponseOutput = zod.output<
   typeof ImportApiV1BookContent422Response
 >
+export const ImportApiV1BookContent429Response = HttpErrorResponse
+export type ImportApiV1BookContent429Response = zod.input<
+  typeof ImportApiV1BookContent429Response
+>
+export type ImportApiV1BookContent429ResponseOutput = zod.output<
+  typeof ImportApiV1BookContent429Response
+>
 export const ImportApiV1BookContent500Response = InternalErrorResponse
 export type ImportApiV1BookContent500Response = zod.input<
   typeof ImportApiV1BookContent500Response
@@ -1824,6 +2271,20 @@ export type GetApiV1BookContent200Response = zod.input<
 export type GetApiV1BookContent200ResponseOutput = zod.output<
   typeof GetApiV1BookContent200Response
 >
+export const GetApiV1BookContent401Response = HttpErrorResponse
+export type GetApiV1BookContent401Response = zod.input<
+  typeof GetApiV1BookContent401Response
+>
+export type GetApiV1BookContent401ResponseOutput = zod.output<
+  typeof GetApiV1BookContent401Response
+>
+export const GetApiV1BookContent403Response = HttpErrorResponse
+export type GetApiV1BookContent403Response = zod.input<
+  typeof GetApiV1BookContent403Response
+>
+export type GetApiV1BookContent403ResponseOutput = zod.output<
+  typeof GetApiV1BookContent403Response
+>
 export const GetApiV1BookContent404Response = BookErrorResponse
 export type GetApiV1BookContent404Response = zod.input<
   typeof GetApiV1BookContent404Response
@@ -1844,6 +2305,13 @@ export type GetApiV1BookContent422Response = zod.input<
 >
 export type GetApiV1BookContent422ResponseOutput = zod.output<
   typeof GetApiV1BookContent422Response
+>
+export const GetApiV1BookContent429Response = HttpErrorResponse
+export type GetApiV1BookContent429Response = zod.input<
+  typeof GetApiV1BookContent429Response
+>
+export type GetApiV1BookContent429ResponseOutput = zod.output<
+  typeof GetApiV1BookContent429Response
 >
 export const GetApiV1BookContent500Response = InternalErrorResponse
 export type GetApiV1BookContent500Response = zod.input<
@@ -1887,6 +2355,20 @@ export type PurgeApiV1BookContent204Response = zod.input<
 export type PurgeApiV1BookContent204ResponseOutput = zod.output<
   typeof PurgeApiV1BookContent204Response
 >
+export const PurgeApiV1BookContent401Response = HttpErrorResponse
+export type PurgeApiV1BookContent401Response = zod.input<
+  typeof PurgeApiV1BookContent401Response
+>
+export type PurgeApiV1BookContent401ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent401Response
+>
+export const PurgeApiV1BookContent403Response = HttpErrorResponse
+export type PurgeApiV1BookContent403Response = zod.input<
+  typeof PurgeApiV1BookContent403Response
+>
+export type PurgeApiV1BookContent403ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent403Response
+>
 export const PurgeApiV1BookContent404Response = BookErrorResponse
 export type PurgeApiV1BookContent404Response = zod.input<
   typeof PurgeApiV1BookContent404Response
@@ -1921,6 +2403,13 @@ export type PurgeApiV1BookContent428Response = zod.input<
 >
 export type PurgeApiV1BookContent428ResponseOutput = zod.output<
   typeof PurgeApiV1BookContent428Response
+>
+export const PurgeApiV1BookContent429Response = HttpErrorResponse
+export type PurgeApiV1BookContent429Response = zod.input<
+  typeof PurgeApiV1BookContent429Response
+>
+export type PurgeApiV1BookContent429ResponseOutput = zod.output<
+  typeof PurgeApiV1BookContent429Response
 >
 export const PurgeApiV1BookContent500Response = InternalErrorResponse
 export type PurgeApiV1BookContent500Response = zod.input<
@@ -1985,6 +2474,20 @@ export type ListApiV1BookSections200Response = zod.input<
 export type ListApiV1BookSections200ResponseOutput = zod.output<
   typeof ListApiV1BookSections200Response
 >
+export const ListApiV1BookSections401Response = HttpErrorResponse
+export type ListApiV1BookSections401Response = zod.input<
+  typeof ListApiV1BookSections401Response
+>
+export type ListApiV1BookSections401ResponseOutput = zod.output<
+  typeof ListApiV1BookSections401Response
+>
+export const ListApiV1BookSections403Response = HttpErrorResponse
+export type ListApiV1BookSections403Response = zod.input<
+  typeof ListApiV1BookSections403Response
+>
+export type ListApiV1BookSections403ResponseOutput = zod.output<
+  typeof ListApiV1BookSections403Response
+>
 export const ListApiV1BookSections404Response = BookErrorResponse
 export type ListApiV1BookSections404Response = zod.input<
   typeof ListApiV1BookSections404Response
@@ -2012,6 +2515,13 @@ export type ListApiV1BookSections422Response = zod.input<
 >
 export type ListApiV1BookSections422ResponseOutput = zod.output<
   typeof ListApiV1BookSections422Response
+>
+export const ListApiV1BookSections429Response = HttpErrorResponse
+export type ListApiV1BookSections429Response = zod.input<
+  typeof ListApiV1BookSections429Response
+>
+export type ListApiV1BookSections429ResponseOutput = zod.output<
+  typeof ListApiV1BookSections429Response
 >
 export const ListApiV1BookSections500Response = InternalErrorResponse
 export type ListApiV1BookSections500Response = zod.input<
@@ -2076,6 +2586,20 @@ export type ListApiV1BookSegments200Response = zod.input<
 export type ListApiV1BookSegments200ResponseOutput = zod.output<
   typeof ListApiV1BookSegments200Response
 >
+export const ListApiV1BookSegments401Response = HttpErrorResponse
+export type ListApiV1BookSegments401Response = zod.input<
+  typeof ListApiV1BookSegments401Response
+>
+export type ListApiV1BookSegments401ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments401Response
+>
+export const ListApiV1BookSegments403Response = HttpErrorResponse
+export type ListApiV1BookSegments403Response = zod.input<
+  typeof ListApiV1BookSegments403Response
+>
+export type ListApiV1BookSegments403ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments403Response
+>
 export const ListApiV1BookSegments404Response = BookErrorResponse
 export type ListApiV1BookSegments404Response = zod.input<
   typeof ListApiV1BookSegments404Response
@@ -2103,6 +2627,13 @@ export type ListApiV1BookSegments422Response = zod.input<
 >
 export type ListApiV1BookSegments422ResponseOutput = zod.output<
   typeof ListApiV1BookSegments422Response
+>
+export const ListApiV1BookSegments429Response = HttpErrorResponse
+export type ListApiV1BookSegments429Response = zod.input<
+  typeof ListApiV1BookSegments429Response
+>
+export type ListApiV1BookSegments429ResponseOutput = zod.output<
+  typeof ListApiV1BookSegments429Response
 >
 export const ListApiV1BookSegments500Response = InternalErrorResponse
 export type ListApiV1BookSegments500Response = zod.input<
@@ -2139,6 +2670,20 @@ export type CreateApiV1File400Response = zod.input<
 export type CreateApiV1File400ResponseOutput = zod.output<
   typeof CreateApiV1File400Response
 >
+export const CreateApiV1File401Response = HttpErrorResponse
+export type CreateApiV1File401Response = zod.input<
+  typeof CreateApiV1File401Response
+>
+export type CreateApiV1File401ResponseOutput = zod.output<
+  typeof CreateApiV1File401Response
+>
+export const CreateApiV1File403Response = HttpErrorResponse
+export type CreateApiV1File403Response = zod.input<
+  typeof CreateApiV1File403Response
+>
+export type CreateApiV1File403ResponseOutput = zod.output<
+  typeof CreateApiV1File403Response
+>
 export const CreateApiV1File405Response = HttpErrorResponse
 export type CreateApiV1File405Response = zod.input<
   typeof CreateApiV1File405Response
@@ -2169,6 +2714,13 @@ export type CreateApiV1File422Response = zod.input<
 >
 export type CreateApiV1File422ResponseOutput = zod.output<
   typeof CreateApiV1File422Response
+>
+export const CreateApiV1File429Response = HttpErrorResponse
+export type CreateApiV1File429Response = zod.input<
+  typeof CreateApiV1File429Response
+>
+export type CreateApiV1File429ResponseOutput = zod.output<
+  typeof CreateApiV1File429Response
 >
 export const CreateApiV1File500Response = InternalErrorResponse
 export type CreateApiV1File500Response = zod.input<
@@ -2218,6 +2770,16 @@ export type GetApiV1File400Response = zod.input<typeof GetApiV1File400Response>
 export type GetApiV1File400ResponseOutput = zod.output<
   typeof GetApiV1File400Response
 >
+export const GetApiV1File401Response = HttpErrorResponse
+export type GetApiV1File401Response = zod.input<typeof GetApiV1File401Response>
+export type GetApiV1File401ResponseOutput = zod.output<
+  typeof GetApiV1File401Response
+>
+export const GetApiV1File403Response = HttpErrorResponse
+export type GetApiV1File403Response = zod.input<typeof GetApiV1File403Response>
+export type GetApiV1File403ResponseOutput = zod.output<
+  typeof GetApiV1File403Response
+>
 export const GetApiV1File404Response = FileErrorResponse
 export type GetApiV1File404Response = zod.input<typeof GetApiV1File404Response>
 export type GetApiV1File404ResponseOutput = zod.output<
@@ -2237,6 +2799,11 @@ export const GetApiV1File422Response = ValidationErrorResponse
 export type GetApiV1File422Response = zod.input<typeof GetApiV1File422Response>
 export type GetApiV1File422ResponseOutput = zod.output<
   typeof GetApiV1File422Response
+>
+export const GetApiV1File429Response = HttpErrorResponse
+export type GetApiV1File429Response = zod.input<typeof GetApiV1File429Response>
+export type GetApiV1File429ResponseOutput = zod.output<
+  typeof GetApiV1File429Response
 >
 export const GetApiV1File500Response = InternalErrorResponse
 export type GetApiV1File500Response = zod.input<typeof GetApiV1File500Response>
@@ -2289,6 +2856,20 @@ export type HeadApiV1File400Response = zod.input<
 export type HeadApiV1File400ResponseOutput = zod.output<
   typeof HeadApiV1File400Response
 >
+export const HeadApiV1File401Response = HttpErrorResponse
+export type HeadApiV1File401Response = zod.input<
+  typeof HeadApiV1File401Response
+>
+export type HeadApiV1File401ResponseOutput = zod.output<
+  typeof HeadApiV1File401Response
+>
+export const HeadApiV1File403Response = HttpErrorResponse
+export type HeadApiV1File403Response = zod.input<
+  typeof HeadApiV1File403Response
+>
+export type HeadApiV1File403ResponseOutput = zod.output<
+  typeof HeadApiV1File403Response
+>
 export const HeadApiV1File404Response = FileErrorResponse
 export type HeadApiV1File404Response = zod.input<
   typeof HeadApiV1File404Response
@@ -2316,6 +2897,13 @@ export type HeadApiV1File422Response = zod.input<
 >
 export type HeadApiV1File422ResponseOutput = zod.output<
   typeof HeadApiV1File422Response
+>
+export const HeadApiV1File429Response = HttpErrorResponse
+export type HeadApiV1File429Response = zod.input<
+  typeof HeadApiV1File429Response
+>
+export type HeadApiV1File429ResponseOutput = zod.output<
+  typeof HeadApiV1File429Response
 >
 export const HeadApiV1File500Response = InternalErrorResponse
 export type HeadApiV1File500Response = zod.input<
@@ -2346,6 +2934,20 @@ export type DeleteApiV1File204Response = zod.input<
 export type DeleteApiV1File204ResponseOutput = zod.output<
   typeof DeleteApiV1File204Response
 >
+export const DeleteApiV1File401Response = HttpErrorResponse
+export type DeleteApiV1File401Response = zod.input<
+  typeof DeleteApiV1File401Response
+>
+export type DeleteApiV1File401ResponseOutput = zod.output<
+  typeof DeleteApiV1File401Response
+>
+export const DeleteApiV1File403Response = HttpErrorResponse
+export type DeleteApiV1File403Response = zod.input<
+  typeof DeleteApiV1File403Response
+>
+export type DeleteApiV1File403ResponseOutput = zod.output<
+  typeof DeleteApiV1File403Response
+>
 export const DeleteApiV1File404Response = FileErrorResponse
 export type DeleteApiV1File404Response = zod.input<
   typeof DeleteApiV1File404Response
@@ -2374,6 +2976,13 @@ export type DeleteApiV1File422Response = zod.input<
 export type DeleteApiV1File422ResponseOutput = zod.output<
   typeof DeleteApiV1File422Response
 >
+export const DeleteApiV1File429Response = HttpErrorResponse
+export type DeleteApiV1File429Response = zod.input<
+  typeof DeleteApiV1File429Response
+>
+export type DeleteApiV1File429ResponseOutput = zod.output<
+  typeof DeleteApiV1File429Response
+>
 export const DeleteApiV1File500Response = InternalErrorResponse
 export type DeleteApiV1File500Response = zod.input<
   typeof DeleteApiV1File500Response
@@ -2391,12 +3000,33 @@ export type CreateApiV1LiveToken200Response = zod.input<
 export type CreateApiV1LiveToken200ResponseOutput = zod.output<
   typeof CreateApiV1LiveToken200Response
 >
+export const CreateApiV1LiveToken401Response = HttpErrorResponse
+export type CreateApiV1LiveToken401Response = zod.input<
+  typeof CreateApiV1LiveToken401Response
+>
+export type CreateApiV1LiveToken401ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken401Response
+>
+export const CreateApiV1LiveToken403Response = HttpErrorResponse
+export type CreateApiV1LiveToken403Response = zod.input<
+  typeof CreateApiV1LiveToken403Response
+>
+export type CreateApiV1LiveToken403ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken403Response
+>
 export const CreateApiV1LiveToken405Response = HttpErrorResponse
 export type CreateApiV1LiveToken405Response = zod.input<
   typeof CreateApiV1LiveToken405Response
 >
 export type CreateApiV1LiveToken405ResponseOutput = zod.output<
   typeof CreateApiV1LiveToken405Response
+>
+export const CreateApiV1LiveToken429Response = HttpErrorResponse
+export type CreateApiV1LiveToken429Response = zod.input<
+  typeof CreateApiV1LiveToken429Response
+>
+export type CreateApiV1LiveToken429ResponseOutput = zod.output<
+  typeof CreateApiV1LiveToken429Response
 >
 export const CreateApiV1LiveToken500Response = InternalErrorResponse
 export type CreateApiV1LiveToken500Response = zod.input<
@@ -2425,7 +3055,24 @@ export type AskApiV1Library200Response = zod.input<
 export type AskApiV1Library200ResponseOutput = zod.output<
   typeof AskApiV1Library200Response
 >
-export const AskApiV1Library404Response = BookErrorResponse
+export const AskApiV1Library401Response = HttpErrorResponse
+export type AskApiV1Library401Response = zod.input<
+  typeof AskApiV1Library401Response
+>
+export type AskApiV1Library401ResponseOutput = zod.output<
+  typeof AskApiV1Library401Response
+>
+export const AskApiV1Library403Response = HttpErrorResponse
+export type AskApiV1Library403Response = zod.input<
+  typeof AskApiV1Library403Response
+>
+export type AskApiV1Library403ResponseOutput = zod.output<
+  typeof AskApiV1Library403Response
+>
+export const AskApiV1Library404Response = zod.union([
+  BookErrorResponse,
+  SeriesErrorResponse,
+])
 export type AskApiV1Library404Response = zod.input<
   typeof AskApiV1Library404Response
 >
@@ -2446,6 +3093,13 @@ export type AskApiV1Library422Response = zod.input<
 export type AskApiV1Library422ResponseOutput = zod.output<
   typeof AskApiV1Library422Response
 >
+export const AskApiV1Library429Response = HttpErrorResponse
+export type AskApiV1Library429Response = zod.input<
+  typeof AskApiV1Library429Response
+>
+export type AskApiV1Library429ResponseOutput = zod.output<
+  typeof AskApiV1Library429Response
+>
 export const AskApiV1Library500Response = InternalErrorResponse
 export type AskApiV1Library500Response = zod.input<
   typeof AskApiV1Library500Response
@@ -2463,12 +3117,33 @@ export type GetApiV1Health200Response = zod.input<
 export type GetApiV1Health200ResponseOutput = zod.output<
   typeof GetApiV1Health200Response
 >
+export const GetApiV1Health401Response = HttpErrorResponse
+export type GetApiV1Health401Response = zod.input<
+  typeof GetApiV1Health401Response
+>
+export type GetApiV1Health401ResponseOutput = zod.output<
+  typeof GetApiV1Health401Response
+>
+export const GetApiV1Health403Response = HttpErrorResponse
+export type GetApiV1Health403Response = zod.input<
+  typeof GetApiV1Health403Response
+>
+export type GetApiV1Health403ResponseOutput = zod.output<
+  typeof GetApiV1Health403Response
+>
 export const GetApiV1Health405Response = HttpErrorResponse
 export type GetApiV1Health405Response = zod.input<
   typeof GetApiV1Health405Response
 >
 export type GetApiV1Health405ResponseOutput = zod.output<
   typeof GetApiV1Health405Response
+>
+export const GetApiV1Health429Response = HttpErrorResponse
+export type GetApiV1Health429Response = zod.input<
+  typeof GetApiV1Health429Response
+>
+export type GetApiV1Health429ResponseOutput = zod.output<
+  typeof GetApiV1Health429Response
 >
 export const GetApiV1Health500Response = InternalErrorResponse
 export type GetApiV1Health500Response = zod.input<
@@ -2487,12 +3162,33 @@ export type GetApiV1Ready200Response = zod.input<
 export type GetApiV1Ready200ResponseOutput = zod.output<
   typeof GetApiV1Ready200Response
 >
+export const GetApiV1Ready401Response = HttpErrorResponse
+export type GetApiV1Ready401Response = zod.input<
+  typeof GetApiV1Ready401Response
+>
+export type GetApiV1Ready401ResponseOutput = zod.output<
+  typeof GetApiV1Ready401Response
+>
+export const GetApiV1Ready403Response = HttpErrorResponse
+export type GetApiV1Ready403Response = zod.input<
+  typeof GetApiV1Ready403Response
+>
+export type GetApiV1Ready403ResponseOutput = zod.output<
+  typeof GetApiV1Ready403Response
+>
 export const GetApiV1Ready405Response = HttpErrorResponse
 export type GetApiV1Ready405Response = zod.input<
   typeof GetApiV1Ready405Response
 >
 export type GetApiV1Ready405ResponseOutput = zod.output<
   typeof GetApiV1Ready405Response
+>
+export const GetApiV1Ready429Response = HttpErrorResponse
+export type GetApiV1Ready429Response = zod.input<
+  typeof GetApiV1Ready429Response
+>
+export type GetApiV1Ready429ResponseOutput = zod.output<
+  typeof GetApiV1Ready429Response
 >
 export const GetApiV1Ready500Response = InternalErrorResponse
 export type GetApiV1Ready500Response = zod.input<

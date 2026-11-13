@@ -1,7 +1,8 @@
 import { useAppNavigate, useAppLocation } from '../routing/navigation'
 import { LiveContext } from './LiveContext'
-import { useEffect, useRef, type ReactNode } from 'react'
-import { useAppStore } from '../store/hooks'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useAppStore, useAppSelector } from '../store/hooks'
+import { getCurrentUser } from '../store/authSlice'
 import {
   getLiveSession,
   initializeLiveSession,
@@ -12,6 +13,7 @@ import { livePageTurnerBinding } from '../services/pageTurnerBindings'
 
 export function LiveProvider({ children }: { children: ReactNode }) {
   const store = useAppStore()
+  const user = useAppSelector(getCurrentUser)
   const navigate = useAppNavigate()
   const navigateRef = useRef(navigate)
 
@@ -40,8 +42,9 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     }
   }, [store])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     function handleLiveKey(event: KeyboardEvent) {
+      if (!user) return
       if (event.key !== livePageTurnerBinding.key) return
 
       event.preventDefault()
@@ -61,7 +64,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener('keydown', handleLiveKey, true)
     return () => window.removeEventListener('keydown', handleLiveKey, true)
-  }, [store])
+  }, [store, user])
 
-  return <LiveContext.Provider value={true}>{children}</LiveContext.Provider>
+  return <LiveContext.Provider value={!!user}>{children}</LiveContext.Provider>
 }

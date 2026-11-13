@@ -31,6 +31,7 @@ import {
   selectBookDownloadState,
 } from './bookDownloadsSlice'
 import type { AppDispatch, RootState } from './store'
+import { getCurrentUser } from './authSlice'
 
 export function createLiveListener() {
   const listener = createListenerMiddleware<RootState, AppDispatch>()
@@ -39,6 +40,10 @@ export function createLiveListener() {
   listener.startListening({
     matcher: isAnyOf(initializeLiveSession, requestLiveSession),
     effect(action, api) {
+      const isStopping =
+        requestLiveSession.match(action) && action.payload.kind !== 'start'
+      if (!getCurrentUser(api.getState()) && !isStopping) return
+      if (!conversation && isStopping) return
       if (!conversation) {
         const commands = createLiveCommands(api.dispatch)
         conversation = createLiveConversation(

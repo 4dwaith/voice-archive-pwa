@@ -100,11 +100,15 @@ Each live run performs the following:
 1. Refuse an occupied API port 8011 rather than attaching to an unknown server.
 2. Start/wait for `db-test`, then validate `.env.test` before any database write.
 3. Create a uniquely named `va_e2e_<uuid>` database and OS temporary upload root.
-4. Apply the backend's Alembic migrations and start Uvicorn on loopback port 8011.
+4. Apply the backend's Alembic migrations, create a disposable reader account,
+   and start Uvicorn on loopback port 8011 with a temporary auth secret.
 5. Wait for `/api/v1/ready`, which checks database connectivity. Connection
    refusal and 503 are retried for up to 30 seconds; a stopped API fails early.
-6. Run the two `@live` scenarios. Books are created and deleted through HTTP
-   APIs; Cypress never uses SQL for fixtures.
+6. Run the `@live` scenarios. Cypress signs in with the disposable account using
+   `cy.session`. Books are created and deleted through authenticated HTTP APIs;
+   the request helper supplies the trusted Origin for writes. Tests cover actual
+   sign-in/out, invalid credentials, expiration and authenticated reader/media
+   delivery. Cypress never uses SQL for book fixtures.
 7. Stop owned servers, drop only this run's named database, and remove its
    temporary upload directory, including after assertion/migration failures.
 
@@ -119,6 +123,10 @@ Live tests deliberately do not attach to the standard API URL: a healthy
 `/ready` endpoint alone cannot establish that a server uses a disposable
 database. Missing prerequisites produce a failing command before browser tests
 start. There is no fallback to the developer server.
+
+Mock runs intercept the session endpoint as a signed-in reader by default.
+The auth feature overrides this to exercise guest reading without Live. These
+runs do not connect to a backend; live runs use the real cookie/auth implementation.
 
 ## Coverage policy
 

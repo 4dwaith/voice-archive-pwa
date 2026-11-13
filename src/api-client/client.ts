@@ -21,7 +21,7 @@ export function contractError(): FetchBaseQueryError {
 }
 
 export function createArchiveBaseQuery(baseUrl: string) {
-  const fetchQuery = fetchBaseQuery({ baseUrl })
+  const fetchQuery = fetchBaseQuery({ baseUrl, credentials: 'include' })
   const query: BaseQueryFn<
     string | FetchArgs,
     unknown,
@@ -48,6 +48,8 @@ export function createArchiveBaseQuery(baseUrl: string) {
       request = { ...request, body: form }
     }
     const result = await fetchQuery(request, api, extraOptions)
+    if (result.error?.status === 401 && typeof window !== 'undefined')
+      window.location.replace('/login?expired=1')
     if (result.error && typeof result.error.status === 'number') {
       const endpoint = extraOptions?.errorSchemaEndpoint ?? api.endpoint
       const schema = errorSchemas[endpoint]?.[result.error.status]

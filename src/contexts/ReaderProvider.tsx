@@ -385,6 +385,7 @@ export function ReaderProvider({
   return (
     <ReaderContext value={value}>
       <audio
+        crossOrigin="use-credentials"
         ref={audioElementRef}
         hidden
         preload="metadata"

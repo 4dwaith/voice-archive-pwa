@@ -1,3 +1,4 @@
+import { requestApi } from '../support/api'
 import {
   Before,
   Given,
@@ -67,7 +68,7 @@ Before(() => {
 // the entire run's disposable database after Chrome exits.
 afterEach(() => {
   for (const id of liveBooks) {
-    cy.request('DELETE', `${Cypress.expose('apiUrl')}/api/v1/books/${id}`)
+    requestApi('DELETE', `${Cypress.expose('apiUrl')}/api/v1/books/${id}`)
   }
 })
 
@@ -77,7 +78,7 @@ Given('a library containing books', () => {
     return
   }
   for (const book of books) {
-    cy.request('POST', `${Cypress.expose('apiUrl')}/api/v1/books`, {
+    requestApi('POST', `${Cypress.expose('apiUrl')}/api/v1/books`, {
       title: book.title,
       language: book.language,
       description: book.description,

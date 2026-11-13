@@ -22,8 +22,10 @@ import { createReaderTocListener } from './readerTocListener'
 import { createReaderSearchListener } from './readerSearchListener'
 import { createReaderMeasurementsListener } from './readerMeasurementsListener'
 import { archiveApi } from '../api-client/archiveApi'
+import authReducer from './authSlice'
 
 const rootReducer = combineReducers({
+  auth: authReducer,
   textSize: textSizeReducer,
   playbackSpeed: playbackSpeedReducer,
   bookDownloads: bookDownloadsReducer,

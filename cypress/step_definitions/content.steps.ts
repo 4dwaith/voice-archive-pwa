@@ -1,3 +1,4 @@
+import { requestApi } from '../support/api'
 import {
   Given,
   When,
@@ -148,7 +149,11 @@ function mockBook(
     },
   })
   cy.intercept('GET', `${apiUrl()}/api/v1/files/99`, {
-    headers: { 'content-type': 'image/svg+xml' },
+    headers: {
+      'content-type': 'image/svg+xml',
+      'access-control-allow-origin': new URL(Cypress.config('baseUrl')!).origin,
+      'access-control-allow-credentials': 'true',
+    },
     body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="160"><rect width="100" height="160" fill="navy"/></svg>',
   })
   cy.intercept('GET', `${apiUrl()}/api/v1/books/${id}/content`, (request) => {
@@ -291,7 +296,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   for (const bookId of liveIds)
-    cy.request('DELETE', `${apiUrl()}/api/v1/books/${bookId}`)
+    requestApi('DELETE', `${apiUrl()}/api/v1/books/${bookId}`)
 })
 
 function preparePublishedBook() {
@@ -299,13 +304,13 @@ function preparePublishedBook() {
     mockBook()
     return
   }
-  cy.request('POST', `${apiUrl()}/api/v1/books`, {
+  requestApi('POST', `${apiUrl()}/api/v1/books`, {
     title: 'Sync book',
     language: 'kn',
   }).then((response) => {
     id = response.body.id
     liveIds.push(id)
-    cy.request(
+    requestApi(
       'POST',
       `${apiUrl()}/api/v1/books/${id}/content-imports`,
       input,
@@ -434,6 +439,8 @@ function prepareBookWithMedia(
     return
   }
   cy.visit('/')
+  cy.contains('reader@example.com').should('be.visible')
+
   cy.window().then(async (win) => {
     async function upload(kind: string, encoded: string, type: string) {
       const form = new FormData()
@@ -444,6 +451,7 @@ function prepareBookWithMedia(
       )
       const response = await win.fetch(`${apiUrl()}/api/v1/files/${kind}`, {
         method: 'POST',
+        credentials: 'include',
         body: form,
       })
       expect(response.status).to.equal(201)
@@ -457,6 +465,7 @@ function prepareBookWithMedia(
     )
     const response = await win.fetch(`${apiUrl()}/api/v1/books`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'Sync book', language: 'kn' }),
     })
@@ -479,6 +488,7 @@ function prepareBookWithMedia(
       `${apiUrl()}/api/v1/books/${id}/content-imports`,
       {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       },
@@ -909,16 +919,21 @@ When('I request conditional byte ranges from its media URLs', () => {
     for (const file of files) {
       // Obtain the current validator, then request sixteen bytes with both a
       // matching and a stale validator. The sync layer fetched no media bytes.
-      const first = await fetch(file.url, { headers: { Range: 'bytes=0-15' } })
+      const first = await fetch(file.url, {
+        credentials: 'include',
+        headers: { Range: 'bytes=0-15' },
+      })
       const etag = first.headers.get('etag')!
       await first.body?.cancel()
 
       const matched = await fetch(file.url, {
+        credentials: 'include',
         headers: { Range: 'bytes=0-15', 'If-Range': etag },
       })
       const byteLength = (await matched.arrayBuffer()).byteLength
 
       const stale = await fetch(file.url, {
+        credentials: 'include',
         headers: { Range: 'bytes=0-15', 'If-Range': '"stale"' },
       })
       await stale.body?.cancel()
@@ -988,8 +1003,8 @@ When('its published content is purged', () => {
     state = 'empty'
     return
   }
-  cy.request(`${apiUrl()}/api/v1/books/${id}/content`).then((response) => {
-    cy.request({
+  requestApi(`${apiUrl()}/api/v1/books/${id}/content`).then((response) => {
+    requestApi({
       method: 'DELETE',
       url: `${apiUrl()}/api/v1/books/${id}/content`,
       headers: { 'If-Match': response.headers.etag },
@@ -1001,13 +1016,13 @@ When('its published content is imported again', () => {
     currentVersion = nextVersion
     return
   }
-  cy.request(`${apiUrl()}/api/v1/books/${id}/content`).then((response) => {
-    cy.request({
+  requestApi(`${apiUrl()}/api/v1/books/${id}/content`).then((response) => {
+    requestApi({
       method: 'DELETE',
       url: `${apiUrl()}/api/v1/books/${id}/content`,
       headers: { 'If-Match': response.headers.etag },
     })
-    cy.request(
+    requestApi(
       'POST',
       `${apiUrl()}/api/v1/books/${id}/content-imports`,
       input,
@@ -1084,6 +1099,32 @@ Then('I see its first reader page', () => {
     .should('contain.text', 'text')
 })
 
+Then(
+  'the reader header separates navigation, settings and account details at {int} pixels',
+  (width: number) => {
+    cy.viewport(width, 800)
+
+    cy.get('header').should(($header) => {
+      const header = $header[0]
+      const home = header.querySelector('button')!.getBoundingClientRect()
+      const speed = header.querySelector(
+        '[aria-label="Speaking speed controls"]',
+      )!
+      const settings = speed.parentElement!.getBoundingClientRect()
+      const signOut = Array.from(header.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Sign out',
+      )!
+      const accountBounds = signOut.parentElement!.getBoundingClientRect()
+
+      expect(settings.left).to.be.at.least(home.right)
+      expect(settings.right).to.be.at.most(accountBounds.left)
+      expect(
+        header.getBoundingClientRect().right - accountBounds.right,
+      ).to.be.lessThan(40)
+    })
+  },
+)
+
 Then('the ToC fills the reader below the header', () => {
   cy.findByRole('navigation', { name: 'Table of contents' }).should(($toc) => {
     const document = $toc[0].ownerDocument
@@ -1140,6 +1181,15 @@ Then('the reader controls are visible', () => {
 })
 
 Given('a book with a nested chapter', () => mockBook({ nested: true }))
+
+Given('a public book is available in the library', () =>
+  mockBook({ nested: true }),
+)
+
+When('I start reading the public book', () => {
+  openBookFromLibrary()
+  waitForBookSynchronization()
+})
 
 Given('a nested chapter book that takes time to finish loading', () =>
   mockBook({ nested: true, slowSecond: true }),

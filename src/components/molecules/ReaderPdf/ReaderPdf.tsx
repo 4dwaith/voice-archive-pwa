@@ -13,6 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 const assetUrl = new URL(`${import.meta.env.BASE_URL}pdfjs/`, document.baseURI)
   .href
 const options = {
+  withCredentials: true,
   disableRange: false,
   disableStream: true,
   disableAutoFetch: true,

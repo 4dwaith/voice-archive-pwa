@@ -35,9 +35,11 @@ async function readLiveToken(signal: AbortSignal) {
   // Credentials never enter Redux, query caches, storage or persisted history.
   const response = await fetch(new URL('/api/v1/live/token', apiBaseUrl), {
     method: 'POST',
+    credentials: 'include',
     cache: 'no-store',
     signal,
   })
+  if (response.status === 401) window.location.replace('/login?expired=1')
   if (!response.ok) throw new Error('Live provisioning failed')
   return LiveTokenResponse.parse(await response.json())
 }

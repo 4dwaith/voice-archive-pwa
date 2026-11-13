@@ -11,12 +11,15 @@ if (import.meta.env.VITE_E2E_TESTING_HARNESS === 'true') {
 }
 import App from './App.tsx'
 import { store } from './store/store'
+import { AuthGate } from './layout/AuthGate.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <AuthGate>
+          <App />
+        </AuthGate>
       </BrowserRouter>
     </Provider>
   </StrictMode>,

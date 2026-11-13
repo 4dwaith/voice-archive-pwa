@@ -1,6 +1,17 @@
 Feature: Structured book synchronization
   Readers open a book and cache version-pinned structured content locally.
 
+  Scenario Outline: Reader settings stay separate from account details
+    Given a book with a nested chapter
+    When I open the book from the library
+    And I wait for the book to finish loading
+    Then the reader header separates navigation, settings and account details at <width> pixels
+
+    Examples:
+      | width |
+      | 1100  |
+      | 700   |
+
   @touch
   Scenario: Two-finger swipes switch modes without turning text pages
     Given a book with a nested chapter

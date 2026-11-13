@@ -9,6 +9,7 @@ import { LiveProvider } from '../../src/contexts/LiveProvider'
 import { createLiveConversation } from '../../src/services/liveConversation'
 import { useReaderAudioControl } from '../../src/hooks/useReaderAudioControl'
 import { createAppStore } from '../../src/store/store'
+import { setCurrentUser } from '../../src/store/authSlice'
 import { reportReaderCommandError } from '../../src/store/readerCommandsSlice'
 import { openReader } from '../../src/store/readerSlice'
 import { setReaderAudioPlayback } from '../../src/store/readerAudioSlice'
@@ -25,6 +26,9 @@ const scope = { bookId: 7, contentVersion: 'version' }
 
 function renderIntegration() {
   const store = createAppStore()
+  store.dispatch(
+    setCurrentUser({ id: 2, email: 'reader@example.com', display_name: null }),
+  )
   const events: string[] = []
   let notifyLive = () => {}
   let notifyAudio = () => {}

@@ -40,6 +40,7 @@ export function Book({ book, bookIndex, isSelected, onSelect }: BookProps) {
         >
           {showCoverImage ? (
             <img
+              crossOrigin="use-credentials"
               src={book.cover_url ?? undefined}
               alt=""
               className="absolute inset-0 size-full object-cover"
