@@ -27,6 +27,7 @@ import {
   setTextSizePercent,
 } from './textSizeSlice'
 import { setPlaybackSpeed } from './playbackSpeedSlice'
+import { setPreferredLanguage } from './userPreferencesSlice'
 import type { AppDispatch, RootState } from './store'
 
 async function readCommandTarget(
@@ -223,6 +224,8 @@ export function createReaderCommandsListener() {
             break
           }
           case 'updateReaderSettings': {
+            if (command.preferredLanguage !== undefined)
+              api.dispatch(setPreferredLanguage(command.preferredLanguage))
             if (command.textSize !== undefined) {
               api.dispatch(setTextSizePercent(command.textSize))
             }
@@ -422,8 +425,10 @@ export function createReaderCommandsListener() {
               navigateToPath(expectedPath)
             }
             dispatchOwned(reader.setReaderViewMode('text'))
+            const isPlayback = command.kind === 'startPlayback'
             const hasEntryLayout = () =>
-              isSameScope() && reader.getLayoutKey(api.getState()) !== null
+              isSameScope() &&
+              (isPlayback || reader.getLayoutKey(api.getState()) !== null)
             const layoutTimeout = needsDownload ? 120000 : 15000
             if (
               !hasEntryLayout() &&
@@ -436,10 +441,14 @@ export function createReaderCommandsListener() {
                 'The book Text layout is still preparing. Please retry.',
               )
             if (!isCurrent()) return
-            const layoutKey = reader.getLayoutKey(api.getState())!
+            const layoutKey = reader.getLayoutKey(api.getState())
             let subscription: { unsubscribe(): void } | undefined
             try {
               const committed = new Promise<void>((resolve, reject) => {
+                if (isPlayback) {
+                  resolve()
+                  return
+                }
                 subscription = liveQuery(async () => {
                   const ready = await readReaderChapterReadiness(
                     bookId,
@@ -482,7 +491,7 @@ export function createReaderCommandsListener() {
             if (!isCurrent()) return
             if (
               !isSameScope() ||
-              reader.getLayoutKey(api.getState()) !== layoutKey
+              (!isPlayback && reader.getLayoutKey(api.getState()) !== layoutKey)
             )
               throw new Error('The target layout changed. Please retry.')
             routeTarget = null

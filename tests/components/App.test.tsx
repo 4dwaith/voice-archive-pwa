@@ -44,7 +44,9 @@ it('preserves the app text-size setting when library data arrives asynchronously
     </Provider>,
   )
 
+  fireEvent.click(screen.getByRole('button', { name: 'Controls' }))
   fireEvent.click(screen.getByRole('button', { name: 'Make text larger' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Close controls' }))
 
   expect(document.documentElement.style.fontSize).toBe('112.5%')
 

@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { MAX_TEXT_SIZE_STEP } from '../store/textSizeSlice'
 import {
+  preferredLanguages,
+  type PreferredLanguage,
+} from '../store/userPreferencesSlice'
+import {
   DEFAULT_PLAYBACK_SPEED_STEP,
   MAX_PLAYBACK_SPEED_STEP,
 } from '../store/playbackSpeedSlice'
@@ -15,6 +19,7 @@ const positionSchema = z.object({
 })
 
 const preferencesSchema = z.object({
+  preferredLanguage: z.enum(preferredLanguages).optional().catch(undefined),
   viewMode: z.enum(['text', 'pdf']).optional().catch(undefined),
   playbackSpeedStep: z
     .number()
@@ -32,6 +37,7 @@ const preferencesSchema = z.object({
 })
 
 export type ReaderPreferences = {
+  preferredLanguage?: PreferredLanguage
   viewMode?: 'text' | 'pdf'
   playbackSpeedStep: number
   textSizeStep: number

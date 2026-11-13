@@ -2,6 +2,17 @@ Feature: Live voice conversation
   Background:
     Given Live is available
 
+  Scenario: Language preferences are shared with Live and its settings tool
+    Given a book with a nested chapter
+    When I choose Kannada in user preferences
+    And I start Live from the library
+    Then Live starts with my Kannada preference
+    When I ask Live to prefer English
+    Then English is selected in user preferences
+    When I stop Live
+    And I reload the Live app
+    Then English is selected in user preferences
+
   Scenario: Live can use newly published summaries after reopening a book
     Given a book with a nested chapter
     When I start Live from the library

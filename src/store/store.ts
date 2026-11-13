@@ -23,8 +23,10 @@ import { createReaderSearchListener } from './readerSearchListener'
 import { createReaderMeasurementsListener } from './readerMeasurementsListener'
 import { archiveApi } from '../api-client/archiveApi'
 import authReducer from './authSlice'
+import userPreferencesReducer from './userPreferencesSlice'
 
 const rootReducer = combineReducers({
+  userPreferences: userPreferencesReducer,
   auth: authReducer,
   textSize: textSizeReducer,
   playbackSpeed: playbackSpeedReducer,
@@ -53,6 +55,9 @@ export function createAppStore() {
   const readerSearchListener = createReaderSearchListener()
   const appStore = configureStore({
     preloadedState: {
+      userPreferences: {
+        preferredLanguage: preferences.preferredLanguage ?? 'english',
+      },
       textSize: { step: preferences.textSizeStep },
       playbackSpeed: { step: preferences.playbackSpeedStep },
       reader: {

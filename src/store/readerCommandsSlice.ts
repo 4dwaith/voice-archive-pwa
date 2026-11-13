@@ -1,4 +1,5 @@
 import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
+import type { PreferredLanguage } from './userPreferencesSlice'
 
 export type ReaderDestination = { bookId: number; contentVersion?: string } & (
   | { target: 'current' }
@@ -10,6 +11,7 @@ export type ReaderCommand =
   | { kind: 'goHome' | 'refreshLibrary' }
   | {
       kind: 'updateReaderSettings'
+      preferredLanguage?: PreferredLanguage
       textSize?: number
       playbackSpeed?: number
       controlsVisible?: boolean

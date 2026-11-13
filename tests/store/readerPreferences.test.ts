@@ -23,12 +23,28 @@ import {
   getLayoutKey,
 } from '../../src/store/readerSlice'
 import { seedContent } from '../helpers/readerMeasurements'
+import { getPreferredLanguage } from '../../src/store/userPreferencesSlice'
+import { requestReaderCommand } from '../../src/store/readerCommandsSlice'
 
 afterEach(async () => {
   vi.restoreAllMocks()
 })
 
 describe('Reader preferences', () => {
+  it('persists language changes requested through the settings command', () => {
+    const store = createAppStore()
+
+    store.dispatch(
+      requestReaderCommand({
+        kind: 'updateReaderSettings',
+        preferredLanguage: 'kannada',
+      }),
+    )
+
+    expect(getPreferredLanguage(createAppStore().getState())).toBe('kannada')
+    expect(readReaderPreferences().preferredLanguage).toBe('kannada')
+  })
+
   it('uses exact speed steps and stops at both limits', () => {
     const store = createAppStore()
 

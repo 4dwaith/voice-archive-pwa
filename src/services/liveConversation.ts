@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { apiBaseUrl } from '../api-client/baseApi'
 import { LiveTokenResponse } from '../api-client/generated/schemas'
 import { createLiveGuidance } from './liveGuidance'
+import type { PreferredLanguage } from '../store/userPreferencesSlice'
 import { liveToolDeclarations, type createLiveTools } from './liveTools'
 
 const checkpointSchema = z.object({
@@ -49,6 +50,7 @@ export function createLiveConversation(
     signal: AbortSignal,
   ) => Promise<{ token: string; model: string }> = readLiveToken,
   tools?: ReturnType<typeof createLiveTools>,
+  readPreferredLanguage: () => PreferredLanguage = () => 'english',
 ) {
   let checkpoint: z.infer<typeof checkpointSchema> | null = null
   try {
@@ -238,7 +240,7 @@ export function createLiveConversation(
             : undefined,
           responseModalities: [Modality.AUDIO],
           // Explicit Start/Continue is the boundary for refreshing static help.
-          systemInstruction: createLiveGuidance(),
+          systemInstruction: createLiveGuidance(readPreferredLanguage()),
           sessionResumption: previous ? { handle: previous.handle } : {},
           contextWindowCompression: { slidingWindow: {} },
         },

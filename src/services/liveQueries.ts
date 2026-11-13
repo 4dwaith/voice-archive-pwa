@@ -24,6 +24,7 @@ import {
 } from '../store/readerSlice'
 import { selectPlaybackSpeed } from '../store/playbackSpeedSlice'
 import { selectTextSizePercent } from '../store/textSizeSlice'
+import { getPreferredLanguage } from '../store/userPreferencesSlice'
 import type { AppDispatch, RootState } from '../store/store'
 import {
   livePageTurnerBinding,
@@ -34,7 +35,7 @@ export const appHelp = {
   overview:
     'Voice Archive combines book text, source PDF and synchronized narration. Choose a book in the library. Live can answer current-state questions and end this conversation.',
   reader:
-    'Tap text to reveal controls. Use the table of contents, search or page controls to navigate. Text/PDF buttons or a two-finger swipe switch views. Select text for narration; Play opens narration and Pause stops it.',
+    'Tap text to reveal controls. Use the table of contents, search or page controls to navigate. Controls opens text size and narration speed settings; your user button opens the preferred Live language. Text/PDF buttons or a two-finger swipe switch views. Select text for narration; Play opens narration and Pause stops it.',
   live: 'Use the corner Live button to start or stop. Continue resumes an available checkpoint only after you choose it; Discard clears it. Starting narration ends Live once playback starts. You can also ask Live to end the conversation.',
   turner: [livePageTurnerBinding, ...readerPageTurnerBindings]
     .map(({ gesture, action, scope }) => `${gesture}: ${action} (${scope})`)
@@ -381,6 +382,7 @@ export function createLiveQueries(
                 : 'loading',
         },
         settings: {
+          preferredLanguage: getPreferredLanguage(state),
           textSizePercent: selectTextSizePercent(state),
           playbackSpeed: selectPlaybackSpeed(state),
           areControlsVisible: scope ? getAreControlsVisible(state) : null,

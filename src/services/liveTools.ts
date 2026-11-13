@@ -13,6 +13,7 @@ import {
 import { isPlaybackSpeed } from '../store/playbackSpeedSlice'
 import type { ReaderCommand } from '../store/readerCommandsSlice'
 import { type createLiveQueries } from './liveQueries'
+import { preferredLanguages } from '../store/userPreferencesSlice'
 
 const noArguments = z.strictObject({})
 const integerId = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
@@ -86,6 +87,7 @@ export const liveToolSchemas = {
         .optional(),
       controlsVisible: z.boolean().optional(),
       viewMode: z.enum(['text', 'pdf']).optional(),
+      preferredLanguage: z.enum(preferredLanguages).optional(),
     })
     .refine(
       (data) => Object.values(data).some((val) => val !== undefined),
@@ -122,12 +124,12 @@ const descriptions = [
   'End Live immediately, preserving continuation. No farewell required.',
   'Go to the library using app navigation.',
   'Refresh the shared library catalog.',
-  'Update reader settings: textSize (100–500%, step 12.5), playbackSpeed (0.75–2, step 0.05), controlsVisible (boolean), or viewMode (text/pdf).',
+  'Update settings: textSize (100–500%, step 12.5), playbackSpeed (0.75–2, step 0.05), controlsVisible (boolean), viewMode (text/pdf), or preferredLanguage (kannada/english). When changing preferredLanguage, use that language for subsequent replies.',
   'Select or clear a segment in the active book; does not move or play.',
   'Open known bookId; automatically downloads missing text and restores position.',
   'Open a known section, including nested sections, using ToC IDs. Opens and downloads an uncached book, then waits for Text measurements before navigating. Acceptance is not completion.',
   'Open a known segment at an optional code-point offset. Opens and downloads an uncached book, then waits for Text measurements before navigating. Acceptance is not completion.',
-  'Read aloud: target="segment" plays a segment; target="section" plays a whole section; target="current" plays from the Text position. Requires cached audio/timing. Acceptance is not playback; success closes Live.',
+  'Read a passage using recorded narration, never recite it yourself: target="segment" selects, highlights and plays the passage; target="section" plays a section; target="current" plays from the Text position. Requires cached audio/timing, but segment/section playback does not wait for page measurements. Acceptance is not playback; success closes Live.',
   'Move one Text page; waits for layout. Edges do not move.',
 ]
 

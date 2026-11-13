@@ -14,6 +14,7 @@ type AudioEvidence = {
   outputs: number
   connections: number
   handles: (string | undefined)[]
+  setupInstructions: string[]
   deliver?: (message: unknown) => void
 }
 let evidence: AudioEvidence
@@ -268,6 +269,7 @@ Given('Live is available', () => {
     outputs: 0,
     connections: 0,
     handles: [],
+    setupInstructions: [],
     errorInputs: [],
     toolResults: [],
   }
@@ -308,6 +310,9 @@ Given('Live is available', () => {
       send(raw: string) {
         const message = JSON.parse(raw)
         if (message.setup) {
+          evidence.setupInstructions.push(
+            JSON.stringify(message.setup.systemInstruction),
+          )
           expect(
             message.setup.tools[0].functionDeclarations.map(
               (declaration: { name: string }) => declaration.name,
@@ -379,6 +384,32 @@ Given('starting Live fails once', () => {
 When('I start Live from the library', () => {
   cy.visit('/')
   cy.findByRole('button', { name: 'Start Live' }).click()
+})
+
+When('I choose Kannada in user preferences', () => {
+  cy.visit('/')
+  cy.findByRole('button', { name: 'User preferences' }).click()
+  cy.findByRole('combobox', { name: 'Preferred language' }).select('kannada')
+  cy.findByRole('button', { name: 'Close user preferences' }).click()
+})
+
+Then('Live starts with my Kannada preference', () => {
+  cy.wrap(null).should(() =>
+    expect(evidence.setupInstructions.at(-1)).to.contain('Kannada (ಕನ್ನಡ)'),
+  )
+})
+
+When('I ask Live to prefer English', () =>
+  requestLiveAction('updateReaderSettings', { preferredLanguage: 'english' }),
+)
+
+Then('English is selected in user preferences', () => {
+  cy.findByRole('button', { name: 'User preferences' }).click()
+  cy.findByRole('combobox', { name: 'Preferred language' }).should(
+    'have.value',
+    'english',
+  )
+  cy.findByRole('button', { name: 'Close user preferences' }).click()
 })
 
 Then('I can talk with Live and hear its reply', () => {
@@ -811,14 +842,18 @@ Then('Live is told to open Text view first', () => {
 })
 
 Then('the speaking speed is {float} times normal', (rate: number) => {
+  cy.findByRole('button', { name: 'Controls' }).click()
   cy.findByLabelText('Speaking speed').should(
     'have.text',
     `${rate.toFixed(2)}×`,
   )
+  cy.findByRole('button', { name: 'Close controls' }).click()
 })
 
 When('I decrease speaking speed using the header', () => {
+  cy.findByRole('button', { name: 'Controls' }).click()
   cy.findByRole('button', { name: 'Speak slower' }).click()
+  cy.findByRole('button', { name: 'Close controls' }).click()
 })
 
 Then('the reading controls are hidden', () => {

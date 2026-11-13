@@ -8,6 +8,7 @@ import {
   setControlsVisible,
   setReaderViewMode,
   selectSegment,
+  getReaderScope,
 } from '../../../src/store/readerSlice'
 import {
   readerBookContent,
@@ -18,12 +19,95 @@ import audioUrl from '../../fixtures/narration.mp3?url'
 import { setPlaybackSpeed } from '../../../src/store/playbackSpeedSlice'
 import { setReaderAudioPlayback } from '../../../src/store/readerAudioSlice'
 import pdfUrl from '../../fixtures/reader.pdf?url'
+import { requestReaderCommand } from '../../../src/store/readerCommandsSlice'
 
 afterEach(() => {
   cy.mount(<></>)
 })
 
 describe('Reader narration', () => {
+  it('highlights and plays a passage while page measurements are unavailable', () => {
+    const store = createAppStore()
+    const scope = { bookId: 91001, contentVersion: 'reader-story-1' }
+
+    cy.document().then((document) => {
+      cy.stub(document.fonts, 'load').returns(new Promise(() => {}))
+    })
+    cy.then(async () => {
+      await database.content.put({
+        ...readerBookContent,
+        manifest: {
+          ...readerBookContent.manifest,
+          section_count: 1,
+          files: [
+            {
+              id: 10,
+              kind: 'audio_chapter',
+              book_id: null,
+              section_id: 1,
+              byte_size: 61000,
+              url: new URL(audioUrl, window.location.href).href,
+              metadata: { duration_ms: 20000, sample_rate: 16000, channels: 1 },
+            },
+          ],
+        },
+      })
+      await database.sections.put({
+        ...readerBookSection,
+        first_segment_source_key: 'passage',
+      })
+      await database.segments.put({
+        ...readerBookSegment,
+        id: 1,
+        source_key: 'passage',
+        section_id: 1,
+        root_section_id: 1,
+        html_content: '<p>Requested passage.</p>',
+        text_content: 'Requested passage.',
+        kind: 'prose',
+        narration_start_ms: 0,
+        narration_end_ms: 12000,
+      })
+    })
+    cy.mount(
+      <Provider store={store}>
+        <MemoryRouter>
+          <div style={{ height: 700 }}>
+            <Reader {...scope} restorePosition={false} />
+          </div>
+        </MemoryRouter>
+      </Provider>,
+    )
+    cy.wrap(null).should(() =>
+      expect(getReaderScope(store.getState())).to.deep.equal(scope),
+    )
+
+    cy.then(() =>
+      store.dispatch(
+        requestReaderCommand({
+          kind: 'startPlayback',
+          destination: {
+            bookId: scope.bookId,
+            target: 'segment',
+            segmentId: 1,
+          },
+        }),
+      ),
+    )
+
+    cy.findByRole('dialog', { name: 'Narration' })
+      .should('be.visible')
+      .within(() => {
+        cy.get('[data-reader-segment-id="1"]')
+          .should('have.attr', 'data-reader-selected', 'true')
+          .and('have.attr', 'data-reader-highlighted', 'true')
+      })
+    cy.get('[data-reader-audio]').should(($audio) =>
+      expect(($audio[0] as HTMLAudioElement).paused).to.equal(false),
+    )
+    cy.then(async () => expect(await database.measurements.count()).to.equal(0))
+  })
+
   it('seeks from modal input and pauses PDF browsing without interrupting mode switches', () => {
     const store = createAppStore()
     const scope = { bookId: 91001, contentVersion: 'reader-story-1' }

@@ -1107,10 +1107,9 @@ Then(
     cy.get('header').should(($header) => {
       const header = $header[0]
       const home = header.querySelector('button')!.getBoundingClientRect()
-      const speed = header.querySelector(
-        '[aria-label="Speaking speed controls"]',
-      )!
-      const settings = speed.parentElement!.getBoundingClientRect()
+      const settings = Array.from(header.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Controls')!
+        .parentElement!.getBoundingClientRect()
       const signOut = Array.from(header.querySelectorAll('button')).find(
         (button) => button.textContent === 'Sign out',
       )!
@@ -1177,7 +1176,7 @@ Then('the reader controls are visible', () => {
   cy.findByRole('navigation', { name: 'Table of contents' }).should(
     'be.visible',
   )
-  cy.findByRole('button', { name: 'Make text larger' }).should('be.enabled')
+  cy.findByRole('button', { name: 'Controls' }).should('be.enabled')
 })
 
 Given('a book with a nested chapter', () => mockBook({ nested: true }))
@@ -1418,7 +1417,9 @@ When('I press the previous-page key', () => {
 })
 
 When('I enlarge the text and move to an interior position', () => {
+  cy.findByRole('button', { name: 'Controls' }).click()
   cy.findByRole('button', { name: 'Make text larger' }).click()
+  cy.findByRole('button', { name: 'Close controls' }).click()
   cy.findByRole('article', { name: 'Book text' }).should(
     'have.attr',
     'aria-busy',
@@ -1458,7 +1459,9 @@ Then('the saved interior position and text size are restored', () => {
   cy.findByRole('article', { name: 'Book text' })
     .should('have.attr', 'aria-busy', 'false')
     .and('have.attr', 'data-reader-page', '2')
-  cy.contains('Text size 112.5 percent').should('exist')
+  cy.findByRole('button', { name: 'Controls' }).click()
+  cy.findByRole('dialog', { name: 'Controls' }).should('contain.text', '112.5%')
+  cy.findByRole('button', { name: 'Close controls' }).click()
   cy.get('@savedPosition').then((position) => {
     cy.window().should((win) => {
       expect(

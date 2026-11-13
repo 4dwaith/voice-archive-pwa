@@ -32,6 +32,7 @@ import {
 } from './bookDownloadsSlice'
 import type { AppDispatch, RootState } from './store'
 import { getCurrentUser } from './authSlice'
+import { getPreferredLanguage } from './userPreferencesSlice'
 
 export function createLiveListener() {
   const listener = createListenerMiddleware<RootState, AppDispatch>()
@@ -54,6 +55,7 @@ export function createLiveListener() {
             commands.request,
             commands.cancel,
           ),
+          () => getPreferredLanguage(api.getState()),
         )
         const connectedConversation = conversation
         function publish() {

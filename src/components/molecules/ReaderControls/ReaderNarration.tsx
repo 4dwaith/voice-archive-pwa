@@ -105,7 +105,12 @@ export function ReaderNarration() {
   const { audio, areControlsVisible, textSizePercent } =
     useReaderContext().reader
   const title = useRef<HTMLHeadingElement>(null)
-  const isOpen = !!(audio?.isPlaying && audio.isSegmentSplit && audio.segment)
+  const { pageCount } = useReaderContext().navigation
+  const isOpen = !!(
+    audio?.isPlaying &&
+    (audio.isSegmentSplit || pageCount === null) &&
+    audio.segment
+  )
 
   if (!audio) return null
   if (!isOpen)

@@ -12,6 +12,7 @@ import {
   getReaderViewMode,
 } from './readerSlice'
 import { selectTextSizeStep } from './textSizeSlice'
+import { getPreferredLanguage } from './userPreferencesSlice'
 import { selectPlaybackSpeedStep } from './playbackSpeedSlice'
 import type { AppDispatch, RootState } from './store'
 
@@ -23,6 +24,7 @@ export function createReaderPreferencesListener(
 
   listener.startListening({
     predicate: (_action, current, previous) =>
+      getPreferredLanguage(current) !== getPreferredLanguage(previous) ||
       getReaderViewMode(current) !== getReaderViewMode(previous) ||
       selectTextSizeStep(current) !== selectTextSizeStep(previous) ||
       selectPlaybackSpeedStep(current) !== selectPlaybackSpeedStep(previous) ||
@@ -30,6 +32,10 @@ export function createReaderPreferencesListener(
     effect: async (_action, api) => {
       const state = api.getState()
       const previous = api.getOriginalState()
+      if (getPreferredLanguage(state) !== getPreferredLanguage(previous)) {
+        preferences.preferredLanguage = getPreferredLanguage(state)
+        writeReaderPreferences(preferences)
+      }
       if (getReaderViewMode(state) !== getReaderViewMode(previous)) {
         preferences.viewMode = getReaderViewMode(state)
         writeReaderPreferences(preferences)

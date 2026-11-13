@@ -5,6 +5,7 @@ import { createLiveQueries } from '../../src/services/liveQueries'
 import { createLiveTools } from '../../src/services/liveTools'
 import { createAppStore } from '../../src/store/store'
 import { createLiveConversation } from '../../src/services/liveConversation'
+import type { PreferredLanguage } from '../../src/store/userPreferencesSlice'
 
 const { connect } = vi.hoisted(() => ({ connect: vi.fn() }))
 
@@ -31,7 +32,9 @@ afterEach(() => {
   connect.mockReset()
 })
 
-async function createResumableConversation() {
+async function createResumableConversation(
+  readLanguage?: () => PreferredLanguage,
+) {
   const media = createMedia()
   connect.mockImplementation(async ({ callbacks }: LiveConnectParameters) => {
     deliverMessage(callbacks, { setupComplete: {} })
@@ -41,7 +44,7 @@ async function createResumableConversation() {
     token: 'fresh-credential',
     model: 'model',
   }))
-  const live = createLiveConversation(readToken)
+  const live = createLiveConversation(readToken, undefined, readLanguage)
   await live.start()
   const callbacks = connect.mock.calls[0][0]
     .callbacks as LiveConnectParameters['callbacks']
@@ -105,6 +108,24 @@ function createMedia() {
 }
 
 describe('Live conversation', () => {
+  it('uses the latest language when starting and continuing', async () => {
+    let language: PreferredLanguage = 'kannada'
+    const { live } = await createResumableConversation(() => language)
+
+    expect(connect.mock.calls[0][0].config.systemInstruction).toContain(
+      'Kannada (ಕನ್ನಡ)',
+    )
+    live.stop()
+
+    language = 'english'
+    await live.start()
+
+    expect(connect.mock.calls[1][0].config.systemInstruction).toContain(
+      'preferred language is\nEnglish',
+    )
+    live.stop()
+  })
+
   it.each(['stop', 'onclose', 'onerror', 'goAway'] as const)(
     'retains a checkpoint after %s until explicit Continue',
     async (reason) => {
