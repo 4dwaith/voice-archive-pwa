@@ -144,6 +144,11 @@ export const AudioFileResponse = zod.object({
 })
 export type AudioFileResponse = zod.input<typeof AudioFileResponse>
 export type AudioFileResponseOutput = zod.output<typeof AudioFileResponse>
+export const AuthConfigResponse = zod.object({
+  login_enabled: zod.boolean(),
+})
+export type AuthConfigResponse = zod.input<typeof AuthConfigResponse>
+export type AuthConfigResponseOutput = zod.output<typeof AuthConfigResponse>
 export const BodyCreateApiV1File = zod.object({
   file: zod
     .instanceof(Blob)
@@ -1199,6 +1204,58 @@ export type LoginApiV1User503Response = zod.input<
 >
 export type LoginApiV1User503ResponseOutput = zod.output<
   typeof LoginApiV1User503Response
+>
+/**
+ * @summary Get Auth Config
+ */
+export const GetApiV1AuthConfig200Response = AuthConfigResponse
+export type GetApiV1AuthConfig200Response = zod.input<
+  typeof GetApiV1AuthConfig200Response
+>
+export type GetApiV1AuthConfig200ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig200Response
+>
+export const GetApiV1AuthConfig401Response = HttpErrorResponse
+export type GetApiV1AuthConfig401Response = zod.input<
+  typeof GetApiV1AuthConfig401Response
+>
+export type GetApiV1AuthConfig401ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig401Response
+>
+export const GetApiV1AuthConfig403Response = HttpErrorResponse
+export type GetApiV1AuthConfig403Response = zod.input<
+  typeof GetApiV1AuthConfig403Response
+>
+export type GetApiV1AuthConfig403ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig403Response
+>
+export const GetApiV1AuthConfig405Response = HttpErrorResponse
+export type GetApiV1AuthConfig405Response = zod.input<
+  typeof GetApiV1AuthConfig405Response
+>
+export type GetApiV1AuthConfig405ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig405Response
+>
+export const GetApiV1AuthConfig429Response = HttpErrorResponse
+export type GetApiV1AuthConfig429Response = zod.input<
+  typeof GetApiV1AuthConfig429Response
+>
+export type GetApiV1AuthConfig429ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig429Response
+>
+export const GetApiV1AuthConfig500Response = InternalErrorResponse
+export type GetApiV1AuthConfig500Response = zod.input<
+  typeof GetApiV1AuthConfig500Response
+>
+export type GetApiV1AuthConfig500ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig500Response
+>
+export const GetApiV1AuthConfig503Response = HttpErrorResponse
+export type GetApiV1AuthConfig503Response = zod.input<
+  typeof GetApiV1AuthConfig503Response
+>
+export type GetApiV1AuthConfig503ResponseOutput = zod.output<
+  typeof GetApiV1AuthConfig503Response
 >
 /**
  * @summary Get Current User

@@ -1,10 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { apiBaseUrl } from '../api-client/baseApi.ts'
-import { UserResponse } from '../api-client/generated/schemas.ts'
+import {
+  AuthConfigResponse,
+  UserResponse,
+} from '../api-client/generated/schemas.ts'
 import { clearAccountData, hasMatchingAccount } from '../services/auth.ts'
 import { useAppDispatch } from '../store/hooks.ts'
-import { setCurrentUser } from '../store/authSlice.ts'
+import { setCurrentUser, setLoginEnabled } from '../store/authSlice.ts'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
@@ -17,6 +20,18 @@ export function AuthGate({ children }: { children: ReactNode }) {
     const controller = new AbortController()
     async function checkSession() {
       try {
+        const configResponse = await fetch(
+          new URL('/api/v1/auth/config', apiBaseUrl),
+          {
+            cache: 'no-store',
+            signal: controller.signal,
+          },
+        )
+        if (!configResponse.ok)
+          throw new Error(
+            `Sign-in configuration failed (${configResponse.status})`,
+          )
+        const config = AuthConfigResponse.parse(await configResponse.json())
         const response = await fetch(new URL('/api/v1/auth/me', apiBaseUrl), {
           credentials: 'include',
           cache: 'no-store',
@@ -36,7 +51,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
         }
         if (!user) sessionStorage.removeItem('voice-archive-live-checkpoint')
         dispatch(setCurrentUser(user))
-        setExpired(isExpired)
+        dispatch(setLoginEnabled(config.login_enabled))
+        setExpired(isExpired && config.login_enabled)
         setReady(true)
       } catch (error) {
         if (controller.signal.aborted) return

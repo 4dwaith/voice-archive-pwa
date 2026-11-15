@@ -14,6 +14,9 @@ beforeEach(() => {
       { cacheAcrossSpecs: true },
     )
   } else {
+    cy.intercept('GET', '**/api/v1/auth/config', {
+      body: { login_enabled: true },
+    })
     cy.intercept('GET', '**/api/v1/auth/me', {
       body: { id: 2, email: 'reader@example.com', display_name: null },
     })

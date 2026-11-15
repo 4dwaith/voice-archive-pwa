@@ -5,6 +5,7 @@ import type { ZodType } from 'zod'
 
 export const endpointEnhancements = {
   loginApiV1User: { responseSchema: schemas.LoginApiV1User200Response },
+  getApiV1AuthConfig: { responseSchema: schemas.GetApiV1AuthConfig200Response },
   getApiV1CurrentUser: {
     responseSchema: schemas.GetApiV1CurrentUser200Response,
   },
@@ -48,6 +49,14 @@ export const errorSchemas: Record<string, Record<string, ZodType>> = {
     '429': schemas.LoginApiV1User429Response,
     '500': schemas.LoginApiV1User500Response,
     '503': schemas.LoginApiV1User503Response,
+  },
+  getApiV1AuthConfig: {
+    '401': schemas.GetApiV1AuthConfig401Response,
+    '403': schemas.GetApiV1AuthConfig403Response,
+    '405': schemas.GetApiV1AuthConfig405Response,
+    '429': schemas.GetApiV1AuthConfig429Response,
+    '500': schemas.GetApiV1AuthConfig500Response,
+    '503': schemas.GetApiV1AuthConfig503Response,
   },
   getApiV1CurrentUser: {
     '401': schemas.GetApiV1CurrentUser401Response,

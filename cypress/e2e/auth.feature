@@ -29,3 +29,13 @@ Feature: Sign-in and guest access
     Given I am signed in
     When I return to the app after my sign-in expires
     Then I am asked to sign in again
+
+  @mock
+  Scenario: Sign-in explains the demo restrictions
+    Given I have not signed in
+    And sign-in is disabled
+    When I request to sign in
+    Then the demo restrictions explain how to set up locally
+    When I continue without signing in
+    Then I am browsing as a guest
+    And Live conversation is unavailable

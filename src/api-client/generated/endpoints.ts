@@ -12,6 +12,12 @@ const injectedRtkApi = api.injectEndpoints({
         body: queryArg.loginInput,
       }),
     }),
+    getApiV1AuthConfig: build.query<
+      GetApiV1AuthConfigApiResponse,
+      GetApiV1AuthConfigApiArg
+    >({
+      query: () => ({ url: `/api/v1/auth/config` }),
+    }),
     getApiV1CurrentUser: build.query<
       GetApiV1CurrentUserApiResponse,
       GetApiV1CurrentUserApiArg
@@ -241,6 +247,9 @@ export type LoginApiV1UserApiResponse =
 export type LoginApiV1UserApiArg = {
   loginInput: LoginInput
 }
+export type GetApiV1AuthConfigApiResponse =
+  /** status 200 Successful Response */ AuthConfigResponse
+export type GetApiV1AuthConfigApiArg = void
 export type GetApiV1CurrentUserApiResponse =
   /** status 200 Successful Response */ UserResponse | null
 export type GetApiV1CurrentUserApiArg = void
@@ -393,6 +402,9 @@ export type InternalErrorResponse = {
 export type LoginInput = {
   email: string
   password: string
+}
+export type AuthConfigResponse = {
+  login_enabled: boolean
 }
 export type BookResponse = {
   id: number
@@ -755,6 +767,7 @@ export type NotReadyResponse = {
 }
 export const {
   useLoginApiV1UserMutation,
+  useGetApiV1AuthConfigQuery,
   useGetApiV1CurrentUserQuery,
   useLogoutApiV1UserMutation,
   useCreateApiV1BookMutation,
